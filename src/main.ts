@@ -1,4 +1,4 @@
-import { renderMarkdown, renderMermaidDiagrams, updateMermaidTheme } from './markdown';
+import { renderMarkdown, renderMermaidDiagrams, renderExternalDiagrams, updateMermaidTheme } from './markdown';
 import { initTheme, toggleTheme } from './theme';
 import { FileTree, initSidebarResize } from './filetree';
 import { TableOfContents } from './toc';
@@ -20,6 +20,10 @@ let sidebarVisible = false;
 let wordWrap = false; // (#7)
 const scrollPositions = new Map<string, number>();
 
+// Split view state
+let splitActive = false;
+let splitViewer: HTMLDivElement | null = null;
+
 // --- DOM refs ---
 const viewer = document.getElementById('viewer') as HTMLDivElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
@@ -32,6 +36,7 @@ const sidebar = document.getElementById('sidebar') as HTMLElement;
 const breadcrumb = document.getElementById('breadcrumb') as HTMLElement;
 const tocSidebar = document.getElementById('toc-sidebar') as HTMLElement;
 const tabBarEl = document.getElementById('tab-bar') as HTMLElement;
+const progressBar = document.getElementById('progress-bar') as HTMLElement;
 
 // --- Find bar (/) ---
 const findBar = new FindBar(viewer);
@@ -83,18 +88,24 @@ const toc = new TableOfContents(tocSidebar, viewer);
 const searchModal = new SearchModal((path) => loadServerFile(path));
 
 // --- Breadcrumb (#3) ---
-function updateBreadcrumb(path: string | null) {
+function updateBreadcrumb(path: string | null, mtime?: string | null) {
   if (!path) { breadcrumb.innerHTML = ''; return; }
   const parts = path.split('/');
-  breadcrumb.innerHTML = parts.map((p, i) => {
+  let html = parts.map((p, i) => {
     const isLast = i === parts.length - 1;
     return `<span class="breadcrumb-item ${isLast ? 'active' : ''}">${p}</span>`;
   }).join('<span class="breadcrumb-sep">/</span>');
+  if (mtime) {
+    const date = new Date(mtime);
+    const fmt = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    html += `<span class="breadcrumb-mtime" title="${escapeHtml(mtime)}">${fmt}</span>`;
+  }
+  breadcrumb.innerHTML = html;
 }
 
 // --- Copy button on code blocks (#4) ---
-function addCopyButtons() {
-  viewer.querySelectorAll<HTMLElement>('.code-block, .data-view').forEach((block) => {
+function addCopyButtons(target: HTMLElement = viewer) {
+  target.querySelectorAll<HTMLElement>('.code-block, .data-view').forEach((block) => {
     if (block.querySelector('.copy-btn')) return;
     const btn = document.createElement('button');
     btn.className = 'copy-btn';
@@ -128,6 +139,10 @@ function restoreScrollPosition(path: string) {
 
 viewer.addEventListener('scroll', () => {
   if (currentFilePath) scrollPositions.set(currentFilePath, viewer.scrollTop);
+  // Progress bar
+  const scrollHeight = viewer.scrollHeight - viewer.clientHeight;
+  const pct = scrollHeight > 0 ? (viewer.scrollTop / scrollHeight) * 100 : 0;
+  if (progressBar) progressBar.style.width = `${pct}%`;
 });
 
 // --- URL hash routing (#9) ---
@@ -146,8 +161,8 @@ function getHashFile(): string | null {
 }
 
 // --- Relative link navigation (#10) ---
-function interceptRelativeLinks() {
-  viewer.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => {
+function interceptRelativeLinks(target: HTMLElement = viewer) {
+  target.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => {
     const href = a.getAttribute('href');
     if (!href || href.startsWith('http') || href.startsWith('#')) return;
     // Relative link to another file
@@ -166,102 +181,104 @@ function interceptRelativeLinks() {
 }
 
 // --- Rendering ---
-function renderContent(content: string, path: string) {
-  saveScrollPosition();
+function renderContent(content: string, path: string, target: HTMLElement = viewer) {
+  if (target === viewer) saveScrollPosition();
   const type = detectFileType(path);
 
   switch (type) {
     case 'markdown':
-      viewer.innerHTML = renderMarkdown(content);
+      target.innerHTML = renderMarkdown(content);
       renderMermaidDiagrams();
-      fixRelativeImages(path);
-      toc.update();
-      interceptRelativeLinks();
+      renderExternalDiagrams(target);
+      fixRelativeImages(path, target);
+      if (target === viewer) {
+        toc.update();
+        toc.loadBacklinks(path);
+      }
+      interceptRelativeLinks(target);
       break;
 
     case 'data': {
       if (path.endsWith('.json')) {
-        // JSON tree view (#6)
         const treeHtml = renderJsonTree(content);
         if (treeHtml) {
-          // Show both tree view and highlighted source with toggle
           let prettyJson: string;
           try { prettyJson = JSON.stringify(JSON.parse(content), null, 2); } catch { prettyJson = content; }
           const lang = 'json';
           const highlighted = hljs.highlight(prettyJson, { language: lang }).value;
-          viewer.innerHTML = `
+          target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
               <button class="json-toggle-btn" data-view="source">Source</button>
             </div>
             <div class="json-view-tree">${treeHtml}</div>
             <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">JSON</span><pre class="hljs"><code>${highlighted}</code></pre></div></div>`;
-          viewer.querySelectorAll<HTMLButtonElement>('.json-toggle-btn').forEach((btn) => {
+          target.querySelectorAll<HTMLButtonElement>('.json-toggle-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
               const view = btn.dataset.view;
-              viewer.querySelectorAll('.json-toggle-btn').forEach((b) => b.classList.remove('active'));
+              target.querySelectorAll('.json-toggle-btn').forEach((b) => b.classList.remove('active'));
               btn.classList.add('active');
-              const tree = viewer.querySelector('.json-view-tree') as HTMLElement;
-              const source = viewer.querySelector('.json-view-source') as HTMLElement;
+              const tree = target.querySelector('.json-view-tree') as HTMLElement;
+              const source = target.querySelector('.json-view-source') as HTMLElement;
               if (tree) tree.style.display = view === 'tree' ? '' : 'none';
               if (source) source.style.display = view === 'source' ? '' : 'none';
             });
           });
         } else {
-          renderHighlighted(content, path);
+          renderHighlighted(content, path, target);
         }
       } else if (path.endsWith('.yaml') || path.endsWith('.yml')) {
-        // YAML tree view (#3)
         const treeHtml = renderYamlTree(content);
         if (treeHtml) {
           const highlighted = hljs.highlight(content, { language: 'yaml' }).value;
-          viewer.innerHTML = `
+          target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
               <button class="json-toggle-btn" data-view="source">Source</button>
             </div>
             <div class="json-view-tree">${treeHtml}</div>
             <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">YAML</span><pre class="hljs"><code>${highlighted}</code></pre></div></div>`;
-          viewer.querySelectorAll<HTMLButtonElement>('.json-toggle-btn').forEach((btn) => {
+          target.querySelectorAll<HTMLButtonElement>('.json-toggle-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
-              viewer.querySelectorAll('.json-toggle-btn').forEach((b) => b.classList.remove('active'));
+              target.querySelectorAll('.json-toggle-btn').forEach((b) => b.classList.remove('active'));
               btn.classList.add('active');
-              const tree = viewer.querySelector('.json-view-tree') as HTMLElement;
-              const source = viewer.querySelector('.json-view-source') as HTMLElement;
+              const tree = target.querySelector('.json-view-tree') as HTMLElement;
+              const source = target.querySelector('.json-view-source') as HTMLElement;
               if (tree) tree.style.display = btn.dataset.view === 'tree' ? '' : 'none';
               if (source) source.style.display = btn.dataset.view === 'source' ? '' : 'none';
             });
           });
         } else {
-          renderHighlighted(content, path);
+          renderHighlighted(content, path, target);
         }
       } else {
-        renderHighlighted(content, path);
+        renderHighlighted(content, path, target);
       }
-      toc.clear();
+      if (target === viewer) toc.clear();
       break;
     }
 
     case 'csv':
-      viewer.innerHTML = renderCsvTable(content, path);
-      toc.clear();
+      target.innerHTML = renderCsvTable(content, path);
+      if (target === viewer) toc.clear();
       break;
 
     case 'config':
-      renderHighlighted(content, path);
-      toc.clear();
+      renderHighlighted(content, path, target);
+      if (target === viewer) toc.clear();
       break;
 
     default:
-      viewer.innerHTML = `<pre class="hljs"><code>${escapeHtml(content)}</code></pre>`;
-      toc.clear();
+      target.innerHTML = `<pre class="hljs"><code>${escapeHtml(content)}</code></pre>`;
+      if (target === viewer) toc.clear();
   }
 
-  addCopyButtons();
-  restoreScrollPosition(path);
+  addCopyButtons(target);
+  initImageZoom(target);
+  if (target === viewer) restoreScrollPosition(path);
 }
 
-function renderHighlighted(content: string, path: string) {
+function renderHighlighted(content: string, path: string, target: HTMLElement = viewer) {
   const lang = langFromExt(path);
   const ext = path.split('.').pop()?.toUpperCase() || '';
   let highlighted: string;
@@ -270,12 +287,11 @@ function renderHighlighted(content: string, path: string) {
   } else {
     highlighted = hljs.highlightAuto(content).value;
   }
-  // Line numbers (#4)
   const lines = highlighted.split('\n');
   const numbered = lines.map((line, i) =>
     `<span class="line-row"><span class="line-num">${i + 1}</span><span class="line-content">${line}</span></span>`
   ).join('\n');
-  viewer.innerHTML = `<div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs has-line-nums"><code>${numbered}</code></pre></div>`;
+  target.innerHTML = `<div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs has-line-nums"><code>${numbered}</code></pre></div>`;
 }
 
 async function renderImage(path: string) {
@@ -285,7 +301,7 @@ async function renderImage(path: string) {
       const res = await fetch(url);
       if (!res.ok) return;
       const svgText = await res.text();
-      const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] });
+      const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
       viewer.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div><p class="image-caption">${escapeHtml(path)}</p></div>`;
       const svgEl = viewer.querySelector('.svg-container svg') as SVGElement | null;
       if (svgEl) {
@@ -293,16 +309,18 @@ async function renderImage(path: string) {
         svgEl.removeAttribute('height');
         svgEl.style.maxHeight = '85vh';
       }
+      initImageZoom(viewer);
     } catch { /* ignore */ }
     return;
   }
   viewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /><p class="image-caption">${escapeHtml(path)}</p></div>`;
+  initImageZoom(viewer);
 }
 
 // Relative images in Markdown (#5)
-function fixRelativeImages(currentPath: string) {
+function fixRelativeImages(currentPath: string, target: HTMLElement = viewer) {
   const dir = currentPath.includes('/') ? currentPath.replace(/\/[^/]+$/, '/') : '';
-  viewer.querySelectorAll<HTMLImageElement>('img[src]').forEach((img) => {
+  target.querySelectorAll<HTMLImageElement>('img[src]').forEach((img) => {
     const src = img.getAttribute('src') || '';
     if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('/api/')) return;
     const resolved = (dir + src).replace(/^\.\//, '');
@@ -399,6 +417,11 @@ async function loadServerFile(path: string) {
 
   if (type === 'image') {
     await renderImage(path);
+    // Fetch mtime for images too
+    try {
+      const headRes = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'HEAD' });
+      updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));
+    } catch { /* ignore */ }
     toc.clear();
     fileTree?.setActive(path);
     return;
@@ -410,6 +433,8 @@ async function loadServerFile(path: string) {
       showError(`Failed to load: ${path} (${res.status})`);
       return;
     }
+    const mtime = res.headers.get('X-File-Mtime');
+    updateBreadcrumb(path, mtime);
     const content = await res.text();
 
     // Large file warning (#10)
@@ -429,6 +454,8 @@ async function loadServerFile(path: string) {
   }
 
   fileTree?.setActive(path);
+  // Reset progress bar
+  if (progressBar) progressBar.style.width = '0%';
 }
 
 // Error UX (#11)
@@ -520,6 +547,7 @@ function toggleShortcutHelp() {
       <kbd>Cmd+Shift+S</kbd><span>Slide mode</span>
       <kbd>Cmd+/−/0</kbd><span>Zoom in/out/reset</span>
       <kbd>Alt+Z</kbd><span>Word wrap toggle</span>
+      <kbd>Cmd+\\</kbd><span>Split view</span>
       <kbd>/</kbd><span>Find in document</span>
       <kbd>↑ / ↓</kbd><span>Navigate sidebar</span>
       <kbd>?</kbd><span>This help</span>
@@ -636,6 +664,11 @@ function handleKeyboard(e: KeyboardEvent) {
     e.preventDefault();
     enterSlideMode();
   }
+  // Split view
+  if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+    e.preventDefault();
+    toggleSplitView();
+  }
 }
 
 // --- SSE ---
@@ -691,6 +724,113 @@ async function loadCustomCSS() {
   } catch { /* ignore */ }
 }
 
+// --- Image zoom/pan ---
+function initImageZoom(target: HTMLElement = viewer) {
+  target.querySelectorAll<HTMLImageElement>('.image-view img, .image-view .svg-container').forEach((el) => {
+    if (el.dataset.zoomInit) return;
+    el.dataset.zoomInit = '1';
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    function applyTransform() {
+      el.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      el.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+    }
+
+    el.addEventListener('wheel', (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      scale = Math.max(0.5, Math.min(5, scale + delta));
+      if (scale <= 1) { translateX = 0; translateY = 0; }
+      applyTransform();
+    }, { passive: false });
+
+    el.addEventListener('dblclick', () => {
+      scale = scale > 1 ? 1 : 2;
+      translateX = 0;
+      translateY = 0;
+      applyTransform();
+    });
+
+    el.addEventListener('mousedown', (e: MouseEvent) => {
+      if (scale <= 1) return;
+      isDragging = true;
+      startX = e.clientX - translateX;
+      startY = e.clientY - translateY;
+      el.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e: MouseEvent) => {
+      if (!isDragging) return;
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      applyTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        el.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+      }
+    });
+  });
+}
+
+// --- Split view ---
+function toggleSplitView() {
+  splitActive = !splitActive;
+  const workspace = document.getElementById('workspace')!;
+
+  if (splitActive) {
+    const pane = document.createElement('div');
+    pane.id = 'viewer-pane-right';
+    pane.className = 'viewer-pane-split';
+    pane.innerHTML = '<div id="viewer-right" class="markdown-body"></div>';
+    workspace.classList.add('split-view');
+    workspace.insertBefore(pane, tocSidebar);
+    splitViewer = pane.querySelector('#viewer-right')!;
+    if (currentFilePath) loadIntoSplit(currentFilePath);
+  } else {
+    workspace.classList.remove('split-view');
+    document.getElementById('viewer-pane-right')?.remove();
+    splitViewer = null;
+  }
+}
+
+async function loadIntoSplit(path: string) {
+  if (!splitViewer) return;
+  const type = detectFileType(path);
+
+  if (type === 'image') {
+    const url = `/api/file?path=${encodeURIComponent(path)}`;
+    if (path.toLowerCase().endsWith('.svg')) {
+      try {
+        const res = await fetch(url);
+        const svgText = await res.text();
+        const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
+        splitViewer.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div></div>`;
+      } catch { /* ignore */ }
+    } else {
+      splitViewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /></div>`;
+    }
+    initImageZoom(splitViewer);
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
+    if (!res.ok) return;
+    const content = await res.text();
+    renderContent(content, path, splitViewer);
+    initImageZoom(splitViewer);
+  } catch { /* ignore */ }
+}
+
 // --- Init ---
 let fileTree: FileTree | null = null;
 
@@ -703,8 +843,18 @@ async function init() {
   if (hasServer) {
     await loadCustomCSS();
 
-    fileTree = new FileTree(document.getElementById('filetree')!, (path) => loadServerFile(path));
+    fileTree = new FileTree(document.getElementById('filetree')!, (path) => {
+      if (splitActive && splitViewer) {
+        // Alt+click on sidebar loads into split pane (handled via keyboard state)
+        loadServerFile(path);
+      } else {
+        loadServerFile(path);
+      }
+    });
     await fileTree.load();
+
+    // Wire up TOC backlinks to navigate files
+    toc.setFileSelectCallback((path) => loadServerFile(path));
 
     sidebarVisible = true;
     sidebar.classList.remove('sidebar-hidden');

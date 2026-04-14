@@ -10,8 +10,10 @@ export class SearchModal {
   private overlay: HTMLElement;
   private input: HTMLInputElement;
   private results: HTMLElement;
+  private regexToggle: HTMLButtonElement;
   private onSelect: FileSelectCallback;
   private mode: 'files' | 'fulltext' = 'files';
+  private useRegex = false;
   private fileList: string[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -25,15 +27,30 @@ export class SearchModal {
     const modal = document.createElement('div');
     modal.className = 'search-modal';
 
+    const inputRow = document.createElement('div');
+    inputRow.className = 'search-input-row';
+
     this.input = document.createElement('input');
     this.input.className = 'search-input';
     this.input.placeholder = 'Search files... (Shift for full-text)';
     this.input.type = 'text';
 
+    this.regexToggle = document.createElement('button');
+    this.regexToggle.className = 'search-regex-toggle';
+    this.regexToggle.textContent = '.*';
+    this.regexToggle.title = 'Toggle regex search';
+    this.regexToggle.addEventListener('click', () => {
+      this.useRegex = !this.useRegex;
+      this.regexToggle.classList.toggle('active', this.useRegex);
+      if (this.input.value.trim()) this.search();
+    });
+
     this.results = document.createElement('div');
     this.results.className = 'search-results';
 
-    modal.appendChild(this.input);
+    inputRow.appendChild(this.input);
+    inputRow.appendChild(this.regexToggle);
+    modal.appendChild(inputRow);
     modal.appendChild(this.results);
     this.overlay.appendChild(modal);
     document.body.appendChild(this.overlay);
@@ -70,6 +87,7 @@ export class SearchModal {
       : 'Search files by name...';
     this.input.value = '';
     this.results.innerHTML = '';
+    this.regexToggle.style.display = mode === 'fulltext' ? '' : 'none';
     this.overlay.style.display = '';
     requestAnimationFrame(() => this.input.focus());
 
@@ -135,7 +153,8 @@ export class SearchModal {
 
   private async searchFullText(query: string) {
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const regexParam = this.useRegex ? '&regex=1' : '';
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}${regexParam}`);
       if (!res.ok) return;
       const results: SearchResult[] = await res.json();
 

@@ -58,6 +58,8 @@ export class TabBar {
     return this.activePath;
   }
 
+  private dragSrcIdx = -1;
+
   private render() {
     if (this.tabs.length <= 1) {
       this.container.style.display = 'none';
@@ -68,13 +70,14 @@ export class TabBar {
     this.container.innerHTML = this.tabs.map((tab) => {
       const isActive = tab.path === this.activePath;
       const safePath = this.escapeAttr(tab.path);
-      return `<div class="tab-item ${isActive ? 'active' : ''}" data-path="${safePath}" title="${safePath}">
+      return `<div class="tab-item ${isActive ? 'active' : ''}" data-path="${safePath}" title="${safePath}" draggable="true">
         <span class="tab-name">${this.escapeHtml(tab.name)}</span>
         <button class="tab-close" data-path="${safePath}" title="Close">&times;</button>
       </div>`;
     }).join('');
 
-    this.container.querySelectorAll<HTMLElement>('.tab-item').forEach((el) => {
+    const items = this.container.querySelectorAll<HTMLElement>('.tab-item');
+    items.forEach((el, idx) => {
       el.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).classList.contains('tab-close')) return;
         const path = el.dataset.path;
@@ -83,6 +86,42 @@ export class TabBar {
           this.onSelect(path);
           this.render();
         }
+      });
+
+      // Drag & drop reorder
+      el.addEventListener('dragstart', (e) => {
+        this.dragSrcIdx = idx;
+        el.classList.add('tab-dragging');
+        e.dataTransfer!.effectAllowed = 'move';
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('tab-dragging');
+        this.container.querySelectorAll('.tab-drop-before, .tab-drop-after').forEach((d) => {
+          d.classList.remove('tab-drop-before', 'tab-drop-after');
+        });
+      });
+      el.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = 'move';
+        const rect = el.getBoundingClientRect();
+        const mid = rect.left + rect.width / 2;
+        el.classList.toggle('tab-drop-before', e.clientX < mid);
+        el.classList.toggle('tab-drop-after', e.clientX >= mid);
+      });
+      el.addEventListener('dragleave', () => {
+        el.classList.remove('tab-drop-before', 'tab-drop-after');
+      });
+      el.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (this.dragSrcIdx < 0 || this.dragSrcIdx === idx) return;
+        const rect = el.getBoundingClientRect();
+        const mid = rect.left + rect.width / 2;
+        const targetIdx = e.clientX < mid ? idx : idx + 1;
+        const [moved] = this.tabs.splice(this.dragSrcIdx, 1);
+        const insertAt = targetIdx > this.dragSrcIdx ? targetIdx - 1 : targetIdx;
+        this.tabs.splice(insertAt, 0, moved);
+        this.dragSrcIdx = -1;
+        this.render();
       });
     });
 

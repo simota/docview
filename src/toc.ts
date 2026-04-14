@@ -1,10 +1,22 @@
+type FileSelectCallback = (path: string) => void;
+
+interface Backlink {
+  path: string;
+  line: number;
+}
+
 export class TableOfContents {
   private container: HTMLElement;
   private viewer: HTMLElement;
+  private onFileSelect: FileSelectCallback | null = null;
 
   constructor(container: HTMLElement, viewer: HTMLElement) {
     this.container = container;
     this.viewer = viewer;
+  }
+
+  setFileSelectCallback(cb: FileSelectCallback) {
+    this.onFileSelect = cb;
   }
 
   update() {
@@ -29,6 +41,8 @@ export class TableOfContents {
     });
 
     html += '</nav>';
+    // Backlinks container (populated async)
+    html += '<div class="backlinks-section" id="backlinks-section"></div>';
     this.container.innerHTML = html;
 
     // Click handler — smooth scroll
@@ -44,6 +58,34 @@ export class TableOfContents {
         }
       });
     });
+  }
+
+  async loadBacklinks(filePath: string) {
+    const section = this.container.querySelector('#backlinks-section');
+    if (!section) return;
+    try {
+      const res = await fetch(`/api/backlinks?path=${encodeURIComponent(filePath)}`);
+      if (!res.ok) return;
+      const backlinks: Backlink[] = await res.json();
+      if (backlinks.length === 0) {
+        section.innerHTML = '';
+        return;
+      }
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const escAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      section.innerHTML = `<div class="backlinks-title">Backlinks</div><nav class="backlinks-nav">${
+        backlinks.map((b) =>
+          `<a class="backlink-item" href="#" data-path="${escAttr(b.path)}" title="Line ${b.line}">${esc(b.path)}</a>`
+        ).join('')
+      }</nav>`;
+      section.querySelectorAll<HTMLAnchorElement>('.backlink-item').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const path = a.dataset.path;
+          if (path && this.onFileSelect) this.onFileSelect(path);
+        });
+      });
+    } catch { /* ignore */ }
   }
 
   private setActive(active: HTMLElement) {

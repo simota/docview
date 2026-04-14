@@ -42,10 +42,13 @@ const ICON_CHEVRON = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none
 export class FileTree {
   private container: HTMLElement;
   private rootLabel: HTMLElement;
+  private filterInput: HTMLInputElement;
   private treeList: HTMLElement;
   private onSelect: FileSelectCallback;
   private activePath: string | null = null;
   private openDirs = new Set<string>();
+  private treeData: FileNode[] = [];
+  private filterQuery = '';
 
   constructor(container: HTMLElement, onSelect: FileSelectCallback) {
     this.container = container;
@@ -56,12 +59,39 @@ export class FileTree {
     this.rootLabel.setAttribute('role', 'heading');
     this.rootLabel.setAttribute('aria-level', '2');
 
+    this.filterInput = document.createElement('input');
+    this.filterInput.className = 'filetree-filter';
+    this.filterInput.type = 'text';
+    this.filterInput.placeholder = 'Filter files...';
+    this.filterInput.addEventListener('input', () => {
+      this.filterQuery = this.filterInput.value.toLowerCase();
+      this.renderTree(this.filterQuery ? this.filterTree(this.treeData, this.filterQuery) : this.treeData, this.treeList, 0);
+    });
+
     this.treeList = document.createElement('div');
     this.treeList.className = 'filetree-list';
     this.treeList.setAttribute('role', 'tree');
 
     this.container.appendChild(this.rootLabel);
+    this.container.appendChild(this.filterInput);
     this.container.appendChild(this.treeList);
+  }
+
+  private filterTree(nodes: FileNode[], query: string): FileNode[] {
+    const result: FileNode[] = [];
+    for (const node of nodes) {
+      if (node.type === 'file') {
+        if (node.name.toLowerCase().includes(query) || node.path.toLowerCase().includes(query)) {
+          result.push(node);
+        }
+      } else if (node.children) {
+        const filtered = this.filterTree(node.children, query);
+        if (filtered.length > 0) {
+          result.push({ ...node, children: filtered });
+        }
+      }
+    }
+    return result;
   }
 
   async load(): Promise<void> {
@@ -70,7 +100,9 @@ export class FileTree {
       if (!res.ok) return;
       const data: TreeResponse = await res.json();
       this.rootLabel.textContent = data.root;
-      this.renderTree(data.tree, this.treeList, 0);
+      this.treeData = data.tree;
+      const display = this.filterQuery ? this.filterTree(this.treeData, this.filterQuery) : this.treeData;
+      this.renderTree(display, this.treeList, 0);
     } catch {
       this.container.style.display = 'none';
     }

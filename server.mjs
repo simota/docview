@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, readdir, stat, realpath } from 'node:fs/promises';
 import { join, resolve, relative, extname, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 import chokidar from 'chokidar';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -190,15 +191,17 @@ const server = createServer(async (req, res) => {
     }
 
     try {
+      const fileStat = await stat(resolved);
+      const mtime = fileStat.mtime.toISOString();
       const ext = extname(resolved).toLowerCase();
       if (IMAGE_EXTENSIONS.has(ext)) {
         const content = await readFile(resolved);
         const mime = IMAGE_MIME[ext] || 'application/octet-stream';
-        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5' });
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime });
         res.end(content);
       } else {
         const content = await readFile(resolved, 'utf-8');
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
         res.end(content);
       }
     } catch {
@@ -236,7 +239,20 @@ const server = createServer(async (req, res) => {
     }
 
     const results = [];
-    const lowerQuery = query.toLowerCase();
+    const useRegex = url.searchParams.get('regex') === '1';
+    let matcher;
+    if (useRegex) {
+      try {
+        matcher = new RegExp(query, 'i');
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid regex pattern' }));
+        return;
+      }
+    } else {
+      const lowerQuery = query.toLowerCase();
+      matcher = { test: (s) => s.toLowerCase().includes(lowerQuery) };
+    }
 
     async function searchDir(dir) {
       if (results.length >= 100) return;
@@ -256,7 +272,7 @@ const server = createServer(async (req, res) => {
               const content = await readFile(fullPath, 'utf-8');
               const lines = content.split('\n');
               for (let i = 0; i < lines.length && results.length < 100; i++) {
-                if (lines[i].toLowerCase().includes(lowerQuery)) {
+                if (matcher.test(lines[i])) {
                   results.push({
                     path: relative(targetDir, fullPath),
                     line: i + 1,
@@ -296,9 +312,148 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/backlinks') {
+    const targetPath = url.searchParams.get('path');
+    if (!targetPath) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing path parameter' }));
+      return;
+    }
+
+    const MARKDOWN_LIKE = new Set(['.md', '.markdown', '.mdx', '.txt']);
+    const targetName = basename(targetPath).replace(/\.[^.]+$/, '');
+    const backlinks = [];
+
+    function isLinkToTarget(link, sourcePath) {
+      if (!link) return false;
+      const linkPath = link.split('#')[0].replace(/^\.\//, '');
+      if (!linkPath) return false;
+      if (linkPath === targetPath) return true;
+      const sourceDir = dirname(sourcePath);
+      const resolved = join(sourceDir, linkPath).replace(/\\/g, '/');
+      if (resolved === targetPath) return true;
+      const linkName = basename(linkPath).replace(/\.[^.]+$/, '');
+      if (linkName === targetName && !linkPath.includes('/')) return true;
+      return false;
+    }
+
+    async function scanBacklinks(dir) {
+      if (backlinks.length >= 50) return;
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (backlinks.length >= 50) return;
+        if (entry.name === 'node_modules' || entry.name === '.git') continue;
+        if (entry.isDirectory() && entry.name.startsWith('.')) continue;
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await scanBacklinks(fullPath);
+        } else {
+          const ext = extname(entry.name).toLowerCase();
+          if (!MARKDOWN_LIKE.has(ext)) continue;
+          const relPath = relative(targetDir, fullPath);
+          if (relPath === targetPath) continue;
+          try {
+            const content = await readFile(fullPath, 'utf-8');
+            const linkRegex = /\[(?:[^\]]*)\]\(([^)]+)\)|\[\[([^\]|]+)(?:\|[^\]]*?)?\]\]/g;
+            let match;
+            while ((match = linkRegex.exec(content)) !== null) {
+              const linkTarget = match[1] || match[2];
+              if (isLinkToTarget(linkTarget, relPath)) {
+                const line = content.substring(0, match.index).split('\n').length;
+                backlinks.push({ path: relPath, line });
+                break;
+              }
+            }
+          } catch { /* skip */ }
+        }
+      }
+    }
+
+    try {
+      await scanBacklinks(targetDir);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(backlinks));
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Internal server error' }));
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/diagram') {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+
+    let data;
+    try { data = JSON.parse(body); } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      return;
+    }
+
+    const { type, source } = data;
+    if (!type || !source) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing type or source' }));
+      return;
+    }
+
+    // Try local CLI first
+    const localSvg = await tryLocalDiagramCLI(type, source);
+    if (localSvg) {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+      res.end(localSvg);
+      return;
+    }
+
+    // Fallback to Kroki
+    const krokiUrl = process.env.KROKI_URL || 'https://kroki.io';
+    try {
+      const krokiRes = await fetch(`${krokiUrl}/${type}/svg`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: source,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (krokiRes.ok) {
+        const svg = await krokiRes.text();
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+        res.end(svg);
+      } else {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Diagram rendering failed' }));
+      }
+    } catch {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Diagram service unavailable' }));
+    }
+    return;
+  }
+
   // Static files
   await serveStatic(res, url.pathname);
 });
+
+// Diagram CLI helper
+function tryLocalDiagramCLI(type, source) {
+  const commands = {
+    d2: ['d2', ['-', '-']],
+    plantuml: ['plantuml', ['-tsvg', '-pipe']],
+  };
+  const cmd = commands[type];
+  if (!cmd) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const proc = spawn(cmd[0], cmd[1], { timeout: 15000 });
+      let out = '';
+      proc.stdout.on('data', (d) => { out += d; });
+      proc.on('close', (code) => { resolve(code === 0 && out ? out : null); });
+      proc.on('error', () => resolve(null));
+      proc.stdin.write(source);
+      proc.stdin.end();
+    } catch { resolve(null); }
+  });
+}
 
 // File watcher
 const mdGlobs = [...SUPPORTED_EXTENSIONS].map((ext) => `**/*${ext}`);

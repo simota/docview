@@ -1642,6 +1642,23 @@ body.dragging::after {
   color: var(--accent);
 }
 
+/* Tab drag & drop */
+.tab-item[draggable='true'] {
+  user-select: none;
+}
+
+.tab-dragging {
+  opacity: 0.4;
+}
+
+.tab-drop-before {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.tab-drop-after {
+  box-shadow: inset -2px 0 0 var(--accent);
+}
+
 /* ===== Shortcut Help (#2) ===== */
 .shortcut-modal {
   padding: 24px 32px;
@@ -1998,7 +2015,9 @@ mark.find-current {
   .copy-btn, .mermaid-label, .code-lang, .data-lang,
   .tab-bar, .reconnect-banner, .json-view-toggle,
   .find-bar, .slide-overlay, .header-anchor,
-  .error-banner, .welcome {
+  .error-banner, .welcome, .progress-bar,
+  .diagram-label, .viewer-pane-split,
+  .backlinks-section, .filetree-filter {
     display: none !important;
   }
 
@@ -2282,6 +2301,241 @@ mark.find-current {
   .markdown-body dd {
     break-before: avoid;
   }
+
+  /* ===== D2/PlantUML diagrams ===== */
+  .diagram-container {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #d0d0d0 !important;
+    border-radius: 4pt !important;
+  }
+
+  .diagram-rendered svg {
+    max-width: 100% !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ===== Wiki links ===== */
+  a.wiki-link::after {
+    content: '';
+  }
+}
+
+/* ===== Progress Bar ===== */
+.progress-bar {
+  height: 3px;
+  width: 0%;
+  background: var(--accent-gradient);
+  transition: width 0.1s ease-out;
+  flex-shrink: 0;
+  border-radius: 0 0 2px 2px;
+}
+
+/* ===== File Tree Filter ===== */
+.filetree-filter {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 4px 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filetree-filter:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.filetree-filter::placeholder {
+  color: var(--text-muted);
+}
+
+/* ===== Search Regex Toggle ===== */
+.search-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.search-input-row .search-input {
+  flex: 1;
+}
+
+.search-regex-toggle {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.search-regex-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.search-regex-toggle.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* ===== Breadcrumb Mtime ===== */
+.breadcrumb-mtime {
+  margin-left: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* ===== Image Zoom ===== */
+.image-view img,
+.image-view .svg-container {
+  transition: transform 0.15s ease;
+  transform-origin: center center;
+}
+
+.image-view img[data-zoom-init],
+.image-view .svg-container[data-zoom-init] {
+  cursor: zoom-in;
+}
+
+/* ===== Backlinks ===== */
+.backlinks-section {
+  margin-top: 16px;
+}
+
+.backlinks-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.backlinks-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.backlink-item {
+  display: block;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.backlink-item:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* ===== Split View ===== */
+.split-view #viewer-pane {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+
+.viewer-pane-split {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.viewer-pane-split .markdown-body {
+  flex: 1;
+  padding: 40px 48px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+/* ===== Wiki Links ===== */
+a.wiki-link {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent-lighter);
+  transition: all 0.15s;
+}
+
+a.wiki-link:hover {
+  color: var(--link-hover);
+  border-bottom-style: solid;
+}
+
+/* ===== D2/PlantUML Diagram Containers ===== */
+.diagram-container {
+  margin: 1.5em 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.diagram-label {
+  padding: 6px 14px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.diagram-source {
+  padding: 1em 1.2em;
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--code-block-bg);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.diagram-rendered {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  background: var(--bg-primary);
+}
+
+.diagram-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-rendered-ok .diagram-source {
+  display: none;
 }
 
 /* ===== Responsive ===== */

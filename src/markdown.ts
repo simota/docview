@@ -27,6 +27,7 @@ import frontmatter from 'markdown-it-front-matter';
 import 'katex/dist/katex.min.css';
 
 let mermaidCounter = 0;
+let diagramCounter = 0;
 
 function initMermaid(isDark: boolean) {
   mermaid.initialize({
@@ -136,10 +137,17 @@ const md = new MarkdownIt({
   html: false,
   linkify: true,
   typographer: true,
-  highlight(str: string, lang: string): string {
+  highlight(str_: string, lang: string): string {
+    const str = str_.replace(/^([ \t]*\n)+/, '').trimEnd();
     if (lang === 'mermaid') {
       const id = `mermaid-${mermaidCounter++}`;
       return `<div class="mermaid-container"><div class="mermaid-label">Diagram</div><pre class="mermaid" id="${id}">${md.utils.escapeHtml(str)}</pre></div>`;
+    }
+    const DIAGRAM_TYPES = new Set(['d2', 'plantuml', 'ditaa']);
+    if (DIAGRAM_TYPES.has(lang)) {
+      const id = `diagram-${diagramCounter++}`;
+      const labelMap: Record<string, string> = { d2: 'D2', plantuml: 'PlantUML', ditaa: 'Ditaa' };
+      return `<div class="diagram-container" data-diagram-type="${lang}" data-diagram-id="${id}"><div class="diagram-label">${labelMap[lang] || lang}</div><pre class="diagram-source" id="${id}">${md.utils.escapeHtml(str)}</pre><div class="diagram-rendered" id="${id}-rendered"></div></div>`;
     }
     const langLabel = lang ? `<span class="code-lang">${md.utils.escapeHtml(lang)}</span>` : '';
     if (lang && hljs.getLanguage(lang)) {
@@ -216,6 +224,35 @@ md.use(frontmatter, () => {
   // silently consume front matter
 });
 
+// Wiki links [[target]] or [[target|display]]
+function wikiLinkPlugin(mdi: MarkdownIt) {
+  mdi.inline.ruler.after('link', 'wiki_link', (state, silent) => {
+    const src = state.src;
+    const pos = state.pos;
+    if (src.charCodeAt(pos) !== 0x5B || src.charCodeAt(pos + 1) !== 0x5B) return false; // [[
+    const closeIdx = src.indexOf(']]', pos + 2);
+    if (closeIdx === -1) return false;
+    if (silent) return true;
+
+    const content = src.slice(pos + 2, closeIdx);
+    const pipeIdx = content.indexOf('|');
+    const target = pipeIdx >= 0 ? content.slice(0, pipeIdx).trim() : content.trim();
+    const display = pipeIdx >= 0 ? content.slice(pipeIdx + 1).trim() : target;
+
+    const href = target.includes('.') ? target : target + '.md';
+    const tokenO = state.push('wiki_link_open', 'a', 1);
+    tokenO.attrSet('href', href);
+    tokenO.attrSet('class', 'wiki-link');
+    tokenO.markup = '[[';
+    const tokenT = state.push('text', '', 0);
+    tokenT.content = display;
+    state.push('wiki_link_close', 'a', -1);
+    state.pos = closeIdx + 2;
+    return true;
+  });
+}
+md.use(wikiLinkPlugin);
+
 // --- Link target ---
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const defaultRender =
@@ -237,7 +274,33 @@ md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
 
 export function renderMarkdown(source: string): string {
   mermaidCounter = 0;
+  diagramCounter = 0;
   return md.render(source);
+}
+
+export async function renderExternalDiagrams(container: HTMLElement): Promise<void> {
+  const blocks = container.querySelectorAll<HTMLElement>('.diagram-container');
+  for (const block of blocks) {
+    const type = block.dataset.diagramType;
+    const pre = block.querySelector<HTMLElement>('.diagram-source');
+    const target = block.querySelector<HTMLElement>('.diagram-rendered');
+    if (!type || !pre || !target) continue;
+    const source = pre.textContent || '';
+    try {
+      const res = await fetch('/api/diagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, source }),
+      });
+      if (res.ok) {
+        const svg = await res.text();
+        const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
+        target.innerHTML = cleanSvg;
+        pre.style.display = 'none';
+        block.classList.add('diagram-rendered-ok');
+      }
+    } catch { /* show source as fallback */ }
+  }
 }
 
 export async function renderMermaidDiagrams(): Promise<void> {
@@ -250,7 +313,7 @@ export async function renderMermaidDiagrams(): Promise<void> {
       const { svg } = await mermaid.render(id + '-svg', code);
       const wrapper = el.closest('.mermaid-container');
       if (wrapper) {
-        const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] });
+        const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
         wrapper.innerHTML = `<div class="mermaid-rendered">${cleanSvg}</div>`;
       }
     } catch {
