@@ -1,11 +1,15 @@
 import { renderMarkdown, renderMermaidDiagrams, updateMermaidTheme } from './markdown';
 import { initTheme, toggleTheme } from './theme';
-import { FileTree } from './filetree';
+import { FileTree, initSidebarResize } from './filetree';
 import { TableOfContents } from './toc';
 import { SearchModal } from './search';
 import { renderJsonTree } from './json-tree';
+import { renderYamlTree } from './yaml-tree';
+import { TabBar, addRecent, getRecent } from './tabs';
 import hljs from 'highlight.js';
 import './style.css';
+
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB (#10)
 
 let currentFilePath: string | null = null;
 let sidebarVisible = false;
@@ -22,6 +26,14 @@ const fileInput = document.getElementById('file-input') as HTMLInputElement;
 const sidebar = document.getElementById('sidebar') as HTMLElement;
 const breadcrumb = document.getElementById('breadcrumb') as HTMLElement;
 const tocSidebar = document.getElementById('toc-sidebar') as HTMLElement;
+const tabBarEl = document.getElementById('tab-bar') as HTMLElement;
+
+// --- Tab bar (#14) ---
+const tabBar = new TabBar(
+  tabBarEl,
+  (path) => loadServerFile(path),
+  (path) => { if (path) loadServerFile(path); else showWelcome(); }
+);
 
 // --- File type detection ---
 const MARKDOWN_EXT = new Set(['.md', '.markdown', '.mdx', '.txt']);
@@ -187,6 +199,31 @@ function renderContent(content: string, path: string) {
         } else {
           renderHighlighted(content, path);
         }
+      } else if (path.endsWith('.yaml') || path.endsWith('.yml')) {
+        // YAML tree view (#3)
+        const treeHtml = renderYamlTree(content);
+        if (treeHtml) {
+          const highlighted = hljs.highlight(content, { language: 'yaml' }).value;
+          viewer.innerHTML = `
+            <div class="json-view-toggle">
+              <button class="json-toggle-btn active" data-view="tree">Tree</button>
+              <button class="json-toggle-btn" data-view="source">Source</button>
+            </div>
+            <div class="json-view-tree">${treeHtml}</div>
+            <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">YAML</span><pre class="hljs"><code>${highlighted}</code></pre></div></div>`;
+          viewer.querySelectorAll<HTMLButtonElement>('.json-toggle-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              viewer.querySelectorAll('.json-toggle-btn').forEach((b) => b.classList.remove('active'));
+              btn.classList.add('active');
+              const tree = viewer.querySelector('.json-view-tree') as HTMLElement;
+              const source = viewer.querySelector('.json-view-source') as HTMLElement;
+              if (tree) tree.style.display = btn.dataset.view === 'tree' ? '' : 'none';
+              if (source) source.style.display = btn.dataset.view === 'source' ? '' : 'none';
+            });
+          });
+        } else {
+          renderHighlighted(content, path);
+        }
       } else {
         renderHighlighted(content, path);
       }
@@ -217,7 +254,12 @@ function renderHighlighted(content: string, path: string) {
   } else {
     highlighted = hljs.highlightAuto(content).value;
   }
-  viewer.innerHTML = `<div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs"><code>${highlighted}</code></pre></div>`;
+  // Line numbers (#4)
+  const lines = highlighted.split('\n');
+  const numbered = lines.map((line, i) =>
+    `<span class="line-row"><span class="line-num">${i + 1}</span><span class="line-content">${line}</span></span>`
+  ).join('\n');
+  viewer.innerHTML = `<div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs has-line-nums"><code>${numbered}</code></pre></div>`;
 }
 
 async function renderImage(path: string) {
@@ -268,22 +310,46 @@ async function loadServerFile(path: string) {
   document.title = `${path} — DocView`;
   updateBreadcrumb(path);
   updateHash(path);
+  addRecent(path);
+  tabBar.open(path);
 
   if (type === 'image') {
     await renderImage(path);
     toc.clear();
+    fileTree?.setActive(path);
     return;
   }
 
   try {
     const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
-    if (!res.ok) return;
+    if (!res.ok) {
+      showError(`Failed to load: ${path} (${res.status})`);
+      return;
+    }
     const content = await res.text();
-    renderContent(content, path);
-  } catch { /* ignore */ }
 
-  // Update sidebar active state
+    // Large file warning (#10)
+    if (content.length > MAX_FILE_SIZE) {
+      viewer.innerHTML = `<div class="error-banner">
+        <p><strong>Large file</strong> (${(content.length / 1024).toFixed(0)} KB)</p>
+        <p>This file may be slow to render.</p>
+        <button class="error-btn" id="force-render">Render anyway</button>
+      </div>`;
+      document.getElementById('force-render')?.addEventListener('click', () => renderContent(content, path));
+      return;
+    }
+
+    renderContent(content, path);
+  } catch {
+    showError(`Connection error loading: ${path}`);
+  }
+
   fileTree?.setActive(path);
+}
+
+// Error UX (#11)
+function showError(message: string) {
+  viewer.innerHTML = `<div class="error-banner"><p>${escapeHtml(message)}</p><button class="error-btn" onclick="location.reload()">Reload</button></div>`;
 }
 
 async function reloadCurrentFile() {
@@ -351,19 +417,89 @@ function handleDrop(e: DragEvent) {
   if (file) loadLocalFile(file);
 }
 
+// Shortcut help overlay (#2)
+function toggleShortcutHelp() {
+  let overlay = document.getElementById('shortcut-overlay');
+  if (overlay) { overlay.remove(); return; }
+  overlay = document.createElement('div');
+  overlay.id = 'shortcut-overlay';
+  overlay.className = 'search-overlay';
+  overlay.innerHTML = `<div class="search-modal shortcut-modal">
+    <h2 class="shortcut-title">Keyboard Shortcuts</h2>
+    <div class="shortcut-grid">
+      <kbd>Cmd+P</kbd><span>Search files</span>
+      <kbd>Cmd+Shift+F</kbd><span>Full-text search</span>
+      <kbd>Cmd+E</kbd><span>Recent files</span>
+      <kbd>Cmd+B</kbd><span>Toggle sidebar</span>
+      <kbd>Cmd+O</kbd><span>Open file</span>
+      <kbd>Cmd+Shift+E</kbd><span>Export HTML</span>
+      <kbd>↑ / ↓</kbd><span>Navigate sidebar</span>
+      <kbd>?</kbd><span>This help</span>
+      <kbd>Esc</kbd><span>Close overlay</span>
+    </div>
+  </div>`;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// Recent files modal (#15)
+function showRecentFiles() {
+  const recent = getRecent();
+  if (recent.length === 0) { searchModal.open('files'); return; }
+  searchModal.open('files');
+  // Inject recent list into search
+}
+
+// HTML export (#16)
+function exportHTML() {
+  const content = viewer.innerHTML;
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${document.title}</title>
+<style>body{font-family:Inter,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;line-height:1.7;color:#1a1c2e}
+pre{background:#f5f6fb;padding:1em;border-radius:8px;overflow-x:auto}code{font-family:'JetBrains Mono',monospace}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;text-align:left}
+blockquote{border-left:3px solid #6366f1;margin:0;padding:0.5em 1em;color:#555}
+img{max-width:100%}h1,h2,h3{color:#1a1c2e}</style></head>
+<body>${content}</body></html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (currentFilePath?.replace(/\.[^.]+$/, '') || 'document') + '.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function handleKeyboard(e: KeyboardEvent) {
+  if (document.getElementById('shortcut-overlay')) {
+    if (e.key === 'Escape') { document.getElementById('shortcut-overlay')?.remove(); e.preventDefault(); }
+    return;
+  }
   if (searchModal.isOpen) return;
 
-  // Cmd+P — file search
+  if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    toggleShortcutHelp();
+    return;
+  }
   if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
     e.preventDefault();
     searchModal.open('files');
     return;
   }
-  // Cmd+Shift+F — full-text search (#11)
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') {
     e.preventDefault();
     searchModal.open('fulltext');
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'e' && !e.shiftKey) {
+    e.preventDefault();
+    showRecentFiles();
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'e') {
+    e.preventDefault();
+    exportHTML();
     return;
   }
   if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
@@ -387,7 +523,21 @@ function connectSSE() {
       if (data.event === 'add' || data.event === 'unlink') fileTree?.refresh();
     } catch { /* ignore */ }
   };
-  evtSource.onerror = () => { evtSource.close(); setTimeout(connectSSE, 3000); };
+  evtSource.onerror = () => {
+    evtSource.close();
+    showReconnectBanner();
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+function showReconnectBanner() {
+  if (document.getElementById('reconnect-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'reconnect-banner';
+  banner.className = 'reconnect-banner';
+  banner.innerHTML = 'Connection lost — reconnecting...';
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 4000);
 }
 
 async function detectServerMode(): Promise<{ server: boolean; initialFile: string | null }> {
@@ -436,6 +586,7 @@ async function init() {
 
     connectSSE();
     setupSidebarKeyNav();
+    initSidebarResize(sidebar);
 
     // URL hash takes priority, then CLI initial file, then first file in tree
     const hashFile = getHashFile();

@@ -1503,6 +1503,236 @@ body.dragging::after {
 .jt-count { color: var(--text-muted); font-size: 11px; margin-left: 4px; }
 
 /* ===== Print (#8, #12) ===== */
+/* ===== File Type Icons (#1) ===== */
+.file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 3px;
+  background: currentColor;
+  -webkit-background-clip: initial;
+  flex-shrink: 0;
+}
+
+.file-icon::before {
+  content: '';
+}
+
+.filetree-item .file-icon {
+  background: none;
+  opacity: 0.85;
+}
+
+/* ===== Line Numbers (#4) ===== */
+.has-line-nums code {
+  counter-reset: line;
+}
+
+.line-row {
+  display: block;
+}
+
+.line-num {
+  display: inline-block;
+  width: 3.5em;
+  text-align: right;
+  padding-right: 1em;
+  color: var(--text-muted);
+  opacity: 0.4;
+  user-select: none;
+  font-size: 12px;
+}
+
+.line-content {
+  /* inherits hljs colors */
+}
+
+/* ===== Sidebar Resize (#5) ===== */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.sidebar-resize-handle:hover {
+  background: var(--accent);
+  opacity: 0.3;
+  border-radius: 3px;
+}
+
+#sidebar {
+  position: relative;
+}
+
+/* ===== Tab Bar (#14) ===== */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 8px;
+  height: 34px;
+  min-height: 34px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.tab-item:hover {
+  color: var(--text-primary);
+  background: var(--accent-bg);
+}
+
+.tab-item.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 500;
+}
+
+.tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+}
+
+.tab-item:hover .tab-close {
+  opacity: 0.6;
+}
+
+.tab-close:hover {
+  opacity: 1 !important;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* ===== Shortcut Help (#2) ===== */
+.shortcut-modal {
+  padding: 24px 32px;
+}
+
+.shortcut-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  align-items: center;
+}
+
+.shortcut-grid kbd {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.shortcut-grid span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ===== Error / Reconnect (#10, #11) ===== */
+.error-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.error-banner p {
+  margin: 0;
+}
+
+.error-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.error-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.reconnect-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--accent-gradient);
+  color: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  z-index: 9999;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
 @media print {
   #toolbar, #sidebar, #toc-sidebar, .search-overlay,
   .copy-btn, .mermaid-label, .code-lang, .data-lang {
