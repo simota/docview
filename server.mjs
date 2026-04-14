@@ -37,7 +37,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   // Markdown
   '.md', '.markdown', '.mdx', '.txt',
   // Data
-  '.json', '.yaml', '.yml',
+  '.json', '.yaml', '.yml', '.csv', '.tsv',
   // Config
   '.toml', '.ini', '.conf', '.env', '.cfg', '.properties',
   // Images

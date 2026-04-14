@@ -1,0 +1,10 @@
+src/
+tests/
+test-results/
+playwright.config.ts
+tsconfig.json
+*.local
+.DS_Store
+.git/
+.gitignore
+src/assets/

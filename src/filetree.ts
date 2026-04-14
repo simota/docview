@@ -25,6 +25,7 @@ function fileIcon(name: string): string {
     ini: { color: '#d97706', label: 'I' }, conf: { color: '#d97706', label: 'C' },
     env: { color: '#d97706', label: 'E' }, cfg: { color: '#d97706', label: 'C' },
     properties: { color: '#d97706', label: 'P' },
+    csv: { color: '#22c55e', label: ',' }, tsv: { color: '#22c55e', label: ',' },
     png: { color: '#ec4899', label: '◻' }, jpg: { color: '#ec4899', label: '◻' },
     jpeg: { color: '#ec4899', label: '◻' }, gif: { color: '#ec4899', label: '◻' },
     svg: { color: '#ec4899', label: '◻' }, webp: { color: '#ec4899', label: '◻' },

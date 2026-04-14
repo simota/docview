@@ -6,13 +6,16 @@ import { SearchModal } from './search';
 import { renderJsonTree } from './json-tree';
 import { renderYamlTree } from './yaml-tree';
 import { TabBar, addRecent, getRecent } from './tabs';
+import { renderCsvTable } from './csv-viewer';
 import hljs from 'highlight.js';
 import './style.css';
 
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB (#10)
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+let zoomLevel = 100; // % (#6)
 
 let currentFilePath: string | null = null;
 let sidebarVisible = false;
+let wordWrap = false; // (#7)
 const scrollPositions = new Map<string, number>();
 
 // --- DOM refs ---
@@ -38,10 +41,11 @@ const tabBar = new TabBar(
 // --- File type detection ---
 const MARKDOWN_EXT = new Set(['.md', '.markdown', '.mdx', '.txt']);
 const DATA_EXT = new Set(['.json', '.yaml', '.yml']);
+const CSV_EXT = new Set(['.csv', '.tsv']);
 const CONFIG_EXT = new Set(['.toml', '.ini', '.conf', '.env', '.cfg', '.properties']);
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 
-type FileType = 'markdown' | 'data' | 'config' | 'image' | 'unknown';
+type FileType = 'markdown' | 'data' | 'csv' | 'config' | 'image' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
@@ -51,6 +55,7 @@ function detectFileType(path: string): FileType {
   const ext = getExt(path);
   if (MARKDOWN_EXT.has(ext)) return 'markdown';
   if (DATA_EXT.has(ext)) return 'data';
+  if (CSV_EXT.has(ext)) return 'csv';
   if (CONFIG_EXT.has(ext)) return 'config';
   if (IMAGE_EXT.has(ext)) return 'image';
   return 'unknown';
@@ -164,6 +169,7 @@ function renderContent(content: string, path: string) {
     case 'markdown':
       viewer.innerHTML = renderMarkdown(content);
       renderMermaidDiagrams();
+      fixRelativeImages(path);
       toc.update();
       interceptRelativeLinks();
       break;
@@ -231,6 +237,11 @@ function renderContent(content: string, path: string) {
       break;
     }
 
+    case 'csv':
+      viewer.innerHTML = renderCsvTable(content, path);
+      toc.clear();
+      break;
+
     case 'config':
       renderHighlighted(content, path);
       toc.clear();
@@ -280,6 +291,73 @@ async function renderImage(path: string) {
     return;
   }
   viewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /><p class="image-caption">${escapeHtml(path)}</p></div>`;
+}
+
+// Relative images in Markdown (#5)
+function fixRelativeImages(currentPath: string) {
+  const dir = currentPath.includes('/') ? currentPath.replace(/\/[^/]+$/, '/') : '';
+  viewer.querySelectorAll<HTMLImageElement>('img[src]').forEach((img) => {
+    const src = img.getAttribute('src') || '';
+    if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('/api/')) return;
+    const resolved = (dir + src).replace(/^\.\//, '');
+    img.src = `/api/file?path=${encodeURIComponent(resolved)}`;
+  });
+}
+
+// Zoom (#6)
+function applyZoom() {
+  viewer.style.fontSize = `${zoomLevel}%`;
+}
+
+function zoom(delta: number) {
+  zoomLevel = Math.max(50, Math.min(200, zoomLevel + delta));
+  applyZoom();
+}
+
+// Word wrap toggle (#7)
+function toggleWordWrap() {
+  wordWrap = !wordWrap;
+  viewer.classList.toggle('word-wrap', wordWrap);
+}
+
+// Slide mode (#9) — split by --- and present
+function enterSlideMode() {
+  if (!currentFilePath || detectFileType(currentFilePath) !== 'markdown') return;
+  const slides = viewer.innerHTML.split(/<hr\s*\/?>/gi).filter((s) => s.trim());
+  if (slides.length < 2) return;
+
+  let idx = 0;
+  const overlay = document.createElement('div');
+  overlay.className = 'slide-overlay';
+
+  function renderSlide() {
+    overlay.innerHTML = `
+      <div class="slide-container">
+        <div class="slide-content markdown-body">${slides[idx]}</div>
+        <div class="slide-nav">
+          <span class="slide-counter">${idx + 1} / ${slides.length}</span>
+          <div class="slide-buttons">
+            <button class="slide-btn" id="slide-prev" ${idx === 0 ? 'disabled' : ''}>&#8592; Prev</button>
+            <button class="slide-btn" id="slide-next" ${idx === slides.length - 1 ? 'disabled' : ''}>Next &#8594;</button>
+            <button class="slide-btn slide-exit" id="slide-exit">Exit</button>
+          </div>
+        </div>
+      </div>`;
+    overlay.querySelector('#slide-prev')?.addEventListener('click', () => { if (idx > 0) { idx--; renderSlide(); } });
+    overlay.querySelector('#slide-next')?.addEventListener('click', () => { if (idx < slides.length - 1) { idx++; renderSlide(); } });
+    overlay.querySelector('#slide-exit')?.addEventListener('click', () => overlay.remove());
+  }
+
+  renderSlide();
+  document.body.appendChild(overlay);
+
+  const keyHandler = (e: KeyboardEvent) => {
+    if (!document.body.contains(overlay)) { document.removeEventListener('keydown', keyHandler); return; }
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); if (idx < slides.length - 1) { idx++; renderSlide(); } }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); if (idx > 0) { idx--; renderSlide(); } }
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', keyHandler); }
+  };
+  document.addEventListener('keydown', keyHandler);
 }
 
 function escapeHtml(s: string): string {
@@ -433,6 +511,9 @@ function toggleShortcutHelp() {
       <kbd>Cmd+B</kbd><span>Toggle sidebar</span>
       <kbd>Cmd+O</kbd><span>Open file</span>
       <kbd>Cmd+Shift+E</kbd><span>Export HTML</span>
+      <kbd>Cmd+Shift+S</kbd><span>Slide mode</span>
+      <kbd>Cmd+/−/0</kbd><span>Zoom in/out/reset</span>
+      <kbd>Alt+Z</kbd><span>Word wrap toggle</span>
       <kbd>↑ / ↓</kbd><span>Navigate sidebar</span>
       <kbd>?</kbd><span>This help</span>
       <kbd>Esc</kbd><span>Close overlay</span>
@@ -509,6 +590,30 @@ function handleKeyboard(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
     e.preventDefault();
     toggleSidebar();
+  }
+  // Zoom (#6)
+  if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+    e.preventDefault();
+    zoom(10);
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+    e.preventDefault();
+    zoom(-10);
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+    e.preventDefault();
+    zoomLevel = 100;
+    applyZoom();
+  }
+  // Word wrap (#7)
+  if (e.altKey && e.key === 'z') {
+    e.preventDefault();
+    toggleWordWrap();
+  }
+  // Slide mode (#9)
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 's') {
+    e.preventDefault();
+    enterSlideMode();
   }
 }
 

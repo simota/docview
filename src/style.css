@@ -1733,29 +1733,190 @@ body.dragging::after {
   to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 
+/* ===== CSV Viewer (#4) ===== */
+.csv-view {
+  overflow: hidden;
+}
+
+.csv-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.csv-table-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 160px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.csv-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.csv-table th {
+  position: sticky;
+  top: 0;
+  background: var(--table-header-bg);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.csv-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.csv-table tr:hover td {
+  background: var(--accent-bg);
+}
+
+/* ===== Word Wrap (#7) ===== */
+.word-wrap pre code,
+.word-wrap .csv-table td {
+  white-space: pre-wrap !important;
+  word-break: break-word;
+}
+
+/* ===== Console Block (#10) ===== */
+.markdown-body .code-block pre.hljs code .hljs-meta {
+  color: #22c55e;
+}
+
+[data-theme='dark'] .markdown-body .code-block pre.hljs code .hljs-meta {
+  color: #4ade80;
+}
+
+/* ===== Slide Mode (#9) ===== */
+.slide-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.slide-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 60px 10%;
+  font-size: 1.4em;
+  line-height: 1.8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.slide-content h1 {
+  font-size: 2.5em;
+  text-align: center;
+}
+
+.slide-content h2 {
+  font-size: 1.8em;
+}
+
+.slide-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.slide-counter {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.slide-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.slide-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slide-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: white;
+}
+
+.slide-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slide-exit {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
 @media print {
   #toolbar, #sidebar, #toc-sidebar, .search-overlay,
-  .copy-btn, .mermaid-label, .code-lang, .data-lang {
+  .copy-btn, .mermaid-label, .code-lang, .data-lang,
+  .tab-bar, .reconnect-banner, .json-view-toggle {
     display: none !important;
   }
 
-  #viewer-pane {
-    width: 100% !important;
-  }
-
-  #viewer {
-    padding: 0 !important;
+  #app, #workspace, #viewer-pane, #viewer {
+    display: block !important;
+    height: auto !important;
     overflow: visible !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    position: static !important;
   }
 
   .markdown-body {
     font-size: 12pt;
-    max-width: none;
+    max-width: none !important;
   }
 
   .mermaid-rendered, .code-block pre, .data-view pre {
     break-inside: avoid;
-    box-shadow: none;
+    box-shadow: none !important;
     border-color: #ccc;
   }
 
