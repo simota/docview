@@ -127,7 +127,7 @@ export class SearchModal {
       .slice(0, 20);
 
     this.results.innerHTML = matches
-      .map((p, i) => `<div class="search-item ${i === 0 ? 'active' : ''}" data-path="${p}"><span class="search-icon">📄</span><span class="search-path">${this.highlight(p, query)}</span></div>`)
+      .map((p, i) => `<div class="search-item ${i === 0 ? 'active' : ''}" data-path="${this.escapeAttr(p)}"><span class="search-icon">📄</span><span class="search-path">${this.highlight(p, query)}</span></div>`)
       .join('') || '<div class="search-empty">No files found</div>';
 
     this.bindClicks();
@@ -141,7 +141,7 @@ export class SearchModal {
 
       this.results.innerHTML = results.length
         ? results.map((r, i) =>
-          `<div class="search-item ${i === 0 ? 'active' : ''}" data-path="${r.path}"><span class="search-icon">📄</span><div class="search-detail"><span class="search-path">${r.path}<span class="search-line">:${r.line}</span></span><span class="search-text">${this.escapeHtml(r.text.trim())}</span></div></div>`
+          `<div class="search-item ${i === 0 ? 'active' : ''}" data-path="${this.escapeAttr(r.path)}"><span class="search-icon">📄</span><div class="search-detail"><span class="search-path">${this.escapeHtml(r.path)}<span class="search-line">:${r.line}</span></span><span class="search-text">${this.escapeHtml(r.text.trim())}</span></div></div>`
         ).join('')
         : '<div class="search-empty">No results found</div>';
 
@@ -160,6 +160,10 @@ export class SearchModal {
 
   private escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  private escapeAttr(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   private bindClicks() {

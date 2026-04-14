@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkgPath = join(__dirname, '..', 'package.json');
@@ -75,7 +75,7 @@ async function main() {
     const url = `http://localhost:${port}/`;
     const platform = process.platform;
     const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
-    exec(`${cmd} ${url}`);
+    execFile(cmd, [url], () => {});
   }
 }
 

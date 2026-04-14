@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, stat, realpath } from 'node:fs/promises';
 import { join, resolve, relative, extname, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chokidar from 'chokidar';
@@ -87,11 +87,22 @@ async function buildTree(dir, base = dir) {
   return items;
 }
 
-// Safe path resolution (prevent traversal)
-function safePath(reqPath) {
+// Safe path resolution (prevent traversal + symlink bypass)
+async function safePath(reqPath) {
   const resolved = resolve(targetDir, reqPath);
-  if (!resolved.startsWith(targetDir)) return null;
-  return resolved;
+  // Check string prefix with trailing separator to prevent /docs-secret bypass
+  const safePrefix = targetDir.endsWith('/') ? targetDir : targetDir + '/';
+  if (resolved !== targetDir && !resolved.startsWith(safePrefix)) return null;
+  try {
+    // Resolve symlinks to real path and re-check
+    const real = await realpath(resolved);
+    const realBase = await realpath(targetDir);
+    const realPrefix = realBase.endsWith('/') ? realBase : realBase + '/';
+    if (real !== realBase && !real.startsWith(realPrefix)) return null;
+    return real;
+  } catch {
+    return null;
+  }
 }
 
 // MIME types for static files
@@ -132,9 +143,16 @@ async function serveStatic(res, urlPath) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${port}`);
 
-  // CORS headers for dev
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  // Security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'");
+  // CORS restricted to same origin (no external access)
+  const origin = req.headers.origin;
+  if (origin && (origin === `http://localhost:${port}` || origin === `http://127.0.0.1:${port}`)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -148,10 +166,10 @@ const server = createServer(async (req, res) => {
       const tree = await buildTree(targetDir);
       const rootName = basename(targetDir);
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ root: rootName, path: targetDir, tree }));
+      res.end(JSON.stringify({ root: rootName, tree }));
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: err.message }));
+      res.end(JSON.stringify({ error: 'Internal server error' }));
     }
     return;
   }
@@ -164,7 +182,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const resolved = safePath(filePath);
+    const resolved = await safePath(filePath);
     if (!resolved) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Access denied' }));
@@ -205,7 +223,7 @@ const server = createServer(async (req, res) => {
 
   if (url.pathname === '/api/info') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ dir: targetDir, root: basename(targetDir), initialFile }));
+    res.end(JSON.stringify({ root: basename(targetDir), initialFile }));
     return;
   }
 
@@ -260,7 +278,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify(results));
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: err.message }));
+      res.end(JSON.stringify({ error: 'Internal server error' }));
     }
     return;
   }

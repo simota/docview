@@ -23,7 +23,9 @@ export class TableOfContents {
       const id = h.id || h.querySelector('.header-anchor')?.parentElement?.id || '';
       const text = h.textContent?.replace(/^#\s*/, '').trim() || '';
       if (!text) return;
-      html += `<a class="toc-link toc-level-${level}" href="#${id}" data-target="${id}">${text}</a>`;
+      const safeId = id.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html += `<a class="toc-link toc-level-${level}" href="#${safeId}" data-target="${safeId}">${safeText}</a>`;
     });
 
     html += '</nav>';

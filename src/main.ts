@@ -8,6 +8,7 @@ import { renderYamlTree } from './yaml-tree';
 import { TabBar, addRecent, getRecent } from './tabs';
 import { renderCsvTable } from './csv-viewer';
 import { FindBar } from './find-bar';
+import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import './style.css';
 
@@ -284,7 +285,8 @@ async function renderImage(path: string) {
       const res = await fetch(url);
       if (!res.ok) return;
       const svgText = await res.text();
-      viewer.innerHTML = `<div class="image-view"><div class="svg-container">${svgText}</div><p class="image-caption">${escapeHtml(path)}</p></div>`;
+      const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] });
+      viewer.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div><p class="image-caption">${escapeHtml(path)}</p></div>`;
       const svgEl = viewer.querySelector('.svg-container svg') as SVGElement | null;
       if (svgEl) {
         svgEl.setAttribute('width', '100%');

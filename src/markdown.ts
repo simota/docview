@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import mermaid from 'mermaid';
+import DOMPurify from 'dompurify';
 
 // @ts-expect-error — no type declarations
 import footnote from 'markdown-it-footnote';
@@ -249,7 +250,8 @@ export async function renderMermaidDiagrams(): Promise<void> {
       const { svg } = await mermaid.render(id + '-svg', code);
       const wrapper = el.closest('.mermaid-container');
       if (wrapper) {
-        wrapper.innerHTML = `<div class="mermaid-rendered">${svg}</div>`;
+        const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] });
+        wrapper.innerHTML = `<div class="mermaid-rendered">${cleanSvg}</div>`;
       }
     } catch {
       el.classList.add('mermaid-error');

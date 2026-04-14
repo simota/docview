@@ -67,9 +67,10 @@ export class TabBar {
     this.container.style.display = '';
     this.container.innerHTML = this.tabs.map((tab) => {
       const isActive = tab.path === this.activePath;
-      return `<div class="tab-item ${isActive ? 'active' : ''}" data-path="${tab.path}" title="${tab.path}">
+      const safePath = this.escapeAttr(tab.path);
+      return `<div class="tab-item ${isActive ? 'active' : ''}" data-path="${safePath}" title="${safePath}">
         <span class="tab-name">${this.escapeHtml(tab.name)}</span>
-        <button class="tab-close" data-path="${tab.path}" title="Close">&times;</button>
+        <button class="tab-close" data-path="${safePath}" title="Close">&times;</button>
       </div>`;
     }).join('');
 
@@ -96,6 +97,10 @@ export class TabBar {
 
   private escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  private escapeAttr(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 }
 
