@@ -18,10 +18,11 @@ if (args.includes('--help') || args.includes('-h')) {
   ${pkg.description}
 
   Usage:
-    mdv [directory] [options]
+    docview [path] [options]
+    mdv [path] [options]
 
   Arguments:
-    directory          Directory to serve (default: current directory)
+    path               File or directory to view (default: current directory)
 
   Options:
     -p, --port <port>  Port number (default: 4000)
@@ -29,11 +30,17 @@ if (args.includes('--help') || args.includes('-h')) {
     -h, --help         Show this help
     -v, --version      Show version
 
+  Supported formats:
+    Markdown   .md .markdown .mdx .txt
+    Data       .json .yaml .yml
+    Config     .toml .ini .conf .env .cfg .properties
+    Images     .png .jpg .jpeg .gif .svg .webp .bmp .ico
+
   Examples:
-    mdv                      # Serve current directory
-    mdv ./docs               # Serve ./docs directory
-    mdv ./docs -p 8080       # Custom port
-    mdv --no-open            # Don't open browser
+    docview                  # View current directory
+    docview ./docs           # View ./docs directory
+    docview README.md        # Open specific file
+    mdv config.yaml -p 8080  # Custom port
 `);
   process.exit(0);
 }

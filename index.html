@@ -2,9 +2,9 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Markdown Viewer</title>
+    <title>DocView</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -14,22 +14,18 @@
       <header id="toolbar">
         <div class="toolbar-left">
           <h1 class="app-title">
-            <span class="logo">M↓</span>
-            Markdown Viewer
+            <span class="logo">D.</span>
+            DocView
           </h1>
         </div>
         <div class="toolbar-right">
-          <button id="btn-sidebar" class="toolbar-btn" title="Toggle Sidebar">
+          <button id="btn-sidebar" class="toolbar-btn" title="Toggle Sidebar (Cmd+B)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
             <span class="btn-label">Files</span>
           </button>
-          <button id="btn-open" class="toolbar-btn" title="Open File">
+          <button id="btn-open" class="toolbar-btn" title="Open File (Cmd+O)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <span class="btn-label">Open</span>
-          </button>
-          <button id="btn-layout" class="toolbar-btn" title="Toggle Layout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-            <span class="btn-label">Layout</span>
           </button>
           <button id="btn-theme" class="toolbar-btn" title="Toggle Theme">
             <svg id="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -44,22 +40,12 @@
           </div>
           <div id="filetree"></div>
         </aside>
-        <div id="editor-pane">
-          <div class="pane-header">
-            <span class="pane-title">Editor</span>
-            <span id="char-count" class="pane-info">0 chars</span>
-          </div>
-          <textarea id="editor" spellcheck="false" placeholder="Write your Markdown here..."></textarea>
-        </div>
-        <div id="preview-pane">
-          <div class="pane-header">
-            <span class="pane-title">Preview</span>
-          </div>
-          <div id="preview" class="markdown-body"></div>
+        <div id="viewer-pane">
+          <div id="viewer" class="markdown-body"></div>
         </div>
       </main>
     </div>
-    <input type="file" id="file-input" accept=".md,.markdown,.txt" style="display:none" />
+    <input type="file" id="file-input" accept=".md,.markdown,.mdx,.txt,.yaml,.yml,.json,.toml,.ini,.conf,.env,.cfg,.properties,.png,.jpg,.jpeg,.gif,.svg,.webp,.bmp,.ico" style="display:none" />
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

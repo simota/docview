@@ -33,7 +33,24 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-const MD_EXTENSIONS = new Set(['.md', '.markdown', '.mdx', '.txt']);
+const SUPPORTED_EXTENSIONS = new Set([
+  // Markdown
+  '.md', '.markdown', '.mdx', '.txt',
+  // Data
+  '.json', '.yaml', '.yml',
+  // Config
+  '.toml', '.ini', '.conf', '.env', '.cfg', '.properties',
+  // Images
+  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico',
+]);
+
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
+
+const IMAGE_MIME = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
+  '.bmp': 'image/bmp', '.ico': 'image/x-icon',
+};
 
 // SSE clients
 const sseClients = new Set();
@@ -44,7 +61,9 @@ async function buildTree(dir, base = dir) {
   const items = [];
 
   for (const entry of entries) {
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    // Skip hidden dirs but allow hidden files with supported extensions (e.g. .env)
+    if (entry.isDirectory() && entry.name.startsWith('.')) continue;
 
     const fullPath = join(dir, entry.name);
     const relPath = relative(base, fullPath);
@@ -54,7 +73,7 @@ async function buildTree(dir, base = dir) {
       if (children.length > 0) {
         items.push({ name: entry.name, path: relPath, type: 'dir', children });
       }
-    } else if (MD_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+    } else if (SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
       items.push({ name: entry.name, path: relPath, type: 'file' });
     }
   }
@@ -153,9 +172,17 @@ const server = createServer(async (req, res) => {
     }
 
     try {
-      const content = await readFile(resolved, 'utf-8');
-      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end(content);
+      const ext = extname(resolved).toLowerCase();
+      if (IMAGE_EXTENSIONS.has(ext)) {
+        const content = await readFile(resolved);
+        const mime = IMAGE_MIME[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5' });
+        res.end(content);
+      } else {
+        const content = await readFile(resolved, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(content);
+      }
     } catch {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'File not found' }));
@@ -187,7 +214,7 @@ const server = createServer(async (req, res) => {
 });
 
 // File watcher
-const mdGlobs = [...MD_EXTENSIONS].map((ext) => `**/*${ext}`);
+const mdGlobs = [...SUPPORTED_EXTENSIONS].map((ext) => `**/*${ext}`);
 const watcher = chokidar.watch(mdGlobs, {
   cwd: targetDir,
   ignoreInitial: true,
@@ -206,9 +233,10 @@ watcher.on('add', (path) => broadcast('add', path));
 watcher.on('unlink', (path) => broadcast('unlink', path));
 
 server.listen(port, () => {
-  console.log(`\n  Markdown Viewer`);
+  console.log(`\n  DocView`);
   console.log(`  ───────────────────────────────`);
   console.log(`  Watching:  ${targetDir}`);
+  if (initialFile) console.log(`  File:      ${initialFile}`);
   console.log(`  Server:    http://localhost:${port}/`);
   console.log(`  ───────────────────────────────\n`);
 });

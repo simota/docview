@@ -1,11 +1,12 @@
 {
-  "name": "markdown-viewer",
-  "version": "0.1.0",
+  "name": "docview",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Beautiful Markdown viewer with Mermaid diagram support, live preview, and local file browsing",
+  "description": "Beautiful document viewer for Markdown, YAML, JSON, config files, and images with Mermaid diagram support",
   "license": "MIT",
   "bin": {
-    "mdv": "bin/mdv.mjs"
+    "mdv": "bin/mdv.mjs",
+    "docview": "bin/mdv.mjs"
   },
   "files": [
     "bin/",
@@ -22,9 +23,11 @@
   },
   "keywords": [
     "markdown",
+    "yaml",
+    "json",
     "viewer",
     "mermaid",
-    "preview",
+    "document",
     "cli"
   ],
   "devDependencies": {
@@ -48,7 +51,6 @@
     "markdown-it-sub": "^2.0.0",
     "markdown-it-sup": "^2.0.0",
     "markdown-it-texmath": "^1.0.0",
-    "mermaid": "^11.14.0",
-    "split.js": "^1.6.5"
+    "mermaid": "^11.14.0"
   }
 }
