@@ -209,6 +209,75 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/search') {
+    const query = url.searchParams.get('q');
+    if (!query) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing q parameter' }));
+      return;
+    }
+
+    const results = [];
+    const lowerQuery = query.toLowerCase();
+
+    async function searchDir(dir) {
+      if (results.length >= 100) return;
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (results.length >= 100) return;
+        if (entry.name === 'node_modules' || entry.name === '.git') continue;
+        if (entry.isDirectory() && entry.name.startsWith('.')) continue;
+
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await searchDir(fullPath);
+        } else {
+          const ext = extname(entry.name).toLowerCase();
+          if (SUPPORTED_EXTENSIONS.has(ext) && !IMAGE_EXTENSIONS.has(ext)) {
+            try {
+              const content = await readFile(fullPath, 'utf-8');
+              const lines = content.split('\n');
+              for (let i = 0; i < lines.length && results.length < 100; i++) {
+                if (lines[i].toLowerCase().includes(lowerQuery)) {
+                  results.push({
+                    path: relative(targetDir, fullPath),
+                    line: i + 1,
+                    text: lines[i],
+                  });
+                }
+              }
+            } catch {
+              // Skip unreadable files
+            }
+          }
+        }
+      }
+    }
+
+    try {
+      await searchDir(targetDir);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(results));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/custom-css') {
+    const cssPath = join(targetDir, '.docview.css');
+    try {
+      const content = await readFile(cssPath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
+      res.end(content);
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not found');
+    }
+    return;
+  }
+
   // Static files
   await serveStatic(res, url.pathname);
 });
