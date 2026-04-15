@@ -1,0 +1,78 @@
+# DocView
+
+> DocView (alias: mdv) is a Node.js CLI tool that serves a local directory as a rich document viewer in the browser. Run `npx docview <directory>` to instantly open a feature-rich viewer with live reload.
+
+## What is DocView?
+
+DocView is an open-source, MIT-licensed Node.js CLI document viewer for developers. It transforms any local directory into a browser-based document viewer with zero configuration.
+
+**One-line definition:** DocView is a local-first, zero-install document viewer CLI for developers that renders Markdown, YAML, JSON, CSV, and diagrams in the browser with live reload.
+
+## Quick Start
+
+```bash
+# No install required
+npx docview .
+
+# Or install globally
+npm install -g docview
+mdv ./docs
+```
+
+## Supported Formats
+
+- **Markdown** (.md) — GFM, footnotes, front-matter, GitHub Alerts, containers
+- **Math** — KaTeX ($...$, $$...$$)
+- **Diagrams** — Mermaid (flowcharts, sequence, class diagrams, etc.)
+- **YAML** (.yaml, .yml) — interactive tree viewer
+- **JSON** (.json) — foldable tree viewer
+- **CSV** (.csv) — formatted table view
+- **Images** (.png, .jpg, .gif, .webp, .svg)
+
+## Key Features
+
+- **Live Reload** — SSE-based file watching via Chokidar; browser auto-reloads on save
+- **Dark Mode** — system preference detection + localStorage persistence
+- **File Tree** — hierarchical sidebar navigation
+- **Tab Management** — open multiple files simultaneously in tabs
+- **Full-Text Search** — grep-based search across entire served directory
+- **Vim-style Find Bar** — regex-capable in-page find (`/pattern`)
+- **Split View** — view two files side by side
+- **Backlinks** — shows which files link to the current file
+- **Image Export** — save rendered pages as PNG
+- **JSON/YAML Tree Viewer** — collapsible nested structure display
+- **Table of Contents** — auto-generated from headings
+
+## Technical Specifications
+
+- **Runtime:** Node.js 18+
+- **Architecture:** Stateless `node:http` server + Vanilla TypeScript SPA (no frontend framework)
+- **Security:** Path traversal prevention (symlink check), CSP headers, CORS restricted to localhost, DOMPurify HTML sanitization
+- **License:** MIT
+- **Package:** Available on npm as `docview`
+
+## API Endpoints (Server)
+
+- `GET /api/tree` — recursive file tree JSON
+- `GET /api/file?path=` — file content (with security checks)
+- `GET /api/search?q=` — full-text grep across served directory
+- `GET /api/watch` — SSE stream for live reload
+- `GET /api/custom-css` — loads `.docview.css` from served directory
+
+## Comparison
+
+| Feature | DocView | VS Code Preview | grip |
+|---------|---------|-----------------|------|
+| Zero install (npx) | ✓ | No | No |
+| Live reload | ✓ SSE | Manual | No |
+| Mermaid / KaTeX | ✓ | Extension needed | No |
+| YAML/JSON/CSV support | ✓ | No | No |
+| Full-text search | ✓ | Partial | No |
+| Works fully offline | ✓ | ✓ | No (GitHub API) |
+
+## Links
+
+- GitHub: https://github.com/simota/document-viewer
+- npm: https://www.npmjs.com/package/docview
+- Landing Page: https://simota.github.io/document-viewer/
+- License: MIT (https://opensource.org/licenses/MIT)

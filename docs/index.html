@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocView — Local Document Viewer for Developers | npx docview</title>
+  <meta name="description" content="npx docview を実行するだけ。Markdown・YAML・JSON・CSV・Mermaid図に対応したリッチビューワーがブラウザにすぐ開きます。ライブリロード・ダークモード・全文検索搭載。" />
+  <meta name="keywords" content="docview, mdv, markdown viewer, local document viewer, npx, cli, mermaid, katex, yaml, json, csv, live reload, developer tool" />
+  <link rel="canonical" href="https://simota.github.io/document-viewer/" />
+  <meta name="theme-color" content="#0d1117" />
+
+  <!-- OGP -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="DocView — Local Document Viewer for Developers" />
+  <meta property="og:description" content="npx docview を実行するだけ。Markdown・YAML・JSON・CSV対応のリッチビューワーがすぐ開きます。" />
+  <meta property="og:url" content="https://simota.github.io/document-viewer/" />
+  <meta property="og:image" content="https://simota.github.io/document-viewer/og-image.png" />
+  <meta property="og:site_name" content="DocView" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="DocView — Local Document Viewer for Developers" />
+  <meta name="twitter:description" content="npx docview を実行するだけ。ブラウザがすぐ開くリッチドキュメントビューワー。" />
+  <meta name="twitter:image" content="https://simota.github.io/document-viewer/og-image.png" />
+
+  <!-- JSON-LD: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "DocView",
+    "alternateName": "mdv",
+    "description": "ローカルディレクトリをブラウザ上のリッチなドキュメントビューワーとして表示するNode.js CLIツール",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Windows, Linux",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "url": "https://simota.github.io/document-viewer/",
+    "downloadUrl": "https://www.npmjs.com/package/docview",
+    "license": "https://opensource.org/licenses/MIT",
+    "featureList": [
+      "Markdown rendering with GFM support",
+      "Live reload via SSE",
+      "Dark mode",
+      "File tree sidebar",
+      "Tab management",
+      "Full-text search",
+      "Vim-style find bar",
+      "KaTeX math rendering",
+      "Mermaid diagram support",
+      "GitHub Alerts",
+      "Split View",
+      "Backlinks",
+      "Image export",
+      "JSON/YAML tree viewer",
+      "CSV viewer"
+    ],
+    "softwareRequirements": "Node.js 18 or higher"
+  }
+  </script>
+
+  <!-- JSON-LD: WebSite -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "DocView",
+    "url": "https://simota.github.io/document-viewer/"
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "インストールなしで使えますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "はい。npx docview コマンドを実行するだけで、インストールなしに即座に起動できます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "どのOSで動作しますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "macOS、Windows、Linuxで動作します。Node.js 18以上が必要です。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "セキュリティは安全ですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ローカル環境のみで動作し、外部への通信は一切行いません。パストラバーサル防止、CSPヘッダー、CORS制限（localhost限定）を実装しています。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "必要なNode.jsのバージョンは？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Node.js 18以上が必要です。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "無料で使えますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "はい。MIT Licenseのオープンソースソフトウェアで、永久に無料でご利用いただけます。"
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===== CSS Variables ===== */
+    :root {
+      --bg: #f8f7f4;
+      --bg-secondary: #edecea;
+      --surface: #ffffff;
+      --surface-elevated: #fafaf8;
+      --text: #1a1a18;
+      --text-secondary: #5a5a54;
+      --text-muted: #8a8a82;
+      --border: #e0dedd;
+      --border-subtle: #ebe9e7;
+      --accent: #1a7a40;
+      --accent-bright: #22a855;
+      --accent-dim: #145f31;
+      --accent-glow: rgba(34, 168, 85, 0.15);
+      --terminal-bg: #0d1117;
+      --terminal-border: #21262d;
+      --terminal-text: #e6edf3;
+      --terminal-muted: #7d8590;
+      --terminal-green: #3fb950;
+      --terminal-yellow: #d29922;
+      --terminal-blue: #58a6ff;
+      --terminal-red: #f85149;
+      --terminal-prompt: #3fb950;
+      --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+      --font-sans: -apple-system, 'Helvetica Neue', 'Segoe UI', sans-serif;
+      --font-display: 'Georgia', 'Times New Roman', serif;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08);
+      --shadow-terminal: 0 20px 60px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.3);
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --bg-secondary: #131920;
+        --surface: #161b22;
+        --surface-elevated: #1c2128;
+        --text: #e6edf3;
+        --text-secondary: #b1bac4;
+        --text-muted: #7d8590;
+        --border: #21262d;
+        --border-subtle: #1c2128;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+        --shadow-lg: 0 10px 30px rgba(0,0,0,0.5);
+      }
+    }
+
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ===== Scroll Animation Base ===== */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    /* ===== NAV ===== */
+    #nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(248, 247, 244, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #nav { background: rgba(13, 17, 23, 0.88); }
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-logo {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--terminal-bg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--terminal-green);
+      border: 1px solid var(--terminal-border);
+    }
+
+    .nav-badges {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: border-color var(--transition), color var(--transition);
+    }
+
+    .nav-badge:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .nav-link {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: color var(--transition), background var(--transition);
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--bg-secondary);
+    }
+
+    .nav-copy-btn {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: var(--terminal-bg);
+      color: var(--terminal-green);
+      border: 1px solid var(--terminal-border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .nav-copy-btn:hover {
+      background: #161b22;
+      border-color: var(--terminal-green);
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-badges { display: none; }
+    }
+
+    /* ===== HERO ===== */
+    #hero {
+      padding: 120px 24px 80px;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+      min-height: 90vh;
+    }
+
+    @media (max-width: 900px) {
+      #hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        padding: 100px 24px 60px;
+        gap: 40px;
+      }
+    }
+
+    .hero-left {}
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 1px solid rgba(34, 168, 85, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent-bright);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero-h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero-h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 36px;
+      max-width: 480px;
+    }
+
+    .hero-sub code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: var(--bg-secondary);
+      color: var(--accent);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .hero-cta-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .code-block-copy {
+      display: flex;
+      align-items: center;
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      font-family: var(--font-mono);
+      box-shadow: var(--shadow-md);
+    }
+
+    .code-block-copy .prompt {
+      padding: 12px 14px;
+      color: var(--terminal-prompt);
+      font-size: 0.95rem;
+      user-select: none;
+      border-right: 1px solid var(--terminal-border);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .code-block-copy .code-text {
+      flex: 1;
+      padding: 12px 16px;
+      color: var(--terminal-text);
+      font-size: 0.95rem;
+    }
+
+    .code-block-copy .copy-btn {
+      padding: 8px 14px;
+      background: none;
+      border: none;
+      border-left: 1px solid var(--terminal-border);
+      color: var(--terminal-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      transition: color var(--transition), background var(--transition);
+      white-space: nowrap;
+    }
+
+    .code-block-copy .copy-btn:hover {
+      color: var(--terminal-green);
+      background: rgba(63, 185, 80, 0.08);
+    }
+
+    .copy-btn.copied {
+      color: var(--terminal-green) !important;
+      animation: bounce-text 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+    }
+
+    @keyframes bounce-text {
+      0%, 100% { transform: scale(1); }
+      40% { transform: scale(1.15); }
+      70% { transform: scale(0.95); }
+    }
+
+    .hero-github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+      box-shadow: var(--shadow-sm);
+      width: fit-content;
+    }
+
+    .hero-github-btn:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .hero-microcopy {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .hero-microcopy span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hero-microcopy .check {
+      color: var(--accent-bright);
+      font-weight: 700;
+    }
+
+    /* ===== Terminal Visual ===== */
+    .hero-terminal {
+      position: relative;
+    }
+
+    .terminal-window {
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-terminal);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid var(--terminal-border);
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background: #ff5f56; }
+    .terminal-dot.yellow { background: #ffbd2e; }
+    .terminal-dot.green { background: #27c93f; }
+
+    .terminal-title {
+      font-size: 0.72rem;
+      color: var(--terminal-muted);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .terminal-body {
+      padding: 16px;
+      min-height: 320px;
+    }
+
+    /* DocView UI mock inside terminal */
+    .docview-mock {
+      border: 1px solid var(--terminal-border);
+      border-radius: 6px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      height: 300px;
+      font-size: 0.78rem;
+    }
+
+    .mock-sidebar {
+      background: #131920;
+      border-right: 1px solid var(--terminal-border);
+      padding: 10px 0;
+      overflow: hidden;
+    }
+
+    .mock-sidebar-header {
+      padding: 4px 12px 8px;
+      font-size: 0.65rem;
+      color: var(--terminal-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .mock-file {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 12px;
+      color: var(--terminal-muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .mock-file.active {
+      background: rgba(63, 185, 80, 0.12);
+      color: var(--terminal-green);
+    }
+
+    .mock-file.folder {
+      color: var(--terminal-yellow);
+    }
+
+    .mock-file .icon { font-size: 0.7rem; opacity: 0.8; }
+
+    .mock-content {
+      background: #0d1117;
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .mock-tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--terminal-border);
+      padding-bottom: 8px;
+    }
+
+    .mock-tab {
+      font-size: 0.68rem;
+      padding: 2px 10px;
+      border-radius: 4px 4px 0 0;
+      color: var(--terminal-muted);
+    }
+
+    .mock-tab.active {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--terminal-blue);
+    }
+
+    .mock-md h3 {
+      color: var(--terminal-blue);
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+      font-family: var(--font-mono);
+    }
+
+    .mock-md p {
+      color: var(--terminal-muted);
+      font-size: 0.72rem;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    .mock-md .code-line {
+      background: rgba(255,255,255,0.05);
+      border-radius: 3px;
+      padding: 4px 8px;
+      margin-bottom: 4px;
+      font-size: 0.7rem;
+      color: var(--terminal-green);
+    }
+
+    .mock-mermaid {
+      margin-top: 10px;
+      border: 1px solid var(--terminal-border);
+      border-radius: 4px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mermaid-label {
+      font-size: 0.6rem;
+      color: var(--terminal-muted);
+      margin-bottom: 4px;
+    }
+
+    .mermaid-flow {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+    }
+
+    .mermaid-node {
+      padding: 3px 8px;
+      border: 1px solid var(--terminal-blue);
+      border-radius: 3px;
+      color: var(--terminal-blue);
+    }
+
+    .mermaid-arrow {
+      color: var(--terminal-muted);
+    }
+
+    .mermaid-node.green {
+      border-color: var(--terminal-green);
+      color: var(--terminal-green);
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.65rem;
+      color: var(--terminal-green);
+      margin-top: 8px;
+      padding: 3px 8px;
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      border-radius: 10px;
+      background: rgba(63, 185, 80, 0.08);
+    }
+
+    .live-badge::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background: var(--terminal-green);
+      border-radius: 50%;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+
+    .terminal-cmd {
+      margin-bottom: 14px;
+    }
+
+    .terminal-line {
+      color: var(--terminal-muted);
+      line-height: 1.6;
+    }
+
+    .terminal-line .prompt-char { color: var(--terminal-green); }
+    .terminal-line .cmd-text { color: var(--terminal-text); }
+    .terminal-line .output { color: var(--terminal-muted); }
+    .terminal-line .success { color: var(--terminal-green); }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1.1em;
+      background: var(--terminal-green);
+      vertical-align: text-bottom;
+      animation: blink 1.2s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* ===== Sections Common ===== */
+    section {
+      padding: 80px 24px;
+    }
+
+    .section-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    .section-h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .section-lead {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      max-width: 640px;
+    }
+
+    /* ===== §2 PAIN ===== */
+    #pain {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .pain-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .pain-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .pain-card .pain-icon {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .pain-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .pain-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ===== §3 SOLUTION ===== */
+    #solution {
+      background: var(--terminal-bg);
+      color: var(--terminal-text);
+      border-top: 1px solid var(--terminal-border);
+      border-bottom: 1px solid var(--terminal-border);
+    }
+
+    #solution .section-label { color: var(--terminal-green); }
+
+    #solution .section-h2 {
+      color: var(--terminal-text);
+    }
+
+    #solution .section-lead {
+      color: var(--terminal-muted);
+    }
+
+    .solution-highlight {
+      margin-top: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .solution-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(63, 185, 80, 0.1);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--terminal-green);
+    }
+
+    /* ===== §4 DEMO ===== */
+    #demo .demo-container {
+      margin-top: 48px;
+      max-width: 780px;
+    }
+
+    #demo .terminal-window {
+      box-shadow: var(--shadow-terminal);
+    }
+
+    #demo .terminal-body {
+      padding: 20px;
+    }
+
+    .typewriter-line {
+      margin-bottom: 6px;
+    }
+
+    .typewriter-text {
+      overflow: hidden;
+      white-space: nowrap;
+      display: inline;
+    }
+
+    @keyframes type-in {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    .demo-cta {
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .demo-cta-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* ===== §5 BENEFITS ===== */
+    #benefits {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 28px;
+      margin-top: 48px;
+    }
+
+    .benefit-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .benefit-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+    }
+
+    .benefit-number {
+      font-family: var(--font-mono);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      opacity: 0.2;
+      line-height: 1;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .benefit-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.35;
+    }
+
+    .benefit-card .keyword {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 2px 8px;
+      border-radius: 10px;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+
+    .benefit-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* ===== §6 FEATURES ===== */
+    .format-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 32px 0;
+    }
+
+    .format-badge {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 6px;
+      background: var(--terminal-bg);
+      color: var(--terminal-green);
+      border: 1px solid var(--terminal-border);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .feature-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .feature-item:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .feature-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .feature-text h4 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .feature-text p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ===== §7 HOW IT WORKS ===== */
+    #howto {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0;
+      margin-top: 48px;
+      position: relative;
+    }
+
+    .step {
+      padding: 28px 32px;
+      position: relative;
+    }
+
+    .step:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+      font-size: 1.4rem;
+      z-index: 1;
+    }
+
+    @media (max-width: 768px) {
+      .step:not(:last-child)::after { display: none; }
+    }
+
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .step h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .step .step-code {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: var(--terminal-bg);
+      color: var(--terminal-green);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--terminal-border);
+      display: inline-block;
+    }
+
+    /* ===== §8 SOCIAL PROOF ===== */
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 32px;
+      align-items: center;
+    }
+
+    .shield-img {
+      height: 22px;
+      display: block;
+    }
+
+    .tech-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      background: var(--surface);
+      font-family: var(--font-mono);
+    }
+
+    /* ===== §8 COMPARISON ===== */
+    .comparison-table-wrap {
+      margin-top: 40px;
+      overflow-x: auto;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      min-width: 520px;
+    }
+
+    .comparison-table th {
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .comparison-table th.highlight {
+      background: var(--terminal-bg);
+      color: var(--terminal-green);
+      border-color: rgba(63, 185, 80, 0.3);
+    }
+
+    .comparison-table td {
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .comparison-table td.highlight {
+      background: rgba(34, 168, 85, 0.04);
+      color: var(--text);
+      font-weight: 500;
+      border-color: rgba(63, 185, 80, 0.2);
+    }
+
+    .comparison-table tr:hover td {
+      background: var(--bg-secondary);
+    }
+
+    .check-yes { color: var(--accent-bright); }
+    .check-no { color: var(--text-muted); }
+    .check-partial { color: var(--terminal-yellow); }
+
+    /* ===== §9 FAQ ===== */
+    #faq {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .faq-list {
+      margin-top: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 720px;
+    }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .faq-item summary {
+      padding: 18px 22px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text);
+      transition: background var(--transition);
+    }
+
+    .faq-item summary::-webkit-details-marker { display: none; }
+
+    .faq-item summary::after {
+      content: '+';
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: transform var(--transition);
+    }
+
+    .faq-item[open] summary {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .faq-item[open] summary::after {
+      transform: rotate(45deg);
+    }
+
+    .faq-answer {
+      padding: 16px 22px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .faq-answer code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: var(--bg-secondary);
+      color: var(--accent);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* ===== §10 FINAL CTA ===== */
+    #final-cta {
+      background: var(--terminal-bg);
+      border-top: 1px solid var(--terminal-border);
+      border-bottom: 1px solid var(--terminal-border);
+      text-align: center;
+      color: var(--terminal-text);
+    }
+
+    #final-cta .section-label { color: var(--terminal-green); }
+
+    #final-cta .section-h2 {
+      color: var(--terminal-text);
+      max-width: 640px;
+      margin: 0 auto 16px;
+    }
+
+    #final-cta .section-lead {
+      color: var(--terminal-muted);
+      margin: 0 auto 40px;
+    }
+
+    .final-cta-code {
+      max-width: 520px;
+      margin: 0 auto 28px;
+    }
+
+    .final-cta-code .code-block-copy {
+      border-color: rgba(63, 185, 80, 0.4);
+    }
+
+    .final-github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: rgba(255,255,255,0.06);
+      color: var(--terminal-text);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: background var(--transition), border-color var(--transition);
+      margin-bottom: 28px;
+    }
+
+    .final-github-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--terminal-green);
+    }
+
+    .final-microcopy {
+      font-size: 0.8rem;
+      color: var(--terminal-muted);
+      font-family: var(--font-mono);
+    }
+
+    .final-microcopy span { margin: 0 8px; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-logo {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .footer-link {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    .footer-link:hover { color: var(--accent); }
+
+    .footer-install {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      background: var(--bg-secondary);
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    /* ===== Utilities ===== */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- §0 NAVIGATION -->
+  <nav id="nav" role="navigation" aria-label="メインナビゲーション">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-icon" aria-hidden="true">&#x25BA;</div>
+        docview
+      </a>
+      <div class="nav-badges" aria-label="バッジ">
+        <a href="https://github.com/simota/document-viewer/blob/main/LICENSE" class="nav-badge" target="_blank" rel="noopener">MIT</a>
+        <a href="https://www.npmjs.com/package/docview" class="nav-badge" target="_blank" rel="noopener">npm</a>
+      </div>
+      <nav class="nav-links" aria-label="セクションリンク">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#demo" class="nav-link">Demo</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+        <a href="https://github.com/simota/document-viewer" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <button class="nav-copy-btn" onclick="copyCmd('npx docview', this)" aria-label="npx docview コマンドをコピー">
+        <span aria-hidden="true">$</span> npx docview
+      </button>
+    </div>
+  </nav>
+
+  <!-- §1 HERO -->
+  <section id="hero" aria-labelledby="hero-h1">
+    <div class="hero-left reveal">
+      <div class="hero-eyebrow">Node.js CLI ドキュメントビューワー</div>
+      <h1 id="hero-h1" class="hero-h1">
+        ローカルドキュメントを、<br><em>ブラウザで美しく。</em>
+      </h1>
+      <p class="hero-sub">
+        <code>npx docview &lt;ディレクトリ&gt;</code> を実行するだけ。
+        Markdown・YAML・JSON・CSV・Mermaid図に対応したリッチビューワーが、ブラウザにすぐ開きます。
+      </p>
+      <div class="hero-cta-group">
+        <div class="code-block-copy" role="group" aria-label="インストールコマンド">
+          <span class="prompt" aria-hidden="true">$</span>
+          <span class="code-text" id="hero-cmd">npx docview .</span>
+          <button class="copy-btn" onclick="copyCmd('npx docview .', this)" aria-label="コマンドをクリップボードにコピー">コピー</button>
+        </div>
+        <a href="https://github.com/simota/document-viewer" class="hero-github-btn" target="_blank" rel="noopener">
+          <span aria-hidden="true">⭐</span> Star on GitHub
+        </a>
+      </div>
+      <div class="hero-microcopy" aria-label="主な特徴">
+        <span><span class="check" aria-hidden="true">✓</span> インストール不要（npx）</span>
+        <span><span class="check" aria-hidden="true">✓</span> ライブリロード</span>
+        <span><span class="check" aria-hidden="true">✓</span> MIT License</span>
+      </div>
+    </div>
+
+    <div class="hero-terminal reveal reveal-delay-2" aria-label="docviewのUI模擬">
+      <div class="terminal-window" role="img" aria-label="docviewの画面プレビュー">
+        <div class="terminal-bar" aria-hidden="true">
+          <div class="terminal-dot red"></div>
+          <div class="terminal-dot yellow"></div>
+          <div class="terminal-dot green"></div>
+          <div class="terminal-title">docview — ~/projects/docs</div>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-cmd">
+            <div class="terminal-line">
+              <span class="prompt-char">$ </span><span class="cmd-text">npx docview ./docs</span>
+            </div>
+            <div class="terminal-line"><span class="output">  Serving: ~/projects/docs</span></div>
+            <div class="terminal-line"><span class="success">✓ Server started → http://localhost:4000</span></div>
+            <div class="terminal-line"><span class="success">✓ Browser opened</span></div>
+            <div class="terminal-line"><span class="output">  Watching for changes...</span> <span class="cursor" aria-hidden="true"></span></div>
+          </div>
+          <div class="docview-mock" aria-hidden="true">
+            <div class="mock-sidebar">
+              <div class="mock-sidebar-header">FILES</div>
+              <div class="mock-file folder"><span class="icon">▸</span> docs/</div>
+              <div class="mock-file active"><span class="icon">◆</span> README.md</div>
+              <div class="mock-file"><span class="icon">◆</span> guide.md</div>
+              <div class="mock-file"><span class="icon">≡</span> data.json</div>
+              <div class="mock-file"><span class="icon">≡</span> schema.yaml</div>
+              <div class="mock-file"><span class="icon">⊞</span> table.csv</div>
+            </div>
+            <div class="mock-content">
+              <div class="mock-tabs">
+                <div class="mock-tab active">README.md</div>
+                <div class="mock-tab">guide.md</div>
+              </div>
+              <div class="mock-md">
+                <h3># Getting Started</h3>
+                <p>Install and run in one command:</p>
+                <div class="code-line">$ npx docview .</div>
+                <div class="mock-mermaid">
+                  <div class="mermaid-label">flowchart LR</div>
+                  <div class="mermaid-flow">
+                    <div class="mermaid-node">Edit</div>
+                    <div class="mermaid-arrow">→</div>
+                    <div class="mermaid-node">Save</div>
+                    <div class="mermaid-arrow">→</div>
+                    <div class="mermaid-node green">Reload</div>
+                  </div>
+                </div>
+                <div class="live-badge">Live reload active</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §2 PAIN -->
+  <section id="pain" aria-labelledby="pain-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">問題提起</div>
+      <h2 id="pain-h2" class="section-h2 reveal reveal-delay-1">こんな経験、ありませんか？</h2>
+      <div class="pain-grid">
+        <div class="pain-card reveal reveal-delay-1">
+          <span class="pain-icon" aria-hidden="true">🔄</span>
+          <h3>Markdownを確認するたびにGitHubにpush</h3>
+          <p>ちょっとした確認のためだけにコミット＆プッシュ。作業が何度も中断される。</p>
+        </div>
+        <div class="pain-card reveal reveal-delay-2">
+          <span class="pain-icon" aria-hidden="true">📁</span>
+          <h3>ローカルのドキュメント群をブラウザで見たい</h3>
+          <p>エディタのプレビューは狭い。ファイルツリーやサイドバーがある本格的なビューワーが欲しい。</p>
+        </div>
+        <div class="pain-card reveal reveal-delay-3">
+          <span class="pain-icon" aria-hidden="true">⟳</span>
+          <h3>ファイル更新のたびに手動でリロード</h3>
+          <p>ファイルを保存してからブラウザに切り替えてF5。この繰り返しが集中力を削ぐ。</p>
+        </div>
+        <div class="pain-card reveal reveal-delay-4">
+          <span class="pain-icon" aria-hidden="true">📊</span>
+          <h3>CSVやYAMLも同じビューワーで確認したい</h3>
+          <p>MarkdownはA、CSVはB、JSONはC…ツールを使い分けるのが面倒。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §3 SOLUTION -->
+  <section id="solution" aria-labelledby="solution-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">ソリューション</div>
+      <h2 id="solution-h2" class="section-h2 reveal reveal-delay-1">
+        ローカルのディレクトリを、<br>そのままブラウザに。
+      </h2>
+      <p class="section-lead reveal reveal-delay-2">
+        docviewは、ローカルの任意のディレクトリをそのままブラウザで表示するドキュメントビューワーです。
+        コマンド1本で起動。ファイル保存で即リロード。すべてのファイルを一つの場所で。
+      </p>
+      <div class="solution-highlight reveal reveal-delay-3">
+        <div class="solution-pill">
+          <span aria-hidden="true">⚡</span> コマンド1本で起動
+        </div>
+        <div class="solution-pill">
+          <span aria-hidden="true">🔁</span> 保存即リロード (SSE)
+        </div>
+        <div class="solution-pill">
+          <span aria-hidden="true">📄</span> 6種以上のフォーマット対応
+        </div>
+        <div class="solution-pill">
+          <span aria-hidden="true">🌑</span> ダークモード内蔵
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §4 DEMO -->
+  <section id="demo" aria-labelledby="demo-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">ライブデモ</div>
+      <h2 id="demo-h2" class="section-h2 reveal reveal-delay-1">30秒で起動できる</h2>
+      <p class="section-lead reveal reveal-delay-2">
+        以下のコマンドをターミナルに貼り付けるだけ。Node.js 18以上がインストールされていれば、すぐに起動します。
+      </p>
+      <div class="demo-container reveal reveal-delay-3">
+        <div class="terminal-window" role="region" aria-label="起動デモ">
+          <div class="terminal-bar" aria-hidden="true">
+            <div class="terminal-dot red"></div>
+            <div class="terminal-dot yellow"></div>
+            <div class="terminal-dot green"></div>
+            <div class="terminal-title">Terminal — zsh</div>
+          </div>
+          <div class="terminal-body" style="min-height: 180px; padding: 20px 24px;">
+            <div class="typewriter-line" id="demo-line-1" style="opacity:0">
+              <span style="color: var(--terminal-prompt)">~ $ </span><span id="tw-text" style="color: var(--terminal-text)"></span><span class="cursor" id="tw-cursor" aria-hidden="true"></span>
+            </div>
+            <div id="demo-output" style="opacity:0; margin-top: 8px;">
+              <div class="terminal-line"><span style="color: var(--terminal-muted)">  npx: installed 1 package in 2.3s</span></div>
+              <div class="terminal-line"><span style="color: var(--terminal-muted)">  Serving directory: ./docs</span></div>
+              <div class="terminal-line"><span style="color: var(--terminal-green)">✓ DocView started → http://localhost:4000</span></div>
+              <div class="terminal-line"><span style="color: var(--terminal-green)">✓ Opening browser...</span></div>
+              <div class="terminal-line" style="margin-top: 6px;">
+                <span class="live-badge" style="display:inline-flex">Watching for changes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-cta reveal reveal-delay-4">
+        <div class="code-block-copy" style="flex: 0 0 auto;" role="group" aria-label="起動コマンド">
+          <span class="prompt" aria-hidden="true">$</span>
+          <span class="code-text">npx docview ./docs</span>
+          <button class="copy-btn" onclick="copyCmd('npx docview ./docs', this)" aria-label="コマンドをコピー">コピー</button>
+        </div>
+        <span class="demo-cta-text">← 今すぐ試す</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- §5 BENEFITS -->
+  <section id="benefits" aria-labelledby="benefits-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">コアベネフィット</div>
+      <h2 id="benefits-h2" class="section-h2 reveal reveal-delay-1">なぜ docview なのか</h2>
+      <div class="benefits-grid">
+        <div class="benefit-card reveal reveal-delay-1">
+          <span class="benefit-number" aria-hidden="true">01</span>
+          <span class="keyword">Live Reload</span>
+          <h3>保存するたびに即反映。集中が切れない。</h3>
+          <p>SSE（Server-Sent Events）によるライブリロードで、ファイルを保存した瞬間にブラウザが自動更新。エディタとブラウザの切り替えが不要になり、フローに入り込んだまま作業できます。</p>
+        </div>
+        <div class="benefit-card reveal reveal-delay-2">
+          <span class="benefit-number" aria-hidden="true">02</span>
+          <span class="keyword">Zero Install</span>
+          <h3>コマンド1本。30秒で起動できる。</h3>
+          <p><code style="font-family: var(--font-mono); font-size: 0.85em; background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">npx docview</code> でインストールなしに即起動。グローバルインストール（<code style="font-family: var(--font-mono); font-size: 0.85em; background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">npm i -g docview</code>）にも対応しています。</p>
+        </div>
+        <div class="benefit-card reveal reveal-delay-3">
+          <span class="benefit-number" aria-hidden="true">03</span>
+          <span class="keyword">Multi-format</span>
+          <h3>あらゆるファイルを、一つの場所で。</h3>
+          <p>Markdown（GFM、脚注、KaTeX、Mermaid、GitHub Alerts）、YAML、JSON、CSV、画像ファイルを統一されたビューワーで閲覧できます。ツールを切り替える必要がありません。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §6 FEATURES -->
+  <section id="features" aria-labelledby="features-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">機能一覧</div>
+      <h2 id="features-h2" class="section-h2 reveal reveal-delay-1">必要な機能が、全部ある。</h2>
+      <p class="section-lead reveal reveal-delay-2">
+        開発者がドキュメントを快適に閲覧・編集するために必要な機能を内蔵しています。
+      </p>
+
+      <div class="format-badges reveal reveal-delay-3" aria-label="対応ファイル形式">
+        <span class="format-badge">.md</span>
+        <span class="format-badge">.yaml</span>
+        <span class="format-badge">.json</span>
+        <span class="format-badge">.csv</span>
+        <span class="format-badge">.png / .jpg</span>
+        <span class="format-badge">Mermaid</span>
+        <span class="format-badge">KaTeX</span>
+        <span class="format-badge">GFM</span>
+      </div>
+
+      <div class="features-grid" role="list">
+        <div class="feature-item reveal reveal-delay-1" role="listitem">
+          <span class="feature-icon" aria-hidden="true">⚡</span>
+          <div class="feature-text">
+            <h4>ライブリロード</h4>
+            <p>SSEでファイル変更を即時反映</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-1" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🌑</span>
+          <div class="feature-text">
+            <h4>ダークモード</h4>
+            <p>OS設定に連動 + localStorage保存</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-2" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🗂️</span>
+          <div class="feature-text">
+            <h4>ファイルツリー</h4>
+            <p>サイドバーに階層表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-2" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🗃️</span>
+          <div class="feature-text">
+            <h4>タブ管理</h4>
+            <p>複数ファイルをタブで同時表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-2" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🔍</span>
+          <div class="feature-text">
+            <h4>全文検索</h4>
+            <p>ディレクトリ全体をgrep検索</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-3" role="listitem">
+          <span class="feature-icon" aria-hidden="true">/</span>
+          <div class="feature-text">
+            <h4>vim風 Find Bar</h4>
+            <p>正規表現対応のページ内検索</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-3" role="listitem">
+          <span class="feature-icon" aria-hidden="true">📢</span>
+          <div class="feature-text">
+            <h4>GitHub Alerts</h4>
+            <p>[!NOTE] [!WARNING] 等を美しく表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-3" role="listitem">
+          <span class="feature-icon" aria-hidden="true">∑</span>
+          <div class="feature-text">
+            <h4>KaTeX / Mermaid</h4>
+            <p>数式・フローチャートをレンダリング</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-4" role="listitem">
+          <span class="feature-icon" aria-hidden="true">⊟</span>
+          <div class="feature-text">
+            <h4>Split View</h4>
+            <p>2ファイルを左右に並べて表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-4" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🔗</span>
+          <div class="feature-text">
+            <h4>バックリンク</h4>
+            <p>そのファイルへの参照元を表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-4" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🖼️</span>
+          <div class="feature-text">
+            <h4>画像エクスポート</h4>
+            <p>レンダリング結果をPNG保存</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-5" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🌲</span>
+          <div class="feature-text">
+            <h4>JSON/YAMLツリー</h4>
+            <p>ネスト構造を折りたたみ表示</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §7 HOW IT WORKS -->
+  <section id="howto" aria-labelledby="howto-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">使い方</div>
+      <h2 id="howto-h2" class="section-h2 reveal reveal-delay-1">3ステップで完了</h2>
+      <div class="steps" role="list">
+        <div class="step reveal reveal-delay-1" role="listitem">
+          <span class="step-num">Step 01</span>
+          <h3>コマンドを実行</h3>
+          <p>ターミナルを開いて1行打つだけ。グローバルインストール不要。</p>
+          <div class="step-code">$ npx docview ./docs</div>
+        </div>
+        <div class="step reveal reveal-delay-2" role="listitem">
+          <span class="step-num">Step 02</span>
+          <h3>ブラウザが自動起動</h3>
+          <p>数秒でサーバーが起動し、ブラウザが自動で開きます。</p>
+          <div class="step-code">→ http://localhost:4000</div>
+        </div>
+        <div class="step reveal reveal-delay-3" role="listitem">
+          <span class="step-num">Step 03</span>
+          <h3>ファイルを編集→即反映</h3>
+          <p>ファイルを保存するたびに、ブラウザが自動リロード。</p>
+          <div class="step-code">Save → Auto Reload ⚡</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §8 SOCIAL PROOF & COMPARISON -->
+  <section id="social" aria-labelledby="social-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">スペック & 比較</div>
+      <h2 id="social-h2" class="section-h2 reveal reveal-delay-1">信頼のオープンソース</h2>
+      <div class="badges-row reveal reveal-delay-2" aria-label="バッジ">
+        <img class="shield-img" src="https://img.shields.io/github/stars/simota/document-viewer?style=flat&label=GitHub%20Stars&color=3fb950&labelColor=0d1117" alt="GitHub Stars" loading="lazy" />
+        <img class="shield-img" src="https://img.shields.io/npm/dm/docview?style=flat&label=npm%20downloads%2Fmonth&color=3fb950&labelColor=0d1117" alt="npm monthly downloads" loading="lazy" />
+        <span class="tech-badge">MIT License</span>
+        <span class="tech-badge">Node.js 18+</span>
+        <span class="tech-badge">TypeScript</span>
+        <span class="tech-badge">DOMPurify</span>
+      </div>
+
+      <div class="comparison-table-wrap reveal reveal-delay-3">
+        <table class="comparison-table" aria-label="ツール比較">
+          <caption class="sr-only">docview と他ツールの機能比較</caption>
+          <thead>
+            <tr>
+              <th scope="col">機能</th>
+              <th scope="col" class="highlight">docview</th>
+              <th scope="col">VS Code Preview</th>
+              <th scope="col">grip</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>インストール不要（npx）</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span></td>
+              <td><span class="check-no" aria-label="非対応">—</span> VSCode必要</td>
+              <td><span class="check-no" aria-label="非対応">—</span> pip install</td>
+            </tr>
+            <tr>
+              <td>ライブリロード</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span> SSE</td>
+              <td><span class="check-partial" aria-label="一部対応">△</span> 手動</td>
+              <td><span class="check-no" aria-label="非対応">—</span></td>
+            </tr>
+            <tr>
+              <td>Mermaid / KaTeX</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span></td>
+              <td><span class="check-partial" aria-label="拡張機能要">△</span> 拡張要</td>
+              <td><span class="check-no" aria-label="非対応">—</span></td>
+            </tr>
+            <tr>
+              <td>YAML / JSON / CSV 対応</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span></td>
+              <td><span class="check-no" aria-label="非対応">—</span></td>
+              <td><span class="check-no" aria-label="非対応">—</span></td>
+            </tr>
+            <tr>
+              <td>全文検索</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span></td>
+              <td><span class="check-partial" aria-label="一部対応">△</span></td>
+              <td><span class="check-no" aria-label="非対応">—</span></td>
+            </tr>
+            <tr>
+              <td>Split View / タブ</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span></td>
+              <td><span class="check-partial" aria-label="一部対応">△</span></td>
+              <td><span class="check-no" aria-label="非対応">—</span></td>
+            </tr>
+            <tr>
+              <td>外部サービス不要</td>
+              <td class="highlight"><span class="check-yes" aria-label="対応">✓</span> 完全ローカル</td>
+              <td><span class="check-yes" aria-label="対応">✓</span></td>
+              <td><span class="check-no" aria-label="非対応">—</span> GitHub API使用</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- §9 FAQ -->
+  <section id="faq" aria-labelledby="faq-h2">
+    <div class="section-inner">
+      <div class="section-label reveal">よくある質問</div>
+      <h2 id="faq-h2" class="section-h2 reveal reveal-delay-1">FAQ</h2>
+      <div class="faq-list reveal reveal-delay-2">
+        <details class="faq-item">
+          <summary>インストールなしで使えますか？</summary>
+          <div class="faq-answer">
+            はい。<code>npx docview</code> コマンドを実行するだけで、グローバルインストールなしに即座に起動できます。
+            恒久的に使う場合は <code>npm install -g docview</code> でグローバルインストールも可能です。
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>どのOSで動作しますか？</summary>
+          <div class="faq-answer">
+            macOS、Windows、Linuxで動作します。Node.js 18以上がインストールされていれば、
+            OS固有の設定は不要です。
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>セキュリティは大丈夫ですか？</summary>
+          <div class="faq-answer">
+            ローカル環境のみで動作し、外部サーバーへの通信は一切行いません。
+            パストラバーサル防止（シンボリックリンクチェック）、CSPヘッダー、CORS制限（localhost限定）、
+            DOMPurifyによるHTMLサニタイズを実装しています。
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>必要なNode.jsのバージョンは？</summary>
+          <div class="faq-answer">
+            Node.js 18以上が必要です。<code>node --version</code> で確認できます。
+            Node.jsは <a href="https://nodejs.org/" target="_blank" rel="noopener" style="color: var(--accent);">nodejs.org</a> からダウンロードできます。
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>無料で使えますか？将来有料になりますか？</summary>
+          <div class="faq-answer">
+            MIT Licenseのオープンソースソフトウェアです。永久に無料でご利用いただけます。
+            商用利用も可能です。
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- §10 FINAL CTA -->
+  <section id="final-cta" aria-labelledby="final-h2">
+    <div class="section-inner" style="text-align: center;">
+      <div class="section-label reveal">さあ、始めよう</div>
+      <h2 id="final-h2" class="section-h2 reveal reveal-delay-1">今すぐドキュメントを快適に</h2>
+      <p class="section-lead reveal reveal-delay-2">
+        インストール不要。コマンド1本で、あなたのドキュメントがリッチビューワーに変わります。
+      </p>
+      <div class="final-cta-code reveal reveal-delay-3">
+        <div class="code-block-copy" role="group" aria-label="最終CTAコマンド">
+          <span class="prompt" aria-hidden="true">$</span>
+          <span class="code-text">npx docview .</span>
+          <button class="copy-btn" onclick="copyCmd('npx docview .', this)" aria-label="コマンドをコピー">コピー</button>
+        </div>
+      </div>
+      <div class="reveal reveal-delay-4" style="margin-bottom: 20px;">
+        <a href="https://github.com/simota/document-viewer" class="final-github-btn" target="_blank" rel="noopener">
+          <span aria-hidden="true">⭐</span> Star on GitHub
+        </a>
+      </div>
+      <div class="final-microcopy reveal reveal-delay-5">
+        <span>30秒で起動</span>·<span>MIT License</span>·<span>インストール不要</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- §11 FOOTER -->
+  <footer role="contentinfo">
+    <div class="footer-inner">
+      <div>
+        <a href="#" class="footer-logo">
+          <div class="nav-logo-icon" aria-hidden="true">&#x25BA;</div>
+          docview
+        </a>
+        <div class="footer-meta">MIT License · Node.js CLI Document Viewer</div>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/simota/document-viewer" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/docview" class="footer-link" target="_blank" rel="noopener">npm</a>
+        <span class="footer-install" aria-label="グローバルインストールコマンド">npm install -g docview</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ===== Copy to clipboard =====
+    function copyCmd(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // ===== Scroll Reveal =====
+    (function() {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+      );
+
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    })();
+
+    // ===== Typewriter Demo =====
+    (function() {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const line1 = document.getElementById('demo-line-1');
+      const twText = document.getElementById('tw-text');
+      const twCursor = document.getElementById('tw-cursor');
+      const output = document.getElementById('demo-output');
+      if (!line1 || !twText || !output) return;
+
+      const CMD = 'npx docview ./docs';
+      let started = false;
+
+      const demoObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && !started) {
+            started = true;
+            demoObserver.disconnect();
+            runTypewriter();
+          }
+        },
+        { threshold: 0.3 }
+      );
+
+      demoObserver.observe(line1);
+
+      function runTypewriter() {
+        if (prefersReduced) {
+          line1.style.opacity = '1';
+          twText.textContent = CMD;
+          twCursor.style.display = 'none';
+          setTimeout(() => { output.style.opacity = '1'; }, 200);
+          return;
+        }
+
+        line1.style.opacity = '1';
+        let i = 0;
+        const speed = 60;
+
+        function type() {
+          if (i < CMD.length) {
+            twText.textContent += CMD[i];
+            i++;
+            setTimeout(type, speed + Math.random() * 30);
+          } else {
+            twCursor.style.display = 'none';
+            setTimeout(() => {
+              output.style.transition = 'opacity 0.5s ease';
+              output.style.opacity = '1';
+            }, 400);
+          }
+        }
+
+        setTimeout(type, 600);
+      }
+    })();
+
+    // ===== Smooth nav scroll on hash links =====
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        const id = link.getAttribute('href').slice(1);
+        const target = document.getElementById(id);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
