@@ -535,6 +535,13 @@
       position: relative;
     }
 
+    .hero-image {
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-terminal);
+    }
+
     .terminal-window {
       background: var(--terminal-bg);
       border: 1px solid var(--terminal-border);
@@ -1453,59 +1460,8 @@
       </div>
     </div>
 
-    <div class="hero-terminal reveal reveal-delay-2" aria-label="docviewのUI模擬">
-      <div class="terminal-window" role="img" aria-label="docviewの画面プレビュー">
-        <div class="terminal-bar" aria-hidden="true">
-          <div class="terminal-dot red"></div>
-          <div class="terminal-dot yellow"></div>
-          <div class="terminal-dot green"></div>
-          <div class="terminal-title">docview — ~/projects/docs</div>
-        </div>
-        <div class="terminal-body">
-          <div class="terminal-cmd">
-            <div class="terminal-line">
-              <span class="prompt-char">$ </span><span class="cmd-text">npx github:simota/docview ./docs</span>
-            </div>
-            <div class="terminal-line"><span class="output">  Serving: ~/projects/docs</span></div>
-            <div class="terminal-line"><span class="success">✓ Server started → http://localhost:4000</span></div>
-            <div class="terminal-line"><span class="success">✓ Browser opened</span></div>
-            <div class="terminal-line"><span class="output">  Watching for changes...</span> <span class="cursor" aria-hidden="true"></span></div>
-          </div>
-          <div class="docview-mock" aria-hidden="true">
-            <div class="mock-sidebar">
-              <div class="mock-sidebar-header">FILES</div>
-              <div class="mock-file folder"><span class="icon">▸</span> docs/</div>
-              <div class="mock-file active"><span class="icon">◆</span> README.md</div>
-              <div class="mock-file"><span class="icon">◆</span> guide.md</div>
-              <div class="mock-file"><span class="icon">≡</span> data.json</div>
-              <div class="mock-file"><span class="icon">≡</span> schema.yaml</div>
-              <div class="mock-file"><span class="icon">⊞</span> table.csv</div>
-            </div>
-            <div class="mock-content">
-              <div class="mock-tabs">
-                <div class="mock-tab active">README.md</div>
-                <div class="mock-tab">guide.md</div>
-              </div>
-              <div class="mock-md">
-                <h3># Getting Started</h3>
-                <p>Install and run in one command:</p>
-                <div class="code-line">$ npx github:simota/docview .</div>
-                <div class="mock-mermaid">
-                  <div class="mermaid-label">flowchart LR</div>
-                  <div class="mermaid-flow">
-                    <div class="mermaid-node">Edit</div>
-                    <div class="mermaid-arrow">→</div>
-                    <div class="mermaid-node">Save</div>
-                    <div class="mermaid-arrow">→</div>
-                    <div class="mermaid-node green">Reload</div>
-                  </div>
-                </div>
-                <div class="live-badge">Live reload active</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="hero-terminal reveal reveal-delay-2">
+      <img src="hero.png" alt="DocView — ターミナルからコマンド実行し、ブラウザでMarkdownやMermaid図をリッチに表示" class="hero-image" width="1536" height="1024" fetchpriority="high" />
     </div>
   </section>
 
