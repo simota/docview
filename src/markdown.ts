@@ -1,6 +1,5 @@
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
-import mermaid from 'mermaid';
 import DOMPurify from 'dompurify';
 
 // @ts-expect-error — no type declarations
@@ -29,11 +28,13 @@ import 'katex/dist/katex.min.css';
 let mermaidCounter = 0;
 let diagramCounter = 0;
 
-function initMermaid(isDark: boolean) {
-  mermaid.initialize({
+// Mermaid theme settings — separated from the module so they can be passed
+// after the lazy import resolves without re-importing the full library.
+function buildMermaidConfig(isDark: boolean) {
+  return {
     startOnLoad: false,
-    theme: 'base',
-    securityLevel: 'strict',
+    theme: 'base' as const,
+    securityLevel: 'strict' as const,
     fontFamily: '"Inter", "Noto Sans JP", sans-serif',
     themeVariables: isDark
       ? {
@@ -126,12 +127,13 @@ function initMermaid(isDark: boolean) {
           pie7: '#a78bfa',
           pie8: '#7c3aed',
         },
-    flowchart: { curve: 'basis', padding: 16 },
+    flowchart: { curve: 'basis' as const, padding: 16 },
     sequence: { mirrorActors: false, bottomMarginAdj: 2 },
-  });
+  };
 }
 
-initMermaid(false);
+// Track current theme for mermaid re-initialization after lazy load
+let mermaidIsDark = false;
 
 const md = new MarkdownIt({
   html: false,
@@ -315,14 +317,33 @@ export async function renderExternalDiagrams(container: HTMLElement): Promise<vo
   }
 }
 
+// Cached mermaid module — loaded on first use to keep it out of the initial bundle.
+// Mermaid is 2.7 MB (715 KB gzip) and only needed when a markdown file contains
+// a ```mermaid``` code block, so lazy-loading it improves initial page load time.
+let mermaidModule: typeof import('mermaid').default | null = null;
+
+async function getMermaid(): Promise<typeof import('mermaid').default> {
+  if (!mermaidModule) {
+    const mod = await import('mermaid');
+    mermaidModule = mod.default;
+    mermaidModule.initialize(buildMermaidConfig(mermaidIsDark));
+  }
+  return mermaidModule;
+}
+
 export async function renderMermaidDiagrams(): Promise<void> {
   const elements = document.querySelectorAll<HTMLElement>('pre.mermaid');
+  if (elements.length === 0) return; // skip lazy load when no diagrams present
+
+  // Load mermaid only when the page actually contains mermaid blocks
+  const mermaidLib = await getMermaid();
+
   for (const el of elements) {
     if (el.dataset.processed === 'true') continue;
     const code = el.textContent || '';
     const id = el.id || `mermaid-${Date.now()}`;
     try {
-      const { svg } = await mermaid.render(id + '-svg', code);
+      const { svg } = await mermaidLib.render(id + '-svg', code);
       const wrapper = el.closest('.mermaid-container');
       if (wrapper) {
         const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
@@ -336,5 +357,10 @@ export async function renderMermaidDiagrams(): Promise<void> {
 }
 
 export function updateMermaidTheme(isDark: boolean): void {
-  initMermaid(isDark);
+  mermaidIsDark = isDark;
+  // Re-initialize only if the module has already been loaded; otherwise the
+  // updated flag is picked up when getMermaid() is first called.
+  if (mermaidModule) {
+    mermaidModule.initialize(buildMermaidConfig(isDark));
+  }
 }
