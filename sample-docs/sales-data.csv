@@ -1,0 +1,21 @@
+Date,Product,Region,Units Sold,Unit Price,Revenue,Cost,Profit,Category
+2025-01-05,DocView Pro,North America,150,29.99,4498.50,1500.00,2998.50,Software
+2025-01-05,DocView Pro,Europe,120,24.99,2998.80,1200.00,1798.80,Software
+2025-01-05,DocView Pro,Asia Pacific,200,19.99,3998.00,2000.00,1998.00,Software
+2025-01-12,DocView Teams,North America,45,99.99,4499.55,2250.00,2249.55,Enterprise
+2025-01-12,DocView Teams,Europe,30,89.99,2699.70,1500.00,1199.70,Enterprise
+2025-01-12,DocView Teams,Asia Pacific,55,79.99,4399.45,2750.00,1649.45,Enterprise
+2025-01-19,Support Plan,North America,80,9.99,799.20,400.00,399.20,Service
+2025-01-19,Support Plan,Europe,60,9.99,599.40,300.00,299.40,Service
+2025-01-19,Support Plan,Asia Pacific,100,7.99,799.00,500.00,299.00,Service
+2025-01-26,DocView Pro,North America,180,29.99,5398.20,1800.00,3598.20,Software
+2025-01-26,DocView Pro,Europe,140,24.99,3498.60,1400.00,2098.60,Software
+2025-01-26,DocView Pro,Asia Pacific,220,19.99,4397.80,2200.00,2197.80,Software
+2025-02-02,DocView Teams,North America,50,99.99,4999.50,2500.00,2499.50,Enterprise
+2025-02-02,DocView Teams,Europe,35,89.99,3149.65,1750.00,1399.65,Enterprise
+2025-02-02,DocView Teams,Asia Pacific,60,79.99,4799.40,3000.00,1799.40,Enterprise
+2025-02-09,Custom Integration,North America,10,499.99,4999.90,3000.00,1999.90,Service
+2025-02-09,Custom Integration,Europe,8,449.99,3599.92,2400.00,1199.92,Service
+2025-02-09,Custom Integration,Asia Pacific,12,399.99,4799.88,3600.00,1199.88,Service
+2025-02-16,DocView Pro,North America,200,29.99,5998.00,2000.00,3998.00,Software
+2025-02-16,DocView Pro,Europe,160,24.99,3998.40,1600.00,2398.40,Software

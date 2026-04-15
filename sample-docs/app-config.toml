@@ -1,0 +1,81 @@
+# DocView Application Configuration
+# See documentation at https://github.com/simota/docview
+
+[server]
+host = "localhost"
+port = 4000
+auto_open_browser = true
+cors_origins = ["http://localhost:4000", "http://127.0.0.1:4000"]
+
+[server.ssl]
+enabled = false
+cert_path = ""
+key_path = ""
+
+[watcher]
+# File watching configuration (powered by Chokidar)
+poll_interval = 100
+ignore_patterns = [
+    "node_modules/**",
+    ".git/**",
+    "*.tmp",
+    "*.swp",
+    ".DS_Store"
+]
+debounce_ms = 150
+
+[rendering]
+# Markdown rendering options
+theme = "auto"   # "light", "dark", or "auto" (follows system)
+
+[rendering.markdown]
+gfm = true
+footnotes = true
+front_matter = true
+alerts = true
+emoji = true
+line_numbers = false
+max_heading_depth = 4
+
+[rendering.mermaid]
+enabled = true
+theme = "default"  # "default", "dark", "forest", "neutral"
+max_text_size = 50000
+
+[rendering.katex]
+enabled = true
+throw_on_error = false
+display_mode = false
+
+[rendering.highlight]
+engine = "highlight.js"
+theme_light = "github"
+theme_dark = "github-dark"
+
+[security]
+# Security settings
+path_traversal_protection = true
+symlink_check = true
+csp_headers = true
+sanitize_html = true
+max_file_size_mb = 10
+
+[ui]
+# User interface settings
+sidebar_width = 260
+sidebar_collapsed = false
+show_hidden_files = false
+tab_limit = 20
+scroll_memory = true
+copy_button_on_code = true
+
+[ui.search]
+full_text = true
+regex = true
+case_sensitive = false
+max_results = 100
+
+[logging]
+level = "info"  # "debug", "info", "warn", "error"
+format = "pretty"  # "pretty", "json"
+timestamp = true

@@ -1,0 +1,117 @@
+{
+  "name": "docview",
+  "version": "1.0.0",
+  "description": "Beautiful document viewer for Markdown, YAML, JSON, CSV, and more",
+  "license": "MIT",
+  "author": {
+    "name": "simota",
+    "url": "https://github.com/simota"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/simota/docview"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "features": {
+    "rendering": {
+      "markdown": {
+        "gfm": true,
+        "footnotes": true,
+        "frontMatter": true,
+        "alerts": true,
+        "emoji": true,
+        "containers": true,
+        "definitionLists": true,
+        "subscript": true,
+        "superscript": true,
+        "mark": true
+      },
+      "diagrams": {
+        "mermaid": {
+          "enabled": true,
+          "supportedTypes": [
+            "flowchart",
+            "sequence",
+            "class",
+            "state",
+            "er",
+            "gantt",
+            "pie",
+            "gitGraph",
+            "mindmap",
+            "timeline"
+          ]
+        }
+      },
+      "math": {
+        "katex": {
+          "enabled": true,
+          "inline": true,
+          "display": true
+        }
+      },
+      "codeHighlight": {
+        "engine": "highlight.js",
+        "languages": 190
+      }
+    },
+    "viewers": {
+      "yaml": {
+        "treeView": true,
+        "collapsible": true
+      },
+      "json": {
+        "treeView": true,
+        "collapsible": true
+      },
+      "csv": {
+        "tableView": true,
+        "sortable": true,
+        "parser": "PapaParse"
+      },
+      "images": {
+        "formats": ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico"],
+        "inline": true
+      }
+    },
+    "ui": {
+      "fileTree": true,
+      "tabs": true,
+      "tableOfContents": true,
+      "search": {
+        "fullText": true,
+        "regex": true,
+        "vimStyleFind": true
+      },
+      "splitView": true,
+      "backlinks": true,
+      "darkMode": {
+        "enabled": true,
+        "persistence": "localStorage",
+        "systemPreference": true
+      }
+    },
+    "server": {
+      "liveReload": {
+        "mechanism": "SSE",
+        "watcher": "Chokidar"
+      },
+      "security": {
+        "pathTraversalProtection": true,
+        "symlinkCheck": true,
+        "cspHeaders": true,
+        "corsRestriction": "localhost",
+        "htmlSanitization": "DOMPurify"
+      },
+      "customCSS": ".docview.css"
+    }
+  },
+  "stats": {
+    "supportedFormats": 15,
+    "totalDependencies": 18,
+    "bundleSize": "~2MB",
+    "startupTime": "<1s"
+  }
+}

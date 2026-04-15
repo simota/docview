@@ -1,0 +1,170 @@
+openapi: "3.1.0"
+info:
+  title: DocView API
+  description: Internal API for the DocView document viewer
+  version: "1.0.0"
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4000
+    description: Local development server
+
+paths:
+  /api/tree:
+    get:
+      summary: Get file tree
+      description: Returns recursive directory tree structure
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  root:
+                    type: string
+                    example: "my-project"
+                  tree:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TreeNode"
+        "500":
+          description: Internal server error
+
+  /api/file:
+    get:
+      summary: Get file content
+      description: Returns the content of a specific file with path traversal protection
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "docs/README.md"
+      responses:
+        "200":
+          description: File content
+          content:
+            text/plain:
+              schema:
+                type: string
+        "400":
+          description: Missing path parameter
+        "403":
+          description: Path traversal detected
+        "404":
+          description: File not found
+
+  /api/search:
+    get:
+      summary: Full-text search
+      description: Search across all files in the served directory
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          example: "function"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResult"
+
+  /api/watch:
+    get:
+      summary: Watch for file changes
+      description: Server-Sent Events stream for live reload
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/backlinks:
+    get:
+      summary: Get backlinks
+      description: Returns files that link to the specified file
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Backlink list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    file:
+                      type: string
+                    line:
+                      type: integer
+
+  /api/shutdown:
+    get:
+      summary: Shutdown server
+      description: Gracefully stops the server (localhost only)
+      responses:
+        "200":
+          description: Server shutting down
+
+components:
+  schemas:
+    TreeNode:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: File or directory name
+          example: "README.md"
+        children:
+          type: array
+          description: Child nodes (directories only)
+          items:
+            $ref: "#/components/schemas/TreeNode"
+
+    SearchResult:
+      type: object
+      properties:
+        file:
+          type: string
+          description: Relative file path
+          example: "docs/guide.md"
+        line:
+          type: integer
+          description: Line number (1-based)
+          example: 42
+        content:
+          type: string
+          description: Matching line content
+          example: "function handleRequest(req, res) {"
+
+    FileChangeEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [change, add, unlink]
+        path:
+          type: string
+          example: "docs/README.md"
