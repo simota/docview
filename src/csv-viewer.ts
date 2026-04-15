@@ -35,6 +35,28 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+const NUM_RE = /^-?[\d,]+\.?\d*$/;
+const DATE_RE = /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/;
+
+function parseNum(s: string): number {
+  return parseFloat(s.replace(/,/g, '')) || 0;
+}
+
+function detectColumnType(rows: Element[], colIndex: number): 'number' | 'date' | 'string' {
+  let numCount = 0;
+  let dateCount = 0;
+  const sample = Math.min(rows.length, 20);
+  for (let i = 0; i < sample; i++) {
+    const text = (rows[i].children[colIndex]?.textContent ?? '').trim();
+    if (!text) continue;
+    if (NUM_RE.test(text)) numCount++;
+    else if (DATE_RE.test(text) && !isNaN(Date.parse(text))) dateCount++;
+  }
+  if (numCount >= sample * 0.8) return 'number';
+  if (dateCount >= sample * 0.8) return 'date';
+  return 'string';
+}
+
 export function initCsvSort(): void {
   document.addEventListener('click', (e) => {
     const th = (e.target as HTMLElement).closest('.csv-sortable th');
@@ -61,28 +83,24 @@ export function initCsvSort(): void {
     th.setAttribute('aria-sort', direction);
     th.classList.add(direction === 'ascending' ? 'sort-asc' : 'sort-desc');
 
-    // Sort rows
+    // Detect column type from first non-empty value
     const rows = Array.from(tbody.querySelectorAll('tr'));
+    const colType = detectColumnType(rows, colIndex);
+
     rows.sort((a, b) => {
-      const aText = a.children[colIndex]?.textContent ?? '';
-      const bText = b.children[colIndex]?.textContent ?? '';
+      const aText = (a.children[colIndex]?.textContent ?? '').trim();
+      const bText = (b.children[colIndex]?.textContent ?? '').trim();
 
-      // Try numeric comparison first
-      const aNum = parseFloat(aText);
-      const bNum = parseFloat(bText);
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        return direction === 'ascending' ? aNum - bNum : bNum - aNum;
+      let cmp = 0;
+      if (colType === 'number') {
+        const aNum = parseNum(aText);
+        const bNum = parseNum(bText);
+        cmp = aNum - bNum;
+      } else if (colType === 'date') {
+        cmp = Date.parse(aText) - Date.parse(bText);
+      } else {
+        cmp = aText.localeCompare(bText);
       }
-
-      // Date comparison
-      const aDate = Date.parse(aText);
-      const bDate = Date.parse(bText);
-      if (!isNaN(aDate) && !isNaN(bDate)) {
-        return direction === 'ascending' ? aDate - bDate : bDate - aDate;
-      }
-
-      // String comparison
-      const cmp = aText.localeCompare(bText);
       return direction === 'ascending' ? cmp : -cmp;
     });
 
