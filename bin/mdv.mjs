@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFile } from 'node:child_process';
+import { execFile, fork } from 'node:child_process';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkgPath = join(__dirname, '..', 'package.json');
@@ -58,28 +58,20 @@ const filteredArgs = args.filter((a) => a !== '--no-open');
 // Auto-open browser after server starts
 const serverPath = join(__dirname, '..', 'server.mjs');
 
-// Determine port from args
-let port = 4000;
-for (let i = 0; i < filteredArgs.length; i++) {
-  if (filteredArgs[i] === '--port' || filteredArgs[i] === '-p') {
-    port = parseInt(filteredArgs[i + 1], 10) || 4000;
-  }
-}
+// Start server as a child process to detect the actual port
 
-// Import and start server
-async function main() {
-  // Dynamic import of the server — it self-starts on import
-  await import(serverPath);
+const child = fork(serverPath, filteredArgs, { stdio: ['inherit', 'pipe', 'inherit', 'ipc'] });
 
-  if (!noOpen) {
-    const url = `http://localhost:${port}/`;
+child.stdout.on('data', (data) => {
+  process.stdout.write(data);
+  const match = data.toString().match(/localhost:(\d+)/);
+  if (match && !noOpen) {
+    const actualPort = match[1];
+    const url = `http://localhost:${actualPort}/`;
     const platform = process.platform;
     const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
     execFile(cmd, [url], () => {});
   }
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
 });
+
+child.on('exit', (code) => process.exit(code ?? 0));

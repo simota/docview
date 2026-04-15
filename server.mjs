@@ -474,6 +474,28 @@ watcher.on('change', (path) => broadcast('change', path));
 watcher.on('add', (path) => broadcast('add', path));
 watcher.on('unlink', (path) => broadcast('unlink', path));
 
+import { createServer as createNetServer } from 'node:net';
+
+function isPortFree(p) {
+  return new Promise((resolve) => {
+    const tester = createNetServer()
+      .once('error', () => resolve(false))
+      .once('listening', () => tester.close(() => resolve(true)))
+      .listen(p);
+  });
+}
+
+async function findFreePort(start, maxRetries = 10) {
+  for (let p = start; p < start + maxRetries; p++) {
+    if (await isPortFree(p)) return p;
+    console.log(`  Port ${p} is in use, trying ${p + 1}...`);
+  }
+  throw new Error(`No free port found in range ${start}-${start + maxRetries - 1}`);
+}
+
+const freePort = await findFreePort(port);
+port = freePort;
+
 server.listen(port, () => {
   console.log(`\n  DocView`);
   console.log(`  ───────────────────────────────`);
@@ -481,4 +503,5 @@ server.listen(port, () => {
   if (initialFile) console.log(`  File:      ${initialFile}`);
   console.log(`  Server:    http://localhost:${port}/`);
   console.log(`  ───────────────────────────────\n`);
+  if (process.send) process.send({ type: 'listening', port });
 });
