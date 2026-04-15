@@ -6,7 +6,7 @@
 
 DocView is an open-source, MIT-licensed Node.js CLI document viewer for developers. It transforms any local directory into a browser-based document viewer with zero configuration.
 
-**One-line definition:** DocView is a local-first, zero-install document viewer CLI for developers that renders Markdown, YAML, JSON, CSV, and diagrams in the browser with live reload.
+**One-line definition:** DocView is a local-first, zero-install document viewer CLI for developers that renders Markdown, YAML, JSON, CSV, TSV, JSONL, access logs, and diagrams in the browser with live reload.
 
 ## Quick Start
 
@@ -26,7 +26,10 @@ mdv ./docs
 - **Diagrams** — Mermaid (flowcharts, sequence, class diagrams, etc.)
 - **YAML** (.yaml, .yml) — interactive tree viewer
 - **JSON** (.json) — foldable tree viewer
-- **CSV** (.csv) — formatted table view
+- **CSV / TSV** (.csv, .tsv) — sortable table with Table/Source toggle
+- **JSONL / NDJSON** (.jsonl, .ndjson) — streaming JSON table viewer
+- **Access Logs** (.log) — Apache/nginx Combined/Common format with status color coding
+- **Config** (.toml, .ini, .conf, .env, .cfg) — syntax-highlighted viewer
 - **Images** (.png, .jpg, .gif, .webp, .svg)
 
 ## Key Features
@@ -41,6 +44,9 @@ mdv ./docs
 - **Backlinks** — shows which files link to the current file
 - **Image Export** — save rendered pages as PNG
 - **JSON/YAML Tree Viewer** — collapsible nested structure display
+- **Log Viewer** — Apache/nginx access log table with method badges and status color coding
+- **Large File Support** — chunked loading with server-side pagination for files over 5 MB
+- **In-File Search** — server-side grep with match highlighting for large chunked files
 - **Table of Contents** — auto-generated from headings
 
 ## Technical Specifications
@@ -54,7 +60,9 @@ mdv ./docs
 ## API Endpoints (Server)
 
 - `GET /api/tree` — recursive file tree JSON
-- `GET /api/file?path=` — file content (with security checks)
+- `GET /api/file?path=` — file content (with security checks); supports `offset` and `limit` params for line-range reads
+- `GET /api/file/meta?path=` — file metadata (size, estimated line count) without reading the full file
+- `GET /api/file/search?path=&q=` — in-file grep search with pagination for chunked mode
 - `GET /api/search?q=` — full-text grep across served directory
 - `GET /api/watch` — SSE stream for live reload
 - `GET /api/custom-css` — loads `.docview.css` from served directory
@@ -66,7 +74,8 @@ mdv ./docs
 | Zero install (npx) | ✓ | No | No |
 | Live reload | ✓ SSE | Manual | No |
 | Mermaid / KaTeX | ✓ | Extension needed | No |
-| YAML/JSON/CSV support | ✓ | No | No |
+| YAML/JSON/CSV/TSV/JSONL/Log support | ✓ | No | No |
+| Large file chunked loading | ✓ | No | No |
 | Full-text search | ✓ | Partial | No |
 | Works fully offline | ✓ | ✓ | No (GitHub API) |
 

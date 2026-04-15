@@ -59,7 +59,11 @@
       "Backlinks",
       "Image export",
       "JSON/YAML tree viewer",
-      "CSV viewer"
+      "CSV/TSV viewer with sorting",
+      "JSONL/NDJSON table viewer",
+      "Apache/nginx log viewer",
+      "Large file chunked loading with server-side search",
+      "TOML/INI config viewer"
     ],
     "softwareRequirements": "Node.js 18 or higher"
   }
@@ -111,6 +115,14 @@
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Node.js 18以上が必要です。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "大きなファイルでも問題なく表示できますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "はい。5MBを超えるCSV・TSV・JSONL・ログファイルは自動的にチャンクモードで省メモリ表示されます。サーバーサイド検索にも対応しています。"
         }
       },
       {
@@ -1488,8 +1500,8 @@
         </div>
         <div class="pain-card reveal reveal-delay-4">
           <span class="pain-icon" aria-hidden="true">📊</span>
-          <h3>CSVやYAMLも同じビューワーで確認したい</h3>
-          <p>MarkdownはA、CSVはB、JSONはC…ツールを使い分けるのが面倒。</p>
+          <h3>CSV・YAML・ログも同じビューワーで確認したい</h3>
+          <p>MarkdownはA、CSVはB、JSONはC、ログはD…ツールを使い分けるのが面倒。</p>
         </div>
       </div>
     </div>
@@ -1514,7 +1526,7 @@
           <span aria-hidden="true">🔁</span> 保存即リロード (SSE)
         </div>
         <div class="solution-pill">
-          <span aria-hidden="true">📄</span> 6種以上のフォーマット対応
+          <span aria-hidden="true">📄</span> 10種以上のフォーマット対応
         </div>
         <div class="solution-pill">
           <span aria-hidden="true">🌑</span> ダークモード内蔵
@@ -1607,7 +1619,10 @@
         <span class="format-badge">.md</span>
         <span class="format-badge">.yaml</span>
         <span class="format-badge">.json</span>
-        <span class="format-badge">.csv</span>
+        <span class="format-badge">.csv / .tsv</span>
+        <span class="format-badge">.jsonl</span>
+        <span class="format-badge">.log</span>
+        <span class="format-badge">.toml / .ini</span>
         <span class="format-badge">.png / .jpg</span>
         <span class="format-badge">Mermaid</span>
         <span class="format-badge">KaTeX</span>
@@ -1697,6 +1712,27 @@
           <div class="feature-text">
             <h4>JSON/YAMLツリー</h4>
             <p>ネスト構造を折りたたみ表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-5" role="listitem">
+          <span class="feature-icon" aria-hidden="true">📜</span>
+          <div class="feature-text">
+            <h4>ログビューワー</h4>
+            <p>Apache/nginxログをテーブル表示・ステータス色分け</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-5" role="listitem">
+          <span class="feature-icon" aria-hidden="true">📦</span>
+          <div class="feature-text">
+            <h4>大容量ファイル対応</h4>
+            <p>数百MBのCSV/ログをチャンク読み込み・省メモリ表示</p>
+          </div>
+        </div>
+        <div class="feature-item reveal reveal-delay-5" role="listitem">
+          <span class="feature-icon" aria-hidden="true">🔎</span>
+          <div class="feature-text">
+            <h4>ファイル内検索</h4>
+            <p>大容量ファイルもサーバーサイドgrepで高速フィルタ</p>
           </div>
         </div>
       </div>
@@ -1838,6 +1874,15 @@
           <div class="faq-answer">
             Node.js 18以上が必要です。<code>node --version</code> で確認できます。
             Node.jsは <a href="https://nodejs.org/" target="_blank" rel="noopener" style="color: var(--accent);">nodejs.org</a> からダウンロードできます。
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>大きなファイルでも問題なく表示できますか？</summary>
+          <div class="faq-answer">
+            はい。5MBを超えるCSV、TSV、JSONL、ログファイルは自動的にチャンクモードに切り替わり、
+            1000行ずつサーバーサイドでページネーション表示します。
+            数百MBのファイルでもブラウザのメモリを圧迫しません。
+            ファイル内検索もサーバーサイドで処理されるため、大容量ファイルでも高速にフィルタリングできます。
           </div>
         </details>
         <details class="faq-item">
