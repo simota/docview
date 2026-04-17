@@ -11,6 +11,8 @@ export class SearchModal {
   private input: HTMLInputElement;
   private results: HTMLElement;
   private regexToggle: HTMLButtonElement;
+  private tabFiles: HTMLButtonElement;
+  private tabFulltext: HTMLButtonElement;
   private onSelect: FileSelectCallback;
   private mode: 'files' | 'fulltext' = 'files';
   private useRegex = false;
@@ -30,6 +32,39 @@ export class SearchModal {
 
     const modal = document.createElement('div');
     modal.className = 'search-modal';
+
+    // Mode tabs
+    const tabList = document.createElement('div');
+    tabList.className = 'search-tab-list';
+    tabList.setAttribute('role', 'tablist');
+    tabList.setAttribute('aria-label', 'Search mode');
+
+    this.tabFiles = document.createElement('button');
+    this.tabFiles.className = 'search-tab active';
+    this.tabFiles.textContent = 'Files';
+    this.tabFiles.setAttribute('role', 'tab');
+    this.tabFiles.setAttribute('aria-selected', 'true');
+    this.tabFiles.addEventListener('click', () => this.switchMode('files'));
+
+    this.tabFulltext = document.createElement('button');
+    this.tabFulltext.className = 'search-tab';
+    this.tabFulltext.textContent = 'Full text';
+    this.tabFulltext.setAttribute('role', 'tab');
+    this.tabFulltext.setAttribute('aria-selected', 'false');
+    this.tabFulltext.addEventListener('click', () => this.switchMode('fulltext'));
+
+    // Arrow key navigation between tabs
+    tabList.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const next = this.mode === 'files' ? 'fulltext' : 'files';
+        this.switchMode(next);
+        (next === 'files' ? this.tabFiles : this.tabFulltext).focus();
+      }
+    });
+
+    tabList.appendChild(this.tabFiles);
+    tabList.appendChild(this.tabFulltext);
 
     const inputRow = document.createElement('div');
     inputRow.className = 'search-input-row';
@@ -54,6 +89,7 @@ export class SearchModal {
 
     inputRow.appendChild(this.input);
     inputRow.appendChild(this.regexToggle);
+    modal.appendChild(tabList);
     modal.appendChild(inputRow);
     modal.appendChild(this.results);
     this.overlay.appendChild(modal);
@@ -70,6 +106,10 @@ export class SearchModal {
 
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.close();
+      // Shift key toggles mode (backward compat)
+      if (e.key === 'Shift') {
+        this.switchMode(this.mode === 'files' ? 'fulltext' : 'files');
+      }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         this.navigate(e.key === 'ArrowDown' ? 1 : -1);
@@ -84,19 +124,27 @@ export class SearchModal {
     });
   }
 
-  open(mode: 'files' | 'fulltext' = 'files') {
+  private switchMode(mode: 'files' | 'fulltext') {
     this.mode = mode;
     this.input.placeholder = mode === 'fulltext'
       ? 'Search content across all files...'
       : 'Search files by name...';
-    this.input.value = '';
-    this.results.innerHTML = '';
     this.regexToggle.style.display = mode === 'fulltext' ? '' : 'none';
     this.overlay.setAttribute('aria-label', mode === 'fulltext' ? 'Full-text search' : 'Search files');
-    this.overlay.style.display = '';
-    requestAnimationFrame(() => this.input.focus());
-
+    this.tabFiles.classList.toggle('active', mode === 'files');
+    this.tabFiles.setAttribute('aria-selected', String(mode === 'files'));
+    this.tabFulltext.classList.toggle('active', mode === 'fulltext');
+    this.tabFulltext.setAttribute('aria-selected', String(mode === 'fulltext'));
+    if (this.input.value.trim()) this.search();
     if (mode === 'files') this.loadFileList();
+  }
+
+  open(mode: 'files' | 'fulltext' = 'files') {
+    this.input.value = '';
+    this.results.innerHTML = '';
+    this.overlay.style.display = '';
+    this.switchMode(mode);
+    requestAnimationFrame(() => this.input.focus());
   }
 
   close() {

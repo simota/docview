@@ -38,6 +38,13 @@ export default async function globalSetup() {
   // not double-decode URL escapes (codex review P1).
   write('100%.ini', 'percent=one\nliteral=two\n');
 
+  // CSV for row-number and sort tests.
+  write('sample.csv', 'name,score\nAlice,90\nBob,80\nCarol,70\n');
+
+  // Nested directory files for tab disambiguation test.
+  mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
+
   // Apache-style combined access log with one unparseable line in the middle.
   // Used to verify the log table's `#` column uses the original file-line
   // number, not the parsed-entries index (codex review P2).

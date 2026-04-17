@@ -65,9 +65,9 @@
 }
 
 [data-theme='dark'] {
-  --bg-primary: #0c0d14;
-  --bg-secondary: #13151f;
-  --bg-tertiary: #1a1d2b;
+  --bg-primary: #0f1117;
+  --bg-secondary: #161822;
+  --bg-tertiary: #1c1f2e;
   --bg-editor: #0f1019;
   --text-primary: #e8eaf4;
   --text-secondary: #9295b0;
@@ -377,9 +377,13 @@ body.dragging::after {
   justify-content: center;
   width: 16px;
   height: 16px;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+.file-icon svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
   flex-shrink: 0;
 }
 
@@ -1109,13 +1113,20 @@ body.dragging::after {
 /* ===== KaTeX overrides ===== */
 .markdown-body .katex-display {
   margin: 1.2em 0;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0.5em 0;
 }
 
+.markdown-body .katex-display > .katex {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .markdown-body .katex {
   font-size: 1.1em;
+  max-width: 100%;
 }
 
 /* ===== Scrollbar (Firefox) ===== */
@@ -1196,6 +1207,56 @@ body.dragging::after {
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   font-weight: 500;
+}
+
+/* ===== Welcome Recent Files ===== */
+.welcome-recent {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 20px;
+}
+
+.welcome-recent-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.welcome-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.welcome-recent-item:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.welcome-recent-dir {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.welcome-recent-name {
+  color: var(--text-primary);
 }
 
 /* ===== Image View ===== */
@@ -1334,6 +1395,11 @@ body.dragging::after {
   border-color: var(--accent-border);
 }
 
+@media (hover: none) {
+  .copy-btn { opacity: 0.7; }
+  .copy-btn:active { opacity: 1; }
+}
+
 /* ===== TOC Sidebar (#1) ===== */
 #toc-sidebar {
   width: 200px;
@@ -1394,6 +1460,37 @@ body.dragging::after {
 .toc-level-4 { padding-left: 32px; }
 
 /* ===== Search Modal (#2, #11) ===== */
+/* ===== Search mode tabs ===== */
+.search-tab-list {
+  display: flex;
+  gap: 0;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.search-tab {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.search-tab:hover {
+  color: var(--text-primary);
+}
+
+.search-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 .search-overlay {
   position: fixed;
   inset: 0;
@@ -1585,22 +1682,17 @@ body.dragging::after {
   justify-content: center;
   width: 16px;
   height: 16px;
-  font-size: 9px;
-  font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
-  border-radius: 3px;
-  background: currentColor;
-  -webkit-background-clip: initial;
   flex-shrink: 0;
 }
 
-.file-icon::before {
-  content: '';
+.file-icon svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .filetree-item .file-icon {
-  background: none;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 /* ===== Line Numbers (#4) ===== */
@@ -1789,6 +1881,15 @@ body.dragging::after {
 /* Tab drag & drop */
 .tab-item[draggable='true'] {
   user-select: none;
+}
+
+.tab-parent {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.tab-filename {
+  color: inherit;
 }
 
 .tab-dragging {
@@ -1996,6 +2097,21 @@ mark.find-current {
   color: var(--text-muted);
   margin-bottom: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.csv-row-num,
+.csv-row-num-header {
+  min-width: 3em;
+  width: 3em;
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  padding-right: 8px;
+}
+
+.csv-sortable .csv-row-num-header {
+  cursor: default;
 }
 
 .csv-table-wrap {
@@ -2801,9 +2917,10 @@ mark.find-current {
 
 /* ===== Progress Bar ===== */
 .progress-bar {
-  height: 3px;
+  height: 3.5px;
   width: 0%;
   background: var(--accent-gradient);
+  box-shadow: 0 1px 4px var(--accent);
   transition: width 0.1s ease-out;
   flex-shrink: 0;
   border-radius: 0 0 2px 2px;
