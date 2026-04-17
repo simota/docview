@@ -904,7 +904,7 @@ function handleKeyboard(e: KeyboardEvent) {
     searchModal.open('files');
     return;
   }
-  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
     e.preventDefault();
     searchModal.open('fulltext');
     return;
@@ -914,7 +914,7 @@ function handleKeyboard(e: KeyboardEvent) {
     showRecentFiles();
     return;
   }
-  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'e') {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'e') {
     e.preventDefault();
     exportHTML();
     return;
@@ -951,7 +951,7 @@ function handleKeyboard(e: KeyboardEvent) {
     toggleWordWrap();
   }
   // Slide mode (#9)
-  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 's') {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
     e.preventDefault();
     enterSlideMode();
   }
