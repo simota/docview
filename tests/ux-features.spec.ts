@@ -316,4 +316,27 @@ test.describe('UX improvements', () => {
     const afterShow = await page.evaluate(() => localStorage.getItem('docview.tocVisible'));
     expect(afterShow).toBe('true');
   });
+
+  // Cmd+Shift+<key> の大文字/小文字バグ回帰防止
+  test('Cmd+Shift+S opens slide mode on a markdown file with --- separators', async ({ page }) => {
+    await page.goto('/#file=slides.md');
+    await page.waitForSelector('#viewer h1');
+    await page.locator('#viewer').click();
+
+    await page.keyboard.press('Meta+Shift+S');
+    await expect(page.locator('.slide-overlay')).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
+
+  test('Cmd+Shift+F opens search modal in full-text mode', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item');
+    await page.locator('body').click();
+
+    await page.keyboard.press('Meta+Shift+F');
+    const dialog = page.locator('.search-modal');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('[role="tab"][aria-selected="true"]')).toHaveText(/Full text/i);
+    await page.keyboard.press('Escape');
+  });
 });

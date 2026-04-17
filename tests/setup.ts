@@ -41,6 +41,9 @@ export default async function globalSetup() {
   // CSV for row-number and sort tests.
   write('sample.csv', 'name,score\nAlice,90\nBob,80\nCarol,70\n');
 
+  // Slides fixture for Cmd+Shift+S regression test.
+  write('slides.md', '# Slide 1\n\nfirst slide\n\n---\n\n# Slide 2\n\nsecond slide\n');
+
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
