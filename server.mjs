@@ -12,6 +12,113 @@ import jschardet from 'jschardet';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const distDir = join(__dirname, 'dist');
 
+// --- Friendly error reporting ---
+
+const ERROR_HINTS = {
+  EACCES: {
+    title: 'アクセス権限エラー (EACCES)',
+    meaning: 'ファイル・ディレクトリ、またはポートへのアクセスが許可されていません。',
+    causes: [
+      '1024 未満のポート (80, 443 など) を管理者権限なしで使おうとしている',
+      '対象ディレクトリやファイルに読み取り権限がない',
+    ],
+    fixes: [
+      '--port 4000 のように 1024 以上のポート番号を指定してください',
+      'ls -la <ディレクトリ> で権限を確認してください (自分が読めるか)',
+      '別のディレクトリに移動するか、権限を付与してから再実行してください',
+    ],
+  },
+  EADDRINUSE: {
+    title: 'ポートが既に使われています (EADDRINUSE)',
+    meaning: '指定したポートは他のプロセスが使用中です。',
+    causes: [
+      '別の docview / 開発サーバが同じポートで起動している',
+      '前回の起動プロセスが終了しきれていない',
+    ],
+    fixes: [
+      'docview --port 4001 のように別のポートを指定してください',
+      'lsof -i :<port> (macOS/Linux) で使用中のプロセスを特定できます',
+      'Windows の場合: netstat -ano | findstr :<port>',
+    ],
+  },
+  ENOENT: {
+    title: 'ファイル・ディレクトリが見つかりません (ENOENT)',
+    meaning: '指定したパスが存在しません。',
+    causes: ['パス名の打ち間違い', 'ファイルが移動・削除された'],
+    fixes: [
+      'ls で対象のパスが存在するか確認してください',
+      '相対パスは現在のディレクトリ (pwd) を基準にします',
+      'スペースを含むパスは引用符で囲ってください: docview "My Docs"',
+    ],
+  },
+  EADDRNOTAVAIL: {
+    title: 'バインドできないアドレスです (EADDRNOTAVAIL)',
+    meaning: '指定したネットワークアドレスがこのマシンで利用できません。',
+    causes: ['ホスト名やIPが間違っている', 'ネットワーク設定の問題'],
+    fixes: ['localhost または 127.0.0.1 を使用してください'],
+  },
+  EMFILE: {
+    title: 'ファイルディスクリプタが不足しています (EMFILE)',
+    meaning: 'OS が許可するオープン可能なファイル数の上限に達しました。',
+    causes: ['非常に大量のファイルを監視しようとしている'],
+    fixes: [
+      'ulimit -n 10240 で上限を引き上げてください (macOS/Linux)',
+      'docview <ディレクトリ> でファイル数の少ないディレクトリを指定してください',
+    ],
+  },
+};
+
+function searchUrl(query) {
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
+function formatFriendlyError(err) {
+  const code = err && err.code;
+  const hint = code && ERROR_HINTS[code];
+  const lines = [];
+  lines.push('');
+  lines.push('  エラーが発生しました');
+  lines.push('  ───────────────────────────────');
+  if (hint) {
+    lines.push(`  種類:  ${hint.title}`);
+    lines.push(`  説明:  ${hint.meaning}`);
+    lines.push('');
+    lines.push('  考えられる原因:');
+    hint.causes.forEach((c) => lines.push(`    - ${c}`));
+    lines.push('');
+    lines.push('  解決方法:');
+    hint.fixes.forEach((f) => lines.push(`    - ${f}`));
+  } else {
+    lines.push(`  ${err && err.message ? err.message : String(err)}`);
+    if (code) lines.push(`  コード: ${code}`);
+    lines.push('');
+    lines.push('  このエラーの意味が分からない場合は、下の検索リンクを開いてみてください。');
+  }
+  lines.push('');
+  lines.push('  この問題の解決策を検索:');
+  lines.push(`    ${searchUrl(`node.js ${code || (err && err.message) || 'error'}`)}`);
+  if (err && err.message) {
+    lines.push('');
+    lines.push('  元のエラーメッセージ (そのまま検索にも使えます):');
+    lines.push(`    ${err.message}`);
+  }
+  lines.push('  ───────────────────────────────');
+  lines.push('');
+  return lines.join('\n');
+}
+
+function reportAndExit(err, { exitCode = 1 } = {}) {
+  try {
+    process.stderr.write(formatFriendlyError(err));
+  } catch {
+    console.error(err);
+  }
+  process.exit(exitCode);
+}
+
+process.on('uncaughtException', (err) => reportAndExit(err));
+process.on('unhandledRejection', (err) => reportAndExit(err instanceof Error ? err : new Error(String(err))));
+
 // --- Encoding detection helpers ---
 
 const ENCODING_MAP = {
@@ -97,7 +204,22 @@ let port = 4000;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--port' || args[i] === '-p') {
-    port = parseInt(args[++i], 10);
+    const raw = args[++i];
+    // Strict integer match: reject "4e3", "1.5", "80abc", empty, etc.
+    if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
+      reportAndExit(Object.assign(
+        new Error(`ポート番号が不正です: "${raw}" (1〜65535 の整数を指定してください)`),
+        { code: 'EINVALIDPORT' },
+      ));
+    }
+    const parsed = Number(raw);
+    if (parsed < 1 || parsed > 65535) {
+      reportAndExit(Object.assign(
+        new Error(`ポート番号が範囲外です: "${raw}" (1〜65535 の整数を指定してください)`),
+        { code: 'EINVALIDPORT' },
+      ));
+    }
+    port = parsed;
   } else if (!args[i].startsWith('-')) {
     const resolved = resolve(args[i]);
     try {
@@ -785,6 +907,10 @@ function broadcast(event, filePath) {
 watcher.on('change', (path) => broadcast('change', path));
 watcher.on('add', (path) => broadcast('add', path));
 watcher.on('unlink', (path) => broadcast('unlink', path));
+watcher.on('error', (err) => {
+  // Non-fatal: continue running but inform the user
+  process.stderr.write(formatFriendlyError(err));
+});
 
 async function killExistingDocview(p) {
   try {
@@ -800,6 +926,8 @@ async function killExistingDocview(p) {
 }
 
 await killExistingDocview(port);
+
+server.on('error', (err) => reportAndExit(err));
 
 server.listen(port, () => {
   console.log(`\n  DocView`);
