@@ -5,10 +5,89 @@ import { createInterface } from 'node:readline';
 import { join, resolve, relative, extname, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { Readable } from 'node:stream';
 import chokidar from 'chokidar';
+import jschardet from 'jschardet';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const distDir = join(__dirname, 'dist');
+
+// --- Encoding detection helpers ---
+
+const ENCODING_MAP = {
+  'utf-8': 'utf-8',
+  'ascii': 'utf-8',
+  'utf8': 'utf-8',
+  'shift_jis': 'shift_jis',
+  'shiftjis': 'shift_jis',
+  'shift-jis': 'shift_jis',
+  'windows-31j': 'shift_jis',
+  'cp932': 'shift_jis',
+  'euc-jp': 'euc-jp',
+  'eucjp': 'euc-jp',
+  'iso-2022-jp': 'iso-2022-jp',
+  'euc-kr': 'euc-kr',
+  'big5': 'big5',
+  'gb2312': 'gbk',
+  'gb18030': 'gb18030',
+  'gbk': 'gbk',
+  'windows-1252': 'windows-1252',
+  'iso-8859-1': 'windows-1252',
+  'iso-8859-2': 'iso-8859-2',
+  'ibm866': 'ibm866',
+  'koi8-r': 'koi8-r',
+};
+
+/**
+ * Detect encoding from a buffer and return a TextDecoder-compatible label.
+ */
+function detectEncoding(buf) {
+  // BOM detection
+  if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) return 'utf-8';
+  if (buf[0] === 0xFF && buf[1] === 0xFE) return 'utf-16le';
+  if (buf[0] === 0xFE && buf[1] === 0xFF) return 'utf-16be';
+
+  const detected = jschardet.detect(buf);
+  if (!detected || !detected.encoding) return 'utf-8';
+  const key = detected.encoding.toLowerCase().replace(/[_\s]/g, match => match === '_' ? '_' : '-');
+  return ENCODING_MAP[key] || 'utf-8';
+}
+
+/**
+ * Read a file and decode to UTF-8 string, auto-detecting encoding.
+ */
+async function readFileText(filePath) {
+  const buf = await readFile(filePath);
+  const encoding = detectEncoding(buf);
+  if (encoding === 'utf-8') return buf.toString('utf-8');
+  const decoder = new TextDecoder(encoding);
+  return decoder.decode(buf);
+}
+
+/**
+ * Create a Readable stream of UTF-8 text from a file, auto-detecting encoding.
+ * For UTF-8 files, uses createReadStream directly.
+ * For non-UTF-8 files, reads the entire file, decodes, and wraps as a stream.
+ */
+async function createTextReadStream(filePath) {
+  // Sample first 4KB to detect encoding
+  const { open } = await import('node:fs/promises');
+  const fh = await open(filePath, 'r');
+  try {
+    const sample = Buffer.alloc(4096);
+    const { bytesRead } = await fh.read(sample, 0, 4096, 0);
+    const encoding = detectEncoding(sample.subarray(0, bytesRead));
+    if (encoding === 'utf-8') {
+      return createReadStream(filePath, { encoding: 'utf-8' });
+    }
+    // Non-UTF-8: read full file, decode, return as stream
+    const buf = await readFile(filePath);
+    const text = new TextDecoder(encoding).decode(buf);
+    return Readable.from([text]);
+  } finally {
+    await fh.close();
+  }
+}
 
 // Parse CLI args
 const args = process.argv.slice(2);
@@ -151,11 +230,12 @@ async function serveStatic(res, urlPath) {
  * Returns the requested lines and the total line count.
  */
 async function readLineRange(filePath, offset, limit) {
+  const inputStream = await createTextReadStream(filePath);
   return new Promise((resolve, reject) => {
     const lines = [];
     let lineNum = 0;
     const rl = createInterface({
-      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      input: inputStream,
       crlfDelay: Infinity,
     });
     rl.on('line', (line) => {
@@ -178,10 +258,11 @@ async function readLineRange(filePath, offset, limit) {
 async function estimateLineCount(filePath, fileSize) {
   const EXACT_THRESHOLD = 1024 * 1024; // 1 MB
   if (fileSize <= EXACT_THRESHOLD) {
+    const inputStream = await createTextReadStream(filePath);
     return new Promise((resolve, reject) => {
       let count = 0;
       const rl = createInterface({
-        input: createReadStream(filePath, { encoding: 'utf-8' }),
+        input: inputStream,
         crlfDelay: Infinity,
       });
       rl.on('line', () => count++);
@@ -196,7 +277,10 @@ async function estimateLineCount(filePath, fileSize) {
   const fh = await open(filePath, 'r');
   try {
     const { bytesRead } = await fh.read(buf, 0, SAMPLE, 0);
-    const sample = buf.toString('utf-8', 0, bytesRead);
+    const encoding = detectEncoding(buf.subarray(0, bytesRead));
+    const sample = encoding === 'utf-8'
+      ? buf.toString('utf-8', 0, bytesRead)
+      : new TextDecoder(encoding).decode(buf.subarray(0, bytesRead));
     const newlines = (sample.match(/\n/g) || []).length;
     if (newlines === 0) return 1;
     const avgLineBytes = bytesRead / newlines;
@@ -213,6 +297,7 @@ async function estimateLineCount(filePath, fileSize) {
  */
 async function searchFileLines(filePath, query, offset, limit) {
   const lowerQuery = query.toLowerCase();
+  const inputStream = await createTextReadStream(filePath);
   return new Promise((resolve, reject) => {
     const matches = [];
     let lineNum = 0;
@@ -220,7 +305,7 @@ async function searchFileLines(filePath, query, offset, limit) {
     let headerLine = null;
 
     const rl = createInterface({
-      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      input: inputStream,
       crlfDelay: Infinity,
     });
 
@@ -362,7 +447,7 @@ const server = createServer(async (req, res) => {
         res.writeHead(200, headers);
         res.end(lines.join('\n'));
       } else {
-        const content = await readFile(resolved, 'utf-8');
+        const content = await readFileText(resolved);
         res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
         res.end(content);
       }
@@ -471,7 +556,7 @@ const server = createServer(async (req, res) => {
           const ext = extname(entry.name).toLowerCase();
           if (SUPPORTED_EXTENSIONS.has(ext) && !IMAGE_EXTENSIONS.has(ext)) {
             try {
-              const content = await readFile(fullPath, 'utf-8');
+              const content = await readFileText(fullPath);
               const lines = content.split('\n');
               for (let i = 0; i < lines.length && results.length < 100; i++) {
                 if (matcher.test(lines[i])) {
@@ -563,7 +648,7 @@ const server = createServer(async (req, res) => {
           const relPath = relative(targetDir, fullPath);
           if (relPath === targetPath) continue;
           try {
-            const content = await readFile(fullPath, 'utf-8');
+            const content = await readFileText(fullPath);
             const linkRegex = /\[(?:[^\]]*)\]\(([^)]+)\)|\[\[([^\]|]+)(?:\|[^\]]*?)?\]\]/g;
             let match;
             while ((match = linkRegex.exec(content)) !== null) {
