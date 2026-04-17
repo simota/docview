@@ -28,7 +28,7 @@ export class TableOfContents {
     }
 
     this.container.style.display = '';
-    let html = '<div class="toc-title">Contents</div><nav class="toc-nav">';
+    let html = '<div class="toc-header"><span class="toc-title">Contents</span><button class="toc-close-btn" aria-label="Close TOC" title="Close TOC (Cmd+J)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg></button></div><nav class="toc-nav">';
 
     headings.forEach((h) => {
       const level = parseInt(h.tagName[1]);
