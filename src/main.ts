@@ -587,6 +587,22 @@ function escapeHtml(s: string): string {
 }
 
 function showWelcome() {
+  const recent = getRecent().slice(0, 5);
+  let recentSection = '';
+  if (recent.length > 0) {
+    const items = recent.map((p) => {
+      const parts = p.split('/');
+      const fileName = parts[parts.length - 1] ?? p;
+      const parentDir = parts.length >= 2 ? parts[parts.length - 2] + '/' : '';
+      return `<button class="welcome-recent-item" data-path="${escapeHtml(p)}" title="${escapeHtml(p)}">
+        <span class="welcome-recent-dir">${escapeHtml(parentDir)}</span><span class="welcome-recent-name">${escapeHtml(fileName)}</span>
+      </button>`;
+    }).join('');
+    recentSection = `<div class="welcome-recent"><p class="welcome-recent-title">Recent files</p>${items}</div>`;
+  } else {
+    recentSection = `<p class="welcome-hint">&#8592; Click <strong>Files</strong> in the toolbar to browse</p>`;
+  }
+
   viewer.innerHTML = `
     <div class="welcome">
       <div class="welcome-icon">D.</div>
@@ -596,8 +612,17 @@ function showWelcome() {
         <span>Markdown</span><span>YAML</span><span>JSON</span>
         <span>TOML</span><span>INI</span><span>Images</span>
       </div>
+      ${recentSection}
       <p class="welcome-hint"><kbd>Cmd+P</kbd> to search files &nbsp; <kbd>Cmd+Shift+F</kbd> for full-text search</p>
     </div>`;
+
+  viewer.querySelectorAll<HTMLButtonElement>('.welcome-recent-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const path = btn.dataset.path;
+      if (path) loadServerFile(path);
+    });
+  });
+
   toc.clear();
   updateBreadcrumb(null);
 }

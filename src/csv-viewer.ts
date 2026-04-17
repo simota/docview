@@ -14,10 +14,15 @@ export function renderCsvTable(content: string, path: string): string {
   const fields = result.meta.fields;
   const rows = result.data as Record<string, unknown>[];
 
-  const ths = fields.map((f, i) => `<th data-col="${esc(f)}" data-col-index="${i}" role="columnheader" aria-sort="none"><label class="csv-col-check"><input type="checkbox" data-col-select="${i}" checked></label>${esc(f)}<span class="sort-indicator" aria-hidden="true"></span></th>`).join('');
+  // Row-number header (not sortable — excluded from sort by col-index offset)
+  const rowNumTh = `<th class="csv-row-num-header" aria-label="Row number">#</th>`;
+  const ths = rowNumTh + fields.map((f, i) => `<th data-col="${esc(f)}" data-col-index="${i}" role="columnheader" aria-sort="none"><label class="csv-col-check"><input type="checkbox" data-col-select="${i}" checked></label>${esc(f)}<span class="sort-indicator" aria-hidden="true"></span></th>`).join('');
   const trs = rows.map((row, i) => {
-    const tds = fields.map((f) => `<td>${esc(String(row[f] ?? ''))}</td>`).join('');
-    return `<tr data-row-index="${i}">${tds}</tr>`;
+    const tds = fields.map((f) => {
+      const val = String(row[f] ?? '');
+      return `<td title="${esc(val)}">${esc(val)}</td>`;
+    }).join('');
+    return `<tr data-row-index="${i}"><td class="csv-row-num">${i + 1}</td>${tds}</tr>`;
   }).join('');
 
   return `<div class="csv-view">
@@ -97,14 +102,18 @@ export function initCsvSort(): void {
 
     const th = target.closest('.csv-sortable th');
     if (!th) return;
+    // Skip the row-number header (no aria-sort attribute)
+    if (!th.hasAttribute('aria-sort')) return;
 
     const table = th.closest('table')!;
     const ths = Array.from(table.querySelectorAll('thead th'));
-    const colIndex = ths.indexOf(th as HTMLTableCellElement);
-    if (colIndex < 0) return;
+    const thIndex = ths.indexOf(th as HTMLTableCellElement);
+    if (thIndex < 0) return;
+    // Data columns start at td index 1 (index 0 is the row-number cell)
+    const colIndex = thIndex;
 
     const direction = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
-    updateSortHeaders(ths, th, direction);
+    updateSortHeaders(ths.filter((h) => h.hasAttribute('aria-sort')), th, direction);
 
     const tbody = table.querySelector('tbody')!;
     const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -126,15 +135,15 @@ function updateColumnHighlight(table: HTMLTableElement): void {
     if (cb.checked) selected.add(Number(cb.dataset.colSelect));
   });
 
-  // ヘッダーのハイライト
+  // ヘッダー: index 0 は行番号列なのでデータ列は +1 オフセット
   const ths = table.querySelectorAll('thead th');
-  ths.forEach((th, i) => th.classList.toggle('csv-col-selected', selected.has(i)));
+  ths.forEach((th, i) => th.classList.toggle('csv-col-selected', selected.has(i - 1)));
 
-  // セルのハイライト
+  // セル: index 0 は行番号列
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach((row) => {
     const tds = row.querySelectorAll('td');
-    tds.forEach((td, i) => td.classList.toggle('csv-col-selected', selected.has(i)));
+    tds.forEach((td, i) => td.classList.toggle('csv-col-selected', selected.has(i - 1)));
   });
 }
 
@@ -146,14 +155,16 @@ function getSelectedColumnData(table: HTMLTableElement): string {
   });
   if (!selected.length) return '';
 
+  // data-col-index はデータ列の 0-based インデックス、th は +1 オフセット
   const ths = table.querySelectorAll('thead th');
-  const headerLine = selected.map((i) => ths[i]?.getAttribute('data-col') ?? '').join('\t');
+  const headerLine = selected.map((i) => ths[i + 1]?.getAttribute('data-col') ?? '').join('\t');
 
   const rows = table.querySelectorAll('tbody tr');
   const lines = [headerLine];
   rows.forEach((row) => {
     const tds = row.querySelectorAll('td');
-    lines.push(selected.map((i) => (tds[i]?.textContent ?? '').trim()).join('\t'));
+    // td[0] is row-number; data cells start at td[1]
+    lines.push(selected.map((i) => (tds[i + 1]?.textContent ?? '').trim()).join('\t'));
   });
   return lines.join('\n');
 }

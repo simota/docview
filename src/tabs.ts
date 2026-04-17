@@ -1,3 +1,5 @@
+import { fileIcon } from './filetree';
+
 type TabSelectCallback = (path: string) => void;
 type TabCloseCallback = (path: string) => void;
 
@@ -21,7 +23,8 @@ export class TabBar {
 
   open(path: string) {
     if (!this.tabs.find((t) => t.path === path)) {
-      const name = path.split('/').pop() || path;
+      const parts = path.split('/');
+      const name = parts.pop() || path;
       this.tabs.push({ path, name });
     }
     this.activePath = path;
@@ -70,8 +73,15 @@ export class TabBar {
     this.container.innerHTML = this.tabs.map((tab) => {
       const isActive = tab.path === this.activePath;
       const safePath = this.escapeAttr(tab.path);
+      const parts = tab.path.split('/');
+      const fileName = parts[parts.length - 1] ?? tab.path;
+      const parentDir = parts.length >= 2 ? parts[parts.length - 2] : null;
+      const icon = fileIcon(fileName);
+      const labelHtml = parentDir
+        ? `${icon}<span class="tab-parent">${this.escapeHtml(parentDir)}/</span><span class="tab-filename">${this.escapeHtml(fileName)}</span>`
+        : `${icon}<span class="tab-filename">${this.escapeHtml(fileName)}</span>`;
       return `<div class="tab-item ${isActive ? 'active' : ''}" data-path="${safePath}" title="${safePath}" draggable="true">
-        <span class="tab-name">${this.escapeHtml(tab.name)}</span>
+        <span class="tab-name">${labelHtml}</span>
         <button class="tab-close" data-path="${safePath}" title="Close">&times;</button>
       </div>`;
     }).join('');
