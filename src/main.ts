@@ -11,6 +11,7 @@ import { renderJsonlTable } from './jsonl-viewer';
 import { renderLogTable } from './log-viewer';
 import { ChunkedTable } from './chunked-table';
 import { FindBar } from './find-bar';
+import { HelpModal } from './help-modal';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import './style.css';
@@ -25,6 +26,7 @@ if (exportMode) document.documentElement.classList.add('export-mode');
 
 let currentFilePath: string | null = null;
 let sidebarVisible = false;
+let tocVisible = localStorage.getItem('docview.tocVisible') !== 'false';
 let wordWrap = false; // (#7)
 const scrollPositions = new Map<string, number>();
 
@@ -35,8 +37,10 @@ let splitViewer: HTMLDivElement | null = null;
 // --- DOM refs ---
 const viewer = document.getElementById('viewer') as HTMLDivElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
+const btnHelp = document.getElementById('btn-help') as HTMLButtonElement;
 const btnOpen = document.getElementById('btn-open') as HTMLButtonElement;
 const btnSidebar = document.getElementById('btn-sidebar') as HTMLButtonElement;
+const btnToc = document.getElementById('btn-toc') as HTMLButtonElement;
 const btnSearch = document.getElementById('btn-search') as HTMLButtonElement;
 const btnPrint = document.getElementById('btn-print') as HTMLButtonElement;
 const btnExport = document.getElementById('btn-export') as HTMLButtonElement;
@@ -99,6 +103,9 @@ const toc = new TableOfContents(tocSidebar, viewer);
 
 // --- Search ---
 const searchModal = new SearchModal((path) => loadServerFile(path));
+
+// --- Help modal (?) ---
+const helpModal = new HelpModal();
 
 // --- Breadcrumb (#3) ---
 function updateBreadcrumb(path: string | null, mtime?: string | null) {
@@ -786,6 +793,20 @@ function toggleSidebar() {
   btnSidebar.classList.toggle('toolbar-btn-active', sidebarVisible);
 }
 
+function applyTocVisibility(visible: boolean, focusBtn?: boolean) {
+  tocVisible = visible;
+  tocSidebar.classList.toggle('toc-hidden', !tocVisible);
+  tocSidebar.setAttribute('aria-hidden', String(!tocVisible));
+  btnToc.classList.toggle('toolbar-btn-active', tocVisible);
+  btnToc.setAttribute('aria-pressed', String(tocVisible));
+  localStorage.setItem('docview.tocVisible', String(tocVisible));
+  if (!visible && focusBtn) btnToc.focus();
+}
+
+function toggleToc() {
+  applyTocVisibility(!tocVisible, true);
+}
+
 // --- Keyboard navigation in sidebar (#5) ---
 function setupSidebarKeyNav() {
   sidebar.addEventListener('keydown', (e) => {
@@ -822,38 +843,6 @@ function handleDrop(e: DragEvent) {
   if (file) loadLocalFile(file);
 }
 
-// Shortcut help overlay (#2)
-function toggleShortcutHelp() {
-  let overlay = document.getElementById('shortcut-overlay');
-  if (overlay) { overlay.remove(); return; }
-  overlay = document.createElement('div');
-  overlay.id = 'shortcut-overlay';
-  overlay.className = 'search-overlay';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Keyboard shortcuts');
-  overlay.innerHTML = `<div class="search-modal shortcut-modal">
-    <h2 class="shortcut-title">Keyboard Shortcuts</h2>
-    <div class="shortcut-grid">
-      <kbd>Cmd+P</kbd><span>Search files</span>
-      <kbd>Cmd+Shift+F</kbd><span>Full-text search</span>
-      <kbd>Cmd+E</kbd><span>Recent files</span>
-      <kbd>Cmd+B</kbd><span>Toggle sidebar</span>
-      <kbd>Cmd+O</kbd><span>Open file</span>
-      <kbd>Cmd+Shift+E</kbd><span>Export HTML</span>
-      <kbd>Cmd+Shift+S</kbd><span>Slide mode</span>
-      <kbd>Cmd+/−/0</kbd><span>Zoom in/out/reset</span>
-      <kbd>Alt+Z</kbd><span>Word wrap toggle</span>
-      <kbd>Cmd+\\</kbd><span>Split view</span>
-      <kbd>/</kbd><span>Find in document</span>
-      <kbd>↑ / ↓</kbd><span>Navigate sidebar</span>
-      <kbd>?</kbd><span>This help</span>
-      <kbd>Esc</kbd><span>Close overlay</span>
-    </div>
-  </div>`;
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-}
 
 // Recent files modal (#15)
 function showRecentFiles() {
@@ -884,18 +873,19 @@ img{max-width:100%}h1,h2,h3{color:#1a1c2e}</style></head>
 }
 
 function handleKeyboard(e: KeyboardEvent) {
-  if (document.getElementById('shortcut-overlay')) {
-    if (e.key === 'Escape') { document.getElementById('shortcut-overlay')?.remove(); e.preventDefault(); }
-    return;
-  }
+  if (helpModal.isOpen) return;
   if (findBar.active) {
     if (e.key === 'Escape') { findBar.close(); e.preventDefault(); }
     return;
   }
   if (searchModal.isOpen) return;
 
+  // Guard: don't fire single-key shortcuts when typing in an input
+  const tag = (e.target as HTMLElement).tagName;
+  const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable;
+
   // Vim-style find (/)
-  if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+  if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable) {
     e.preventDefault();
     findBar.open();
     return;
@@ -904,9 +894,9 @@ function handleKeyboard(e: KeyboardEvent) {
     // n/N for next/prev match when find was used
   }
 
-  if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+  if (e.key === '?' && !e.metaKey && !e.ctrlKey && !isEditable) {
     e.preventDefault();
-    toggleShortcutHelp();
+    helpModal.toggle();
     return;
   }
   if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
@@ -936,6 +926,10 @@ function handleKeyboard(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
     e.preventDefault();
     toggleSidebar();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'j' && !e.shiftKey) {
+    e.preventDefault();
+    toggleToc();
   }
   // Zoom (#6)
   if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
@@ -1157,6 +1151,15 @@ async function init() {
     sidebar.classList.remove('sidebar-hidden');
     btnSidebar.classList.add('toolbar-btn-active');
 
+    // Apply TOC visibility from localStorage
+    applyTocVisibility(tocVisible);
+
+    // Wire up TOC close button (delegated — button is rendered on each toc.update())
+    tocSidebar.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.toc-close-btn')) toggleToc();
+    });
+
     connectSSE();
     setupSidebarKeyNav();
     initSidebarResize(sidebar);
@@ -1191,6 +1194,7 @@ async function init() {
 init();
 
 // --- Event listeners ---
+btnHelp.addEventListener('click', () => helpModal.open());
 btnTheme.addEventListener('click', () => {
   const newTheme = toggleTheme();
   updateMermaidTheme(newTheme === 'dark');
@@ -1198,6 +1202,7 @@ btnTheme.addEventListener('click', () => {
 });
 btnOpen.addEventListener('click', () => fileInput.click());
 btnSidebar.addEventListener('click', toggleSidebar);
+btnToc.addEventListener('click', toggleToc);
 btnSearch.addEventListener('click', () => searchModal.open('files'));
 btnPrint.addEventListener('click', () => window.print()); // #12
 btnExport.addEventListener('click', async () => {
