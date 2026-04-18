@@ -30,12 +30,30 @@ let tocVisible = localStorage.getItem('docview.tocVisible') !== 'false';
 let wordWrap = false; // (#7)
 const scrollPositions = new Map<string, number>();
 
+type PaneId = 'left' | 'right';
+type LineJumpTarget = { line: number; lineEnd: number | null };
+
 // Split view state
 let splitActive = false;
 let splitViewer: HTMLDivElement | null = null;
+let splitFilePath: string | null = null;
+const splitScrollPositions = new Map<string, number>();
+let splitPendingLineJump: LineJumpTarget | null = null;
+let currentHighlightedLine: number | null = null;
+let splitCurrentHighlightedLine: number | null = null;
+let activePane: PaneId = 'left';
+let splitFindBar: FindBar | null = null;
+let syncSplitScroll = localStorage.getItem('docview.syncSplitScroll') !== 'false';
+let syncingSplitScroll = false;
+let leftCompareHeader: HTMLDivElement | null = null;
+let leftComparePath: HTMLSpanElement | null = null;
+let rightComparePath: HTMLSpanElement | null = null;
+let btnSyncScroll: HTMLButtonElement | null = null;
 
 // --- DOM refs ---
 const viewer = document.getElementById('viewer') as HTMLDivElement;
+const viewerPane = document.getElementById('viewer-pane') as HTMLDivElement;
+const workspace = document.getElementById('workspace') as HTMLElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
 const btnHelp = document.getElementById('btn-help') as HTMLButtonElement;
 const btnOpen = document.getElementById('btn-open') as HTMLButtonElement;
@@ -50,6 +68,8 @@ const breadcrumb = document.getElementById('breadcrumb') as HTMLElement;
 const tocSidebar = document.getElementById('toc-sidebar') as HTMLElement;
 const tabBarEl = document.getElementById('tab-bar') as HTMLElement;
 const progressBar = document.getElementById('progress-bar') as HTMLElement;
+let splitTabBarEl: HTMLElement | null = null;
+let splitProgressBar: HTMLElement | null = null;
 
 // --- Find bar (/) ---
 const findBar = new FindBar(viewer);
@@ -60,6 +80,7 @@ const tabBar = new TabBar(
   (path) => loadServerFile(path),
   (path) => { if (path) loadServerFile(path); else showWelcome(); }
 );
+let splitTabBar: TabBar | null = null;
 
 // --- File type detection ---
 const MARKDOWN_EXT = new Set(['.md', '.markdown', '.mdx', '.txt']);
@@ -102,10 +123,93 @@ function langFromExt(path: string): string {
 const toc = new TableOfContents(tocSidebar, viewer);
 
 // --- Search ---
-const searchModal = new SearchModal(({ path, line }) => openFileLocation(path, line ?? null));
+const searchModal = new SearchModal(({ path, line }) => openFileLocation(path, line ?? null, null, getNavigationPane()));
 
 // --- Help modal (?) ---
 const helpModal = new HelpModal();
+
+function getNavigationPane(): PaneId {
+  return splitActive ? activePane : 'left';
+}
+
+function getPaneViewer(pane: PaneId): HTMLDivElement | null {
+  return pane === 'left' ? viewer : splitViewer;
+}
+
+function getPanePath(pane: PaneId): string | null {
+  return pane === 'left' ? currentFilePath : splitFilePath;
+}
+
+function getPaneScrollMap(pane: PaneId): Map<string, number> {
+  return pane === 'left' ? scrollPositions : splitScrollPositions;
+}
+
+function getPendingLineJump(pane: PaneId): LineJumpTarget | null {
+  return pane === 'left' ? pendingLineJump : splitPendingLineJump;
+}
+
+function setPendingLineJump(pane: PaneId, jump: LineJumpTarget | null) {
+  if (pane === 'left') pendingLineJump = jump;
+  else splitPendingLineJump = jump;
+}
+
+function getHighlightedLine(pane: PaneId): number | null {
+  return pane === 'left' ? currentHighlightedLine : splitCurrentHighlightedLine;
+}
+
+function setHighlightedLine(pane: PaneId, line: number | null) {
+  if (pane === 'left') currentHighlightedLine = line;
+  else splitCurrentHighlightedLine = line;
+}
+
+function getFindBarForPane(pane: PaneId): FindBar | null {
+  return pane === 'left' ? findBar : splitFindBar;
+}
+
+function getProgressBarForPane(pane: PaneId): HTMLElement | null {
+  return pane === 'left' ? progressBar : splitProgressBar;
+}
+
+function getPaneIdForTarget(target: HTMLElement): PaneId | null {
+  if (target === viewer) return 'left';
+  if (splitViewer && target === splitViewer) return 'right';
+  return null;
+}
+
+function formatPanePath(path: string | null): string {
+  return path || 'Select a file to compare';
+}
+
+function updatePaneLabels() {
+  if (leftComparePath) leftComparePath.textContent = formatPanePath(currentFilePath);
+  if (rightComparePath) rightComparePath.textContent = formatPanePath(splitFilePath);
+}
+
+function updateSyncScrollButton() {
+  if (!btnSyncScroll) return;
+  btnSyncScroll.textContent = syncSplitScroll ? 'Sync scroll: On' : 'Sync scroll: Off';
+  btnSyncScroll.setAttribute('aria-pressed', String(syncSplitScroll));
+}
+
+function setPaneProgress(pane: PaneId, pct: number) {
+  getProgressBarForPane(pane)?.style.setProperty('width', `${Math.max(0, Math.min(100, pct))}%`);
+}
+
+function setActivePane(pane: PaneId) {
+  activePane = splitActive ? pane : 'left';
+  viewerPane.classList.toggle('compare-pane-active', splitActive && activePane === 'left');
+  document.getElementById('viewer-pane-right')?.classList.toggle('compare-pane-active', splitActive && activePane === 'right');
+}
+
+function toggleSyncSplitScroll() {
+  syncSplitScroll = !syncSplitScroll;
+  localStorage.setItem('docview.syncSplitScroll', String(syncSplitScroll));
+  updateSyncScrollButton();
+}
+
+viewerPane.addEventListener('click', () => {
+  if (splitActive) setActivePane('left');
+});
 
 // --- Breadcrumb (#3) ---
 function updateBreadcrumb(path: string | null, mtime?: string | null) {
@@ -159,26 +263,55 @@ function addCopyButtons(target: HTMLElement = viewer) {
 }
 
 // --- Scroll position memory (#7) ---
-function saveScrollPosition() {
-  if (currentFilePath) {
-    scrollPositions.set(currentFilePath, viewer.scrollTop);
+function saveScrollPosition(pane: PaneId = 'left') {
+  const path = getPanePath(pane);
+  const target = getPaneViewer(pane);
+  if (path && target) {
+    getPaneScrollMap(pane).set(path, target.scrollTop);
   }
 }
 
-function restoreScrollPosition(path: string) {
-  const pos = scrollPositions.get(path);
-  if (pos !== undefined) {
-    requestAnimationFrame(() => { viewer.scrollTop = pos; });
+function restoreScrollPosition(path: string, pane: PaneId = 'left') {
+  const target = getPaneViewer(pane);
+  const pos = getPaneScrollMap(pane).get(path);
+  if (target && pos !== undefined) {
+    requestAnimationFrame(() => { target.scrollTop = pos; });
   }
 }
 
-viewer.addEventListener('scroll', () => {
-  if (currentFilePath) scrollPositions.set(currentFilePath, viewer.scrollTop);
-  // Progress bar
-  const scrollHeight = viewer.scrollHeight - viewer.clientHeight;
-  const pct = scrollHeight > 0 ? (viewer.scrollTop / scrollHeight) * 100 : 0;
-  if (progressBar) progressBar.style.width = `${pct}%`;
-});
+function syncScrollFrom(sourcePane: PaneId) {
+  if (!splitActive || !syncSplitScroll || syncingSplitScroll) return;
+  const source = getPaneViewer(sourcePane);
+  const targetPane: PaneId = sourcePane === 'left' ? 'right' : 'left';
+  const target = getPaneViewer(targetPane);
+  if (!source || !target) return;
+
+  const sourceMax = source.scrollHeight - source.clientHeight;
+  const targetMax = target.scrollHeight - target.clientHeight;
+  if (sourceMax <= 0 || targetMax <= 0) return;
+
+  syncingSplitScroll = true;
+  target.scrollTop = (source.scrollTop / sourceMax) * targetMax;
+  requestAnimationFrame(() => {
+    syncingSplitScroll = false;
+  });
+}
+
+function handlePaneScroll(pane: PaneId) {
+  const target = getPaneViewer(pane);
+  if (!target) return;
+
+  const path = getPanePath(pane);
+  if (path) getPaneScrollMap(pane).set(path, target.scrollTop);
+
+  const scrollHeight = target.scrollHeight - target.clientHeight;
+  const pct = scrollHeight > 0 ? (target.scrollTop / scrollHeight) * 100 : 0;
+  setPaneProgress(pane, pct);
+
+  syncScrollFrom(pane);
+}
+
+viewer.addEventListener('scroll', () => handlePaneScroll('left'));
 
 // --- URL hash routing (#9) ---
 // Format: #file=<path>[&line=<N>[-<M>]]
@@ -229,29 +362,42 @@ function updateHash(path: string | null, line?: number | null, lineEnd?: number 
   }
 }
 
-function openFileLocation(path: string, line: number | null = null, lineEnd: number | null = null) {
-  if (line != null) {
-    pendingLineJump = { line, lineEnd };
-    updateHash(path, line, lineEnd);
-
-    if (path === currentFilePath) {
-      scrollToLine(line, lineEnd);
+function openFileLocation(path: string, line: number | null = null, lineEnd: number | null = null, pane: PaneId = 'left') {
+  if (pane === 'right' && splitActive && splitViewer) {
+    if (line != null) {
+      setPendingLineJump('right', { line, lineEnd });
+      if (path === splitFilePath) {
+        scrollToLine(line, lineEnd, splitViewer, 'right');
+        return;
+      }
+      void loadIntoSplit(path);
       return;
     }
 
-    loadServerFile(path);
+    if (path !== splitFilePath) void loadIntoSplit(path);
+    return;
+  }
+
+  if (line != null) {
+    setPendingLineJump('left', { line, lineEnd });
+    updateHash(path, line, lineEnd);
+
+    if (path === currentFilePath) {
+      scrollToLine(line, lineEnd, viewer, 'left');
+      return;
+    }
+
+    void loadServerFile(path);
     return;
   }
 
   updateHash(path, null, null);
-  if (path !== currentFilePath) loadServerFile(path);
+  if (path !== currentFilePath) void loadServerFile(path);
 }
 
 // --- Line jump (URL hash #file=...&line=N[-M]) ---
 // Tracks the line requested by URL hash. Consumed (and cleared) after rendering.
-let pendingLineJump: { line: number; lineEnd: number | null } | null = null;
-// Tracks the currently highlighted line range, used for Shift+Click range expansion.
-let currentHighlightedLine: number | null = null;
+let pendingLineJump: LineJumpTarget | null = null;
 
 function clearLineHighlights(target: HTMLElement = viewer) {
   target.querySelectorAll('.line-highlighted').forEach((el) => el.classList.remove('line-highlighted'));
@@ -269,11 +415,11 @@ function highlightLines(start: number, end: number | null, target: HTMLElement =
   }
 }
 
-function scrollToLine(line: number, lineEnd: number | null, target: HTMLElement = viewer) {
+function scrollToLine(line: number, lineEnd: number | null, target: HTMLElement = viewer, pane: PaneId = 'left') {
   const el = target.querySelector(`.line-row[data-line="${line}"], tr[data-line="${line}"]`) as HTMLElement | null;
   if (!el) return false;
   highlightLines(line, lineEnd, target);
-  currentHighlightedLine = line;
+  setHighlightedLine(pane, line);
   // Center in view; fall back to scrollIntoView for robustness.
   requestAnimationFrame(() => {
     el.scrollIntoView({ block: 'center', behavior: 'auto' });
@@ -296,10 +442,11 @@ function showCopyToast(message: string) {
   }, 1600);
 }
 
-async function copyLinkToLine(line: number, lineEnd: number | null) {
-  if (!currentFilePath) return;
-  updateHash(currentFilePath, line, lineEnd);
-  const url = `${location.origin}${location.pathname}${buildHash(currentFilePath, line, lineEnd)}`;
+async function copyLinkToLine(pane: PaneId, line: number, lineEnd: number | null) {
+  const path = getPanePath(pane);
+  if (!path) return;
+  if (pane === 'left') updateHash(path, line, lineEnd);
+  const url = `${location.origin}${location.pathname}${buildHash(path, line, lineEnd)}`;
   try {
     await navigator.clipboard.writeText(url);
     const label = lineEnd != null && lineEnd !== line
@@ -311,7 +458,7 @@ async function copyLinkToLine(line: number, lineEnd: number | null) {
   }
 }
 
-function handleLineNumClick(e: Event) {
+function handleLineNumClick(e: Event, pane: PaneId) {
   const t = e.target as HTMLElement;
   const el = t.closest('[data-line]') as HTMLElement | null;
   if (!el) return;
@@ -323,32 +470,40 @@ function handleLineNumClick(e: Event) {
 
   const mouseEvt = e as MouseEvent;
   const shift = mouseEvt.shiftKey;
-  if (shift && currentHighlightedLine != null && currentHighlightedLine !== line) {
-    const start = Math.min(currentHighlightedLine, line);
-    const end = Math.max(currentHighlightedLine, line);
-    highlightLines(start, end);
-    copyLinkToLine(start, end);
+  const target = getPaneViewer(pane);
+  const highlightedLine = getHighlightedLine(pane);
+  if (!target) return;
+
+  if (shift && highlightedLine != null && highlightedLine !== line) {
+    const start = Math.min(highlightedLine, line);
+    const end = Math.max(highlightedLine, line);
+    highlightLines(start, end, target);
+    void copyLinkToLine(pane, start, end);
   } else {
-    highlightLines(line, null);
-    currentHighlightedLine = line;
-    copyLinkToLine(line, null);
+    highlightLines(line, null, target);
+    setHighlightedLine(pane, line);
+    void copyLinkToLine(pane, line, null);
   }
 }
 
-function handleLineNumKey(e: KeyboardEvent) {
+function handleLineNumKey(e: KeyboardEvent, pane: PaneId) {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const t = e.target as HTMLElement;
   if (!t.classList.contains('line-num') && !t.classList.contains('log-line-num')) return;
   e.preventDefault();
-  handleLineNumClick(e);
+  handleLineNumClick(e, pane);
+}
+
+function bindLineInteractions(target: HTMLElement, pane: PaneId) {
+  target.addEventListener('click', (e) => handleLineNumClick(e, pane));
+  target.addEventListener('keydown', (e) => handleLineNumKey(e, pane));
 }
 
 // Delegated line-number click handler on the viewer.
-viewer.addEventListener('click', handleLineNumClick);
-viewer.addEventListener('keydown', handleLineNumKey);
+bindLineInteractions(viewer, 'left');
 
 // --- Relative link navigation (#10) ---
-function interceptRelativeLinks(target: HTMLElement = viewer) {
+function interceptRelativeLinks(currentPath: string, target: HTMLElement = viewer, pane: PaneId = 'left') {
   target.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => {
     const href = a.getAttribute('href');
     if (!href || href.startsWith('http') || href.startsWith('#')) return;
@@ -356,20 +511,20 @@ function interceptRelativeLinks(target: HTMLElement = viewer) {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       let targetPath = href;
-      if (currentFilePath && !href.startsWith('/')) {
-        const dir = currentFilePath.includes('/') ? currentFilePath.replace(/\/[^/]+$/, '/') : '';
+      if (!href.startsWith('/')) {
+        const dir = currentPath.includes('/') ? currentPath.replace(/\/[^/]+$/, '/') : '';
         targetPath = dir + href;
       }
       // Normalize path (remove ./)
       targetPath = targetPath.replace(/^\.\//, '');
-      loadServerFile(targetPath);
+      openFileLocation(targetPath, null, null, pane);
     });
   });
 }
 
 // --- Rendering ---
 function renderContent(content: string, path: string, target: HTMLElement = viewer) {
-  if (target === viewer) saveScrollPosition();
+  const pane = getPaneIdForTarget(target) ?? 'left';
   const type = detectFileType(path);
 
   switch (type) {
@@ -382,7 +537,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
         toc.update();
         toc.loadBacklinks(path);
       }
-      interceptRelativeLinks(target);
+      interceptRelativeLinks(path, target, pane);
       break;
 
     case 'data': {
@@ -489,14 +644,13 @@ function renderContent(content: string, path: string, target: HTMLElement = view
 
   addCopyButtons(target);
   initImageZoom(target);
-  if (target === viewer) {
-    if (pendingLineJump) {
-      const { line, lineEnd } = pendingLineJump;
-      pendingLineJump = null;
-      scrollToLine(line, lineEnd, target);
-    } else {
-      restoreScrollPosition(path);
-    }
+  const lineJump = getPendingLineJump(pane);
+  if (lineJump) {
+    const { line, lineEnd } = lineJump;
+    setPendingLineJump(pane, null);
+    scrollToLine(line, lineEnd, target, pane);
+  } else {
+    restoreScrollPosition(path, pane);
   }
 }
 
@@ -554,6 +708,7 @@ function fixRelativeImages(currentPath: string, target: HTMLElement = viewer) {
 // Zoom (#6)
 function applyZoom() {
   viewer.style.fontSize = `${zoomLevel}%`;
+  if (splitViewer) splitViewer.style.fontSize = `${zoomLevel}%`;
 }
 
 function zoom(delta: number) {
@@ -565,6 +720,7 @@ function zoom(delta: number) {
 function toggleWordWrap() {
   wordWrap = !wordWrap;
   viewer.classList.toggle('word-wrap', wordWrap);
+  splitViewer?.classList.toggle('word-wrap', wordWrap);
 }
 
 // Slide mode (#9) — split by --- and present
@@ -612,6 +768,7 @@ function escapeHtml(s: string): string {
 }
 
 function showWelcome() {
+  currentFilePath = null;
   const recent = getRecent().slice(0, 5);
   let recentSection = '';
   if (recent.length > 0) {
@@ -650,6 +807,7 @@ function showWelcome() {
 
   toc.clear();
   updateBreadcrumb(null);
+  updatePaneLabels();
 }
 
 // --- Chunked file type check ---
@@ -664,12 +822,13 @@ function fileTypeToChunkKind(type: FileType): 'csv' | 'jsonl' | 'log' | null {
 
 // --- File loading ---
 async function loadServerFile(path: string) {
-  saveScrollPosition();
+  saveScrollPosition('left');
   const type = detectFileType(path);
   const fileChanged = currentFilePath !== path;
   currentFilePath = path;
   document.title = `${path} — DocView`;
   updateBreadcrumb(path);
+  updatePaneLabels();
   // Preserve existing line info in hash when the caller didn't provide one.
   const existingHash = parseHash();
   const hashLine = existingHash.path === path ? existingHash.line : null;
@@ -735,7 +894,7 @@ async function loadServerFile(path: string) {
             pendingLineJump = null;
             toc.clear();
             fileTree?.setActive(path);
-            if (progressBar) progressBar.style.width = '0%';
+            setPaneProgress('left', 0);
           }
           return;
         }
@@ -750,7 +909,7 @@ async function loadServerFile(path: string) {
 
   fileTree?.setActive(path);
   // Reset progress bar
-  if (progressBar) progressBar.style.width = '0%';
+  setPaneProgress('left', 0);
 }
 
 async function loadFullFile(path: string) {
@@ -791,6 +950,7 @@ function loadLocalFile(file: File) {
   currentFilePath = null;
   document.title = `${file.name} — DocView`;
   updateBreadcrumb(file.name);
+  updatePaneLabels();
 
   if (type === 'image') {
     const url = URL.createObjectURL(file);
@@ -892,8 +1052,9 @@ img{max-width:100%}h1,h2,h3{color:#1a1c2e}</style></head>
 
 function handleKeyboard(e: KeyboardEvent) {
   if (helpModal.isOpen) return;
-  if (findBar.active) {
-    if (e.key === 'Escape') { findBar.close(); e.preventDefault(); }
+  const openPaneFindBar = [findBar, splitFindBar].find((bar) => bar?.active);
+  if (openPaneFindBar) {
+    if (e.key === 'Escape') { openPaneFindBar.close(); e.preventDefault(); }
     return;
   }
   if (searchModal.isOpen) return;
@@ -905,7 +1066,7 @@ function handleKeyboard(e: KeyboardEvent) {
   // Vim-style find (/)
   if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable) {
     e.preventDefault();
-    findBar.open();
+    getFindBarForPane(getNavigationPane())?.open();
     return;
   }
   if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
@@ -988,6 +1149,7 @@ function connectSSE() {
     try {
       const data = JSON.parse(event.data) as { event: string; path: string };
       if (data.event === 'change' && data.path === currentFilePath) reloadCurrentFile();
+      if (data.event === 'change' && splitActive && data.path === splitFilePath) void loadIntoSplit(data.path);
       if (data.event === 'add' || data.event === 'unlink') fileTree?.refresh();
     } catch { /* ignore */ }
   };
@@ -1091,28 +1253,127 @@ function initImageZoom(target: HTMLElement = viewer) {
 }
 
 // --- Split view ---
+function ensureLeftCompareHeader() {
+  if (leftCompareHeader) return;
+  leftCompareHeader = document.createElement('div');
+  leftCompareHeader.className = 'pane-header compare-pane-header';
+  leftCompareHeader.innerHTML = `
+    <div class="compare-pane-info">
+      <span class="pane-title">Left</span>
+      <span class="compare-pane-path"></span>
+    </div>`;
+  leftComparePath = leftCompareHeader.querySelector('.compare-pane-path') as HTMLSpanElement;
+  leftCompareHeader.addEventListener('click', () => setActivePane('left'));
+  viewerPane.insertBefore(leftCompareHeader, tabBarEl);
+}
+
+function renderSplitEmptyState() {
+  if (!splitViewer) return;
+  splitViewer.innerHTML = `
+    <div class="compare-empty-state">
+      <p>Select a file for the right pane.</p>
+      <p>Click inside the pane, then choose a file from the sidebar or search.</p>
+    </div>`;
+}
+
+function resetSplitPane() {
+  splitFilePath = null;
+  splitPendingLineJump = null;
+  splitCurrentHighlightedLine = null;
+  splitFindBar?.close();
+  renderSplitEmptyState();
+  updatePaneLabels();
+}
+
 function toggleSplitView() {
   splitActive = !splitActive;
-  const workspace = document.getElementById('workspace')!;
 
   if (splitActive) {
+    ensureLeftCompareHeader();
     const pane = document.createElement('div');
     pane.id = 'viewer-pane-right';
     pane.className = 'viewer-pane-split';
-    pane.innerHTML = '<div id="viewer-right" class="markdown-body"></div>';
+    pane.innerHTML = `
+      <div class="pane-header compare-pane-header">
+        <div class="compare-pane-info">
+          <span class="pane-title">Right</span>
+          <span class="compare-pane-path"></span>
+        </div>
+        <div class="compare-pane-actions">
+          <button type="button" class="compare-sync-btn">Sync scroll</button>
+        </div>
+      </div>
+      <div id="tab-bar-right" class="tab-bar split-tab-bar" style="display:none" role="tablist"></div>
+      <div id="progress-bar-right" class="progress-bar"></div>
+      <div id="viewer-right" class="markdown-body" role="main" aria-label="Comparison viewer"></div>`;
     workspace.classList.add('split-view');
     workspace.insertBefore(pane, tocSidebar);
     splitViewer = pane.querySelector('#viewer-right')!;
-    if (currentFilePath) loadIntoSplit(currentFilePath);
+    splitTabBarEl = pane.querySelector('#tab-bar-right') as HTMLElement;
+    splitProgressBar = pane.querySelector('#progress-bar-right') as HTMLElement;
+    rightComparePath = pane.querySelector('.compare-pane-path') as HTMLSpanElement;
+    btnSyncScroll = pane.querySelector('.compare-sync-btn') as HTMLButtonElement;
+    splitTabBar = new TabBar(
+      splitTabBarEl,
+      (path) => {
+        setActivePane('right');
+        void loadIntoSplit(path);
+      },
+      (path) => {
+        setActivePane('right');
+        if (path) {
+          void loadIntoSplit(path);
+        } else {
+          resetSplitPane();
+        }
+      }
+    );
+    btnSyncScroll.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSyncSplitScroll();
+    });
+    pane.addEventListener('click', () => setActivePane('right'));
+    splitViewer.addEventListener('scroll', () => handlePaneScroll('right'));
+    bindLineInteractions(splitViewer, 'right');
+    splitFindBar = new FindBar(splitViewer);
+    applyZoom();
+    if (wordWrap) splitViewer.classList.add('word-wrap');
+    updatePaneLabels();
+    updateSyncScrollButton();
+    if (currentFilePath) {
+      void loadIntoSplit(currentFilePath);
+    } else {
+      renderSplitEmptyState();
+    }
+    setActivePane('right');
   } else {
     workspace.classList.remove('split-view');
     document.getElementById('viewer-pane-right')?.remove();
     splitViewer = null;
+    splitTabBar = null;
+    splitTabBarEl = null;
+    splitProgressBar = null;
+    splitFilePath = null;
+    splitPendingLineJump = null;
+    splitCurrentHighlightedLine = null;
+    splitFindBar = null;
+    rightComparePath = null;
+    btnSyncScroll = null;
+    setActivePane('left');
+    updatePaneLabels();
   }
 }
 
 async function loadIntoSplit(path: string) {
   if (!splitViewer) return;
+  saveScrollPosition('right');
+  const fileChanged = splitFilePath !== path;
+  splitFilePath = path;
+  if (fileChanged) splitCurrentHighlightedLine = null;
+  addRecent(path);
+  splitTabBar?.open(path);
+  updatePaneLabels();
+  setPaneProgress('right', 0);
   const type = detectFileType(path);
 
   if (type === 'image') {
@@ -1128,6 +1389,7 @@ async function loadIntoSplit(path: string) {
       splitViewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /></div>`;
     }
     initImageZoom(splitViewer);
+    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
     return;
   }
 
@@ -1137,6 +1399,7 @@ async function loadIntoSplit(path: string) {
     const content = await res.text();
     renderContent(content, path, splitViewer);
     initImageZoom(splitViewer);
+    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
   } catch { /* ignore */ }
 }
 
@@ -1153,11 +1416,10 @@ async function init() {
     await loadCustomCSS();
 
     fileTree = new FileTree(document.getElementById('filetree')!, (path) => {
-      if (splitActive && splitViewer) {
-        // Alt+click on sidebar loads into split pane (handled via keyboard state)
-        loadServerFile(path);
+      if (splitActive && activePane === 'right') {
+        void loadIntoSplit(path);
       } else {
-        loadServerFile(path);
+        void loadServerFile(path);
       }
     });
     await fileTree.load();
@@ -1190,13 +1452,13 @@ async function init() {
 
     if (startFile) {
       if (parsed.path && parsed.line != null) {
-        pendingLineJump = { line: parsed.line, lineEnd: parsed.lineEnd };
+        setPendingLineJump('left', { line: parsed.line, lineEnd: parsed.lineEnd });
       }
-      loadServerFile(startFile);
+      void loadServerFile(startFile);
     } else {
       const firstFile = sidebar.querySelector('.filetree-item[data-type="file"]') as HTMLElement;
       if (firstFile?.dataset.path) {
-        loadServerFile(firstFile.dataset.path);
+        void loadServerFile(firstFile.dataset.path);
       } else {
         showWelcome();
       }
@@ -1216,7 +1478,8 @@ btnHelp.addEventListener('click', () => helpModal.open());
 btnTheme.addEventListener('click', () => {
   const newTheme = toggleTheme();
   updateMermaidTheme(newTheme === 'dark');
-  if (currentFilePath) reloadCurrentFile();
+  if (currentFilePath) void reloadCurrentFile();
+  if (splitActive && splitFilePath) void loadIntoSplit(splitFilePath);
 });
 btnOpen.addEventListener('click', () => fileInput.click());
 btnSidebar.addEventListener('click', toggleSidebar);
@@ -1266,13 +1529,13 @@ window.addEventListener('hashchange', () => {
   if (!parsed.path) return;
   if (parsed.path !== currentFilePath) {
     if (parsed.line != null) {
-      pendingLineJump = { line: parsed.line, lineEnd: parsed.lineEnd };
+      setPendingLineJump('left', { line: parsed.line, lineEnd: parsed.lineEnd });
     }
-    loadServerFile(parsed.path);
+    void loadServerFile(parsed.path);
   } else if (parsed.line != null) {
-    scrollToLine(parsed.line, parsed.lineEnd);
+    scrollToLine(parsed.line, parsed.lineEnd, viewer, 'left');
   } else {
     clearLineHighlights();
-    currentHighlightedLine = null;
+    setHighlightedLine('left', null);
   }
 });

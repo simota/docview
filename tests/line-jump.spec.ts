@@ -49,6 +49,22 @@ test.describe('Line jump (URL hash &line=)', () => {
     expect(clip).toMatch(/#file=settings\.ini&line=5-12$/);
   });
 
+  test('shift-click preserves the original anchor for subsequent range expansion', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/#file=settings.ini');
+    await page.waitForSelector('.line-num[data-line="12"]');
+
+    await page.locator('.line-num[data-line="12"]').click();
+    await page.locator('.line-num[data-line="5"]').click({ modifiers: ['Shift'] });
+    await expect(page).toHaveURL(/#file=settings\.ini&line=5-12$/);
+
+    await page.locator('.line-num[data-line="20"]').click({ modifiers: ['Shift'] });
+    await expect(page).toHaveURL(/#file=settings\.ini&line=12-20$/);
+
+    const clip = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clip).toMatch(/#file=settings\.ini&line=12-20$/);
+  });
+
   test('changing only the line hash on the same file scrolls without reloading', async ({ page }) => {
     await page.goto('/#file=settings.ini&line=3');
     await page.waitForSelector('.line-row[data-line="3"].line-highlighted');
