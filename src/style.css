@@ -441,22 +441,26 @@ body.dragging::after {
 }
 
 /* ===== Viewer ===== */
-#viewer {
+#viewer,
+#viewer-right {
   flex: 1;
   padding: 40px 48px;
   overflow-y: auto;
   background: var(--bg-primary);
 }
 
-#viewer::-webkit-scrollbar {
+#viewer::-webkit-scrollbar,
+#viewer-right::-webkit-scrollbar {
   width: 6px;
 }
 
-#viewer::-webkit-scrollbar-track {
+#viewer::-webkit-scrollbar-track,
+#viewer-right::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
 }
 
-#viewer::-webkit-scrollbar-thumb {
+#viewer::-webkit-scrollbar-thumb,
+#viewer-right::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
@@ -3273,6 +3277,68 @@ mark.find-current {
 }
 
 /* ===== Split View ===== */
+.compare-pane-header {
+  display: none;
+}
+
+.split-view .compare-pane-header {
+  display: flex;
+}
+
+.compare-pane-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.compare-pane-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compare-pane-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compare-sync-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.compare-sync-btn:hover,
+.compare-sync-btn[aria-pressed="true"] {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-lighter);
+}
+
+.compare-pane-active {
+  box-shadow: inset 0 0 0 2px var(--accent-lighter);
+}
+
+.compare-empty-state {
+  display: grid;
+  place-content: center;
+  min-height: 100%;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
 .split-view #viewer-pane {
   flex: 1;
   min-width: 0;
