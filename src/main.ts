@@ -102,7 +102,7 @@ function langFromExt(path: string): string {
 const toc = new TableOfContents(tocSidebar, viewer);
 
 // --- Search ---
-const searchModal = new SearchModal((path) => loadServerFile(path));
+const searchModal = new SearchModal(({ path, line }) => openFileLocation(path, line ?? null));
 
 // --- Help modal (?) ---
 const helpModal = new HelpModal();
@@ -227,6 +227,24 @@ function updateHash(path: string | null, line?: number | null, lineEnd?: number 
   } else {
     history.replaceState(null, '', location.pathname);
   }
+}
+
+function openFileLocation(path: string, line: number | null = null, lineEnd: number | null = null) {
+  if (line != null) {
+    pendingLineJump = { line, lineEnd };
+    updateHash(path, line, lineEnd);
+
+    if (path === currentFilePath) {
+      scrollToLine(line, lineEnd);
+      return;
+    }
+
+    loadServerFile(path);
+    return;
+  }
+
+  updateHash(path, null, null);
+  if (path !== currentFilePath) loadServerFile(path);
 }
 
 // --- Line jump (URL hash #file=...&line=N[-M]) ---
