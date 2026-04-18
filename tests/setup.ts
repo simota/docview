@@ -44,6 +44,15 @@ export default async function globalSetup() {
   // Slides fixture for Cmd+Shift+S regression test.
   write('slides.md', '# Slide 1\n\nfirst slide\n\n---\n\n# Slide 2\n\nsecond slide\n');
 
+  write('diagrams.md', `# Diagram gallery
+
+\`\`\`mermaid
+flowchart TD
+  Start[Open DocView] --> Compare[Compare two files]
+  Compare --> Review[Review the diff]
+\`\`\`
+`);
+
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');

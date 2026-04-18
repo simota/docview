@@ -784,6 +784,7 @@ body.dragging::after {
   overflow-x: auto;
   box-shadow: var(--shadow-md);
   min-height: 120px;
+  position: relative;
 }
 
 .mermaid-rendered svg {
@@ -2114,6 +2115,90 @@ body.dragging::after {
   color: var(--accent);
 }
 
+.diagram-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(8px);
+  z-index: 1100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+body.diagram-fullscreen-open {
+  overflow: hidden;
+}
+
+.diagram-fullscreen-modal {
+  width: min(1400px, 100%);
+  height: min(100%, calc(100vh - 40px));
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.diagram-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.diagram-fullscreen-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.diagram-fullscreen-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.diagram-fullscreen-close:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.diagram-fullscreen-stage {
+  flex: 1;
+  overflow: hidden;
+  padding: 24px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram-fullscreen-stage svg {
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  transform-origin: center center;
+  transition: transform 0.08s ease-out;
+  will-change: transform;
+}
+
 .help-content {
   overflow-y: auto;
   padding: 12px 20px 20px;
@@ -2797,6 +2882,7 @@ mark.find-current {
   .tab-bar, .reconnect-banner, .json-view-toggle,
   .find-bar, .slide-overlay, .header-anchor,
   .error-banner, .welcome, .progress-bar,
+  .diagram-fullscreen-btn, .diagram-fullscreen-overlay,
   .diagram-label, .viewer-pane-split,
   .backlinks-section, .filetree-filter {
     display: none !important;
@@ -3112,6 +3198,8 @@ mark.find-current {
 .export-mode .search-overlay,
 .export-mode .find-bar,
 .export-mode .progress-bar,
+.export-mode .diagram-fullscreen-btn,
+.export-mode .diagram-fullscreen-overlay,
 .export-mode .copy-btn,
 .export-mode .mermaid-label,
 .export-mode .code-lang,
@@ -3411,11 +3499,35 @@ a.wiki-link:hover {
   justify-content: center;
   padding: 16px;
   background: var(--bg-primary);
+  position: relative;
 }
 
 .diagram-rendered svg {
   max-width: 100%;
   height: auto;
+}
+
+.diagram-fullscreen-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+
+.diagram-fullscreen-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-lighter);
 }
 
 .diagram-rendered-ok .diagram-source {

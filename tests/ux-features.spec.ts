@@ -240,6 +240,34 @@ test.describe('UX improvements', () => {
     await expect(dialog.locator('kbd').first()).toBeVisible();
   });
 
+  test('Mermaid diagrams can open in a fullscreen overlay', async ({ page }) => {
+    await page.goto('/#file=diagrams.md');
+    await page.waitForSelector('.mermaid-rendered svg');
+
+    const fullscreenButton = page.locator('.mermaid-rendered .diagram-fullscreen-btn');
+    await expect(fullscreenButton).toBeVisible();
+    await fullscreenButton.click();
+
+    const overlay = page.locator('.diagram-fullscreen-overlay');
+    await expect(overlay).toBeVisible();
+    await expect(overlay.locator('.diagram-fullscreen-stage svg')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(overlay).not.toBeVisible();
+  });
+
+  test('diagram fullscreen overlay closes from the close button', async ({ page }) => {
+    await page.goto('/#file=diagrams.md');
+    await page.waitForSelector('.mermaid-rendered svg');
+
+    await page.locator('.mermaid-rendered .diagram-fullscreen-btn').click();
+    const overlay = page.locator('.diagram-fullscreen-overlay');
+    await expect(overlay).toBeVisible();
+
+    await overlay.locator('.diagram-fullscreen-close').click();
+    await expect(overlay).not.toBeVisible();
+  });
+
   // TOC toggle — #btn-toc / Cmd+J / Ctrl+J / .toc-close-btn
   test('header contains #btn-toc button', async ({ page }) => {
     await page.goto('/');
