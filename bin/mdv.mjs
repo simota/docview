@@ -25,10 +25,17 @@ if (args.includes('--help') || args.includes('-h')) {
     path               File or directory to view (default: current directory)
 
   Options:
-    -p, --port <port>  Port number (default: 4000)
-    --no-open          Don't auto-open browser
-    -h, --help         Show this help
-    -v, --version      Show version
+    -p, --port <port>         Port number (default: 4000)
+    --no-open                 Don't auto-open browser
+    --no-remote               Disable the remote URL fetcher (Cmd+L remote mode)
+    --allow-private-remote    Also fetch private/loopback remote URLs (opt-in)
+    --remote-max-size <bytes> Max remote response size in bytes (default: 5242880)
+    --remote-strict-tls       Enforce strict TLS cert verification for remote
+                              URLs. By default verification is relaxed so
+                              self-signed / corporate-MITM CAs don't block
+                              fetches.
+    -h, --help                Show this help
+    -v, --version             Show version
 
   Supported formats:
     Markdown   .md .markdown .mdx .txt
