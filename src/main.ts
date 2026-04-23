@@ -12,6 +12,7 @@ import { renderLogTable } from './log-viewer';
 import { ChunkedTable } from './chunked-table';
 import { FindBar } from './find-bar';
 import { HelpModal } from './help-modal';
+import { UrlBar } from './url-bar';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import './style.css';
@@ -57,6 +58,7 @@ const workspace = document.getElementById('workspace') as HTMLElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
 const btnHelp = document.getElementById('btn-help') as HTMLButtonElement;
 const btnOpen = document.getElementById('btn-open') as HTMLButtonElement;
+const btnOpenUrl = document.getElementById('btn-open-url') as HTMLButtonElement;
 const btnSidebar = document.getElementById('btn-sidebar') as HTMLButtonElement;
 const btnToc = document.getElementById('btn-toc') as HTMLButtonElement;
 const btnSearch = document.getElementById('btn-search') as HTMLButtonElement;
@@ -127,6 +129,15 @@ const searchModal = new SearchModal(({ path, line }) => openFileLocation(path, l
 
 // --- Help modal (?) ---
 const helpModal = new HelpModal();
+
+// --- URL bar (Cmd+L) ---
+const urlBar = new UrlBar((target) => {
+  if (target.kind === 'local') {
+    openFileLocation(target.path, target.line, target.lineEnd, getNavigationPane());
+  } else {
+    void loadRemoteUrl(target.url);
+  }
+});
 
 function getNavigationPane(): PaneId {
   return splitActive ? activePane : 'left';
@@ -912,6 +923,58 @@ async function loadServerFile(path: string) {
   setPaneProgress('left', 0);
 }
 
+// --- Remote URL loading (Phase 3) ---
+// Remote views are stateless: no tab entry, no hash update, no SSE tracking,
+// no scroll memory — each open is a fresh read through /api/remote.
+async function loadRemoteUrl(rawUrl: string) {
+  saveScrollPosition('left');
+  currentFilePath = null;
+  currentHighlightedLine = null;
+  const displayName = remoteDisplayName(rawUrl);
+  document.title = `${displayName} — DocView (remote)`;
+  updateBreadcrumb(rawUrl);
+  updatePaneLabels();
+  // Deactivate all local tabs — remote views aren't tabbed.
+  tabBar.setActive('');
+  viewer.innerHTML = `<div class="loading-skeleton">${'<div class="skel-line"></div>'.repeat(6)}</div>`;
+
+  try {
+    const res = await fetch(`/api/remote?url=${encodeURIComponent(rawUrl)}`);
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      showError(`Remote fetch failed: ${detail.error ?? res.status}`);
+      return;
+    }
+    const type = detectFileType(displayName);
+
+    if (type === 'image') {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      viewer.innerHTML = `<div class="image-view"><img src="${blobUrl}" alt="${escapeHtml(rawUrl)}" /><p class="image-caption">${escapeHtml(rawUrl)}</p></div>`;
+      initImageZoom(viewer);
+      toc.clear();
+      return;
+    }
+
+    const content = await res.text();
+    renderContent(content, displayName);
+    const mtime = res.headers.get('X-File-Mtime');
+    updateBreadcrumb(rawUrl, mtime);
+  } catch (err) {
+    showError(`Remote fetch error: ${String(err)}`);
+  }
+}
+
+function remoteDisplayName(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    const last = u.pathname.split('/').filter(Boolean).pop();
+    return last || u.hostname;
+  } catch {
+    return rawUrl;
+  }
+}
+
 async function loadFullFile(path: string) {
   const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
   if (!res.ok) {
@@ -1058,6 +1121,7 @@ function handleKeyboard(e: KeyboardEvent) {
     return;
   }
   if (searchModal.isOpen) return;
+  if (urlBar.isOpen) return;
 
   // Guard: don't fire single-key shortcuts when typing in an input
   const tag = (e.target as HTMLElement).tagName;
@@ -1101,6 +1165,11 @@ function handleKeyboard(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
     e.preventDefault();
     fileInput.click();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'l' && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+    urlBar.open();
+    return;
   }
   if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
     e.preventDefault();
@@ -1548,6 +1617,7 @@ if (themeMenu) {
   });
 }
 btnOpen.addEventListener('click', () => fileInput.click());
+btnOpenUrl?.addEventListener('click', () => urlBar.open());
 btnSidebar.addEventListener('click', toggleSidebar);
 btnToc.addEventListener('click', toggleToc);
 btnSearch.addEventListener('click', () => searchModal.open('files'));

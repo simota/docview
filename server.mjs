@@ -6,6 +6,7 @@ import { join, resolve, relative, extname, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { Readable } from 'node:stream';
+import { isIP } from 'node:net';
 import chokidar from 'chokidar';
 import jschardet from 'jschardet';
 
@@ -201,6 +202,12 @@ const args = process.argv.slice(2);
 let targetDir = process.cwd();
 let initialFile = null;
 let port = 4000;
+let remoteEnabled = true;
+let allowPrivateRemote = false;
+let remoteMaxSize = 5 * 1024 * 1024; // 5 MB default
+// Default: relaxed TLS so self-signed / corporate-MITM CAs don't block fetches.
+// Users who want strict verification can opt in with --remote-strict-tls.
+let remoteInsecureTls = true;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--port' || args[i] === '-p') {
@@ -220,6 +227,25 @@ for (let i = 0; i < args.length; i++) {
       ));
     }
     port = parsed;
+  } else if (args[i] === '--no-remote') {
+    remoteEnabled = false;
+  } else if (args[i] === '--allow-private-remote') {
+    allowPrivateRemote = true;
+  } else if (args[i] === '--remote-max-size') {
+    const raw = args[++i];
+    if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
+      reportAndExit(Object.assign(
+        new Error(`--remote-max-size の値が不正です: "${raw}" (バイト数を整数で指定してください)`),
+        { code: 'EINVALIDREMOTESIZE' },
+      ));
+    }
+    remoteMaxSize = Number(raw);
+  } else if (args[i] === '--remote-strict-tls') {
+    remoteInsecureTls = false;
+  } else if (args[i] === '--remote-insecure-tls') {
+    // No-op — insecure is already the default. Retained so old invocations
+    // don't fail.
+    remoteInsecureTls = true;
   } else if (!args[i].startsWith('-')) {
     const resolved = resolve(args[i]);
     try {
@@ -252,6 +278,222 @@ const SUPPORTED_EXTENSIONS = new Set([
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const SEARCH_CONTEXT_LINES = 20;
+
+// --- Remote URL fetching (Phase 3) ---
+// Primary gate: URL path extension must be in SUPPORTED_EXTENSIONS.
+// Secondary gate: Content-Type must be in REMOTE_MIME_ALLOW (used when URL has no / unsupported ext).
+// Hard deny: Content-Type in REMOTE_MIME_DENY is rejected even if the extension is allowed.
+const REMOTE_MIME_ALLOW = new Set([
+  'text/markdown', 'text/x-markdown', 'text/plain',
+  'application/json', 'application/yaml', 'application/x-yaml',
+  'text/yaml', 'text/x-yaml',
+  'text/csv', 'text/tab-separated-values',
+  'application/x-ndjson', 'application/jsonl',
+  'application/toml', 'text/x-toml', 'text/x-ini', 'text/x-properties',
+  'image/png', 'image/jpeg', 'image/gif', 'image/svg+xml',
+  'image/webp', 'image/bmp', 'image/x-icon', 'image/vnd.microsoft.icon',
+]);
+const REMOTE_MIME_DENY = new Set([
+  'text/html', 'application/xhtml+xml',
+  'text/javascript', 'application/javascript', 'application/x-javascript',
+]);
+
+function isPrivateIPv4(ip) {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((p) => !Number.isFinite(p) || p < 0 || p > 255)) return true;
+  const [a, b] = parts;
+  if (a === 0) return true;             // "this network"
+  if (a === 10) return true;            // RFC1918
+  if (a === 127) return true;           // loopback
+  if (a === 169 && b === 254) return true;  // link-local (AWS metadata etc.)
+  if (a === 172 && b >= 16 && b <= 31) return true;  // RFC1918
+  if (a === 192 && b === 168) return true;           // RFC1918
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT RFC6598
+  if (a >= 224) return true;            // multicast / reserved
+  return false;
+}
+
+function isPrivateIPv6(ip) {
+  const lower = ip.toLowerCase();
+  // Normalize IPv6 like ::ffff:127.0.0.1 to IPv4 form
+  const v4Mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4Mapped) return isPrivateIPv4(v4Mapped[1]);
+  if (lower === '::1' || lower === '::') return true;
+  if (lower.startsWith('fe80:') || lower.startsWith('fe80')) return true; // link-local
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return true;      // ULA
+  if (lower.startsWith('ff')) return true;                                 // multicast
+  return false;
+}
+
+function isPrivateAddress(ip, family) {
+  if (family === 6) return isPrivateIPv6(ip);
+  return isPrivateIPv4(ip);
+}
+
+function normalizeContentType(ct) {
+  return (ct || '').split(';')[0].trim().toLowerCase();
+}
+
+/**
+ * Fetch a remote URL with SSRF and content-type guards.
+ * Re-resolves DNS on every hop (original + redirects) to prevent rebinding.
+ *
+ * Returns one of:
+ *   { status: 200, body: Buffer, contentType, sourceUrl, lastModified }
+ *   { status, error }   // any error condition
+ */
+async function fetchRemoteUrl(rawUrl, config, hopsLeft = 3) {
+  const { maxSize, allowPrivate, insecureTls = false, timeoutMs = 5000 } = config;
+
+  let urlObj;
+  try { urlObj = new URL(rawUrl); } catch {
+    return { status: 400, error: 'Invalid URL' };
+  }
+  if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+    return { status: 400, error: `Unsupported protocol: ${urlObj.protocol}` };
+  }
+
+  const ext = extname(urlObj.pathname).toLowerCase();
+  const extAllowed = ext.length > 0 && SUPPORTED_EXTENSIONS.has(ext);
+  const hasExt = ext.length > 0;
+  if (hasExt && !extAllowed) {
+    return { status: 415, error: `Unsupported file extension: ${ext}` };
+  }
+
+  if (!urlObj.hostname) {
+    return { status: 400, error: 'URL has no hostname' };
+  }
+
+  // DNS lookup (re-done for every hop — guards against rebinding)
+  let address, family;
+  try {
+    const { lookup } = await import('node:dns/promises');
+    const result = await lookup(urlObj.hostname, { verbatim: true });
+    address = result?.address;
+    family = result?.family;
+  } catch (err) {
+    return { status: 502, error: `DNS lookup failed for ${urlObj.hostname}: ${err.message}` };
+  }
+  if (typeof address !== 'string' || !address) {
+    return { status: 502, error: `DNS lookup returned no address for ${urlObj.hostname}` };
+  }
+  const ipVersion = isIP(address);
+  if (ipVersion === 0) {
+    return { status: 502, error: `DNS lookup returned invalid IP for ${urlObj.hostname}: ${address}` };
+  }
+  // Trust isIP over the DNS-reported family — Node has surfaced family
+  // values outside {4, 6} in rare environments, which breaks net.connect.
+  const numericFamily = ipVersion === 6 ? 6 : 4;
+
+  if (!allowPrivate && isPrivateAddress(address, numericFamily)) {
+    return { status: 403, error: `Refusing to fetch private/loopback address (${address})` };
+  }
+
+  const lib = urlObj.protocol === 'https:' ? await import('node:https') : await import('node:http');
+  // Connect directly to the resolved IP so Node skips its own DNS lookup —
+  // this closes the rebinding window between our check and the connect call
+  // without needing a custom `lookup` hook (which has been unreliable across
+  // Node versions). The Host header keeps the origin server's virtual host
+  // routing intact, and servername drives TLS SNI.
+  const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
+  const hostHeader = urlObj.port ? `${urlObj.hostname}:${urlObj.port}` : urlObj.hostname;
+  const connectHost = numericFamily === 6 ? `[${address}]` : address;
+
+  return new Promise((resolve) => {
+    const reqOptions = {
+      method: 'GET',
+      host: connectHost,
+      path: urlObj.pathname + urlObj.search,
+      port,
+      headers: {
+        // Fresh request — no cookies / auth leakage
+        'Host': hostHeader,
+        'User-Agent': 'DocView-Remote/1.0',
+        'Accept': '*/*',
+        'Accept-Encoding': 'identity',
+      },
+      timeout: timeoutMs,
+      servername: urlObj.hostname, // TLS SNI
+    };
+    if (urlObj.protocol === 'https:' && insecureTls) {
+      // User opted into skipping cert verification — common when operating
+      // behind a corporate TLS-inspecting proxy. Scope is per-request only.
+      reqOptions.rejectUnauthorized = false;
+    }
+
+    const req = lib.request(reqOptions, (remoteRes) => {
+      const status = remoteRes.statusCode ?? 502;
+
+      // Manual redirect handling — re-validate at every hop
+      if (status >= 300 && status < 400 && remoteRes.headers.location) {
+        remoteRes.resume();
+        if (hopsLeft <= 0) {
+          resolve({ status: 502, error: 'Too many redirects' });
+          return;
+        }
+        let nextUrl;
+        try { nextUrl = new URL(remoteRes.headers.location, rawUrl).href; }
+        catch { resolve({ status: 502, error: 'Invalid redirect target' }); return; }
+        resolve(fetchRemoteUrl(nextUrl, config, hopsLeft - 1));
+        return;
+      }
+
+      if (status < 200 || status >= 300) {
+        remoteRes.resume();
+        resolve({ status: 502, error: `Remote returned ${status}` });
+        return;
+      }
+
+      const ct = normalizeContentType(remoteRes.headers['content-type']);
+      if (ct && REMOTE_MIME_DENY.has(ct)) {
+        remoteRes.resume();
+        resolve({ status: 415, error: `Content-Type ${ct} is not allowed` });
+        return;
+      }
+      // If no extension signal, require MIME allow-list match
+      if (!extAllowed) {
+        if (!ct || !REMOTE_MIME_ALLOW.has(ct)) {
+          remoteRes.resume();
+          resolve({ status: 415, error: ct ? `Content-Type ${ct} is not in the allow list` : 'Missing Content-Type' });
+          return;
+        }
+      }
+
+      const lengthHeader = remoteRes.headers['content-length'];
+      if (lengthHeader && Number(lengthHeader) > maxSize) {
+        remoteRes.resume();
+        resolve({ status: 413, error: `Remote content exceeds ${maxSize} bytes` });
+        return;
+      }
+
+      const chunks = [];
+      let total = 0;
+      remoteRes.on('data', (chunk) => {
+        total += chunk.length;
+        if (total > maxSize) {
+          remoteRes.destroy();
+          resolve({ status: 413, error: `Remote content exceeds ${maxSize} bytes` });
+          return;
+        }
+        chunks.push(chunk);
+      });
+      remoteRes.on('end', () => {
+        resolve({
+          status: 200,
+          body: Buffer.concat(chunks),
+          contentType: remoteRes.headers['content-type'] || 'application/octet-stream',
+          sourceUrl: urlObj.href,
+          lastModified: remoteRes.headers['last-modified'] || null,
+        });
+      });
+      remoteRes.on('error', (err) => resolve({ status: 502, error: `Stream error: ${err.message}` }));
+    });
+
+    req.on('timeout', () => { req.destroy(); resolve({ status: 504, error: 'Remote request timed out' }); });
+    req.on('error', (err) => resolve({ status: 502, error: `Request error: ${err.message}` }));
+    req.end();
+  });
+}
 
 const IMAGE_MIME = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -630,7 +872,52 @@ const server = createServer(async (req, res) => {
 
   if (url.pathname === '/api/info') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ root: basename(targetDir), initialFile }));
+    res.end(JSON.stringify({
+      root: basename(targetDir),
+      initialFile,
+      remote: {
+        enabled: remoteEnabled,
+        allowPrivate: allowPrivateRemote,
+        maxSizeBytes: remoteMaxSize,
+        insecureTls: remoteInsecureTls,
+      },
+    }));
+    return;
+  }
+
+  if (url.pathname === '/api/remote') {
+    if (!remoteEnabled) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Remote URLs are disabled on this server (--no-remote)' }));
+      return;
+    }
+    const rawUrl = url.searchParams.get('url');
+    if (!rawUrl) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing url parameter' }));
+      return;
+    }
+
+    const result = await fetchRemoteUrl(rawUrl, {
+      maxSize: remoteMaxSize,
+      allowPrivate: allowPrivateRemote,
+      insecureTls: remoteInsecureTls,
+    });
+
+    if (result.status !== 200) {
+      res.writeHead(result.status, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: result.error }));
+      return;
+    }
+
+    const headers = {
+      'Content-Type': result.contentType,
+      'X-Source-Url': result.sourceUrl,
+      'Access-Control-Expose-Headers': 'X-Source-Url, X-File-Mtime',
+    };
+    if (result.lastModified) headers['X-File-Mtime'] = result.lastModified;
+    res.writeHead(200, headers);
+    res.end(result.body);
     return;
   }
 
@@ -975,6 +1262,13 @@ server.listen(port, () => {
   console.log(`  Watching:  ${targetDir}`);
   if (initialFile) console.log(`  File:      ${initialFile}`);
   console.log(`  Server:    http://localhost:${port}/`);
+  if (remoteEnabled) {
+    const priv = allowPrivateRemote ? ' (incl. private IPs)' : '';
+    const tls = remoteInsecureTls ? ' · TLS verify off' : ' · TLS strict';
+    console.log(`  Remote:    on${priv} · max ${(remoteMaxSize / 1024 / 1024).toFixed(1)} MB${tls}`);
+  } else {
+    console.log(`  Remote:    off (--no-remote)`);
+  }
   console.log(`  ─────────────────────────────────────────────`);
   console.log(`  Tip:       ${pickTip()}`);
   console.log('');

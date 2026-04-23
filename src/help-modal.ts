@@ -14,6 +14,7 @@ function buildSections(): ShortcutSection[] {
         [`${MOD}+P`, 'Search files'],
         [`${MOD}+E`, 'Recent files'],
         [`${MOD}+O`, 'Open local file'],
+        [`${MOD}+L`, 'Open by URL or path'],
         [`${MOD}+B`, 'Toggle sidebar'],
         ['↑ / ↓', 'Navigate sidebar'],
       ],
