@@ -120,6 +120,418 @@
   --icon-default: #585b76;
 }
 
+/* Paper — aged kraft paper / sepia ink */
+[data-theme='paper'] {
+  --bg-primary: #f4ecd8;
+  --bg-secondary: #ede3c8;
+  --bg-tertiary: #e4d8b5;
+  --bg-editor: #f7f0de;
+  --text-primary: #3e2f1c;
+  --text-secondary: #5b4a32;
+  --text-muted: #8b7a5c;
+  --border: #cbb994;
+  --border-subtle: #dccca5;
+  --accent: #8b5a2b;
+  --accent-light: #a0724d;
+  --accent-lighter: #c49770;
+  --accent-bg: rgba(139, 90, 43, 0.08);
+  --accent-border: rgba(139, 90, 43, 0.25);
+  --accent-gradient: linear-gradient(135deg, #8b5a2b, #a0724d, #c49770);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(139, 90, 43, 0.12), rgba(196, 151, 112, 0.08));
+  --gutter-bg: #e4d8b5;
+  --gutter-hover: #d4c49c;
+  --shadow-sm: 0 1px 3px rgba(91, 74, 50, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(91, 74, 50, 0.10), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 12px 40px rgba(91, 74, 50, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --code-bg: #ede1c4;
+  --code-text: #9b2c2c;
+  --code-block-bg: #eee2c4;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(139, 90, 43, 0.05);
+  --table-stripe: #ede3c8;
+  --table-border: #cbb994;
+  --table-header-bg: linear-gradient(180deg, #e4d8b5, #dccca5);
+  --link-color: #6b4423;
+  --link-hover: #8b5a2b;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
+  --mark-bg: #f6e58d;
+  --scrollbar-thumb: #bfad86;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(244, 236, 216, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --color-info: #2563eb;
+  --color-info-bg: rgba(37, 99, 235, 0.08);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.08);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.08);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.08);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.08);
+  --icon-markdown: #8b5a2b;
+  --icon-data: #15803d;
+  --icon-config: #b45309;
+  --icon-image: #b91c1c;
+  --icon-default: #8b7a5c;
+}
+
+/* Whiteboard — bright white with marker accents */
+[data-theme='whiteboard'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f4f4f4;
+  --bg-editor: #ffffff;
+  --text-primary: #0a0a0a;
+  --text-secondary: #404040;
+  --text-muted: #808080;
+  --border: #d4d4d4;
+  --border-subtle: #e8e8e8;
+  --accent: #e63946;
+  --accent-light: #ef5a66;
+  --accent-lighter: #f48891;
+  --accent-bg: rgba(230, 57, 70, 0.06);
+  --accent-border: rgba(230, 57, 70, 0.3);
+  --accent-gradient: linear-gradient(135deg, #e63946, #f48891);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(230, 57, 70, 0.08), rgba(244, 136, 145, 0.05));
+  --gutter-bg: #f4f4f4;
+  --gutter-hover: #e4e4e4;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
+  --code-bg: #fef3c7;
+  --code-text: #1e40af;
+  --code-block-bg: #fafafa;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(230, 57, 70, 0.03);
+  --table-stripe: #fafafa;
+  --table-border: #d4d4d4;
+  --table-header-bg: linear-gradient(180deg, #f4f4f4, #e8e8e8);
+  --link-color: #1e40af;
+  --link-hover: #2563eb;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), #1e40af, var(--border), transparent);
+  --mark-bg: #fde047;
+  --scrollbar-thumb: #c0c0c0;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --color-info: #1e40af;
+  --color-info-bg: rgba(30, 64, 175, 0.06);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.06);
+  --color-warning: #d97706;
+  --color-warning-bg: rgba(217, 119, 6, 0.06);
+  --color-danger: #dc2626;
+  --color-danger-bg: rgba(220, 38, 38, 0.06);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.06);
+  --icon-markdown: #1e40af;
+  --icon-data: #15803d;
+  --icon-config: #d97706;
+  --icon-image: #e63946;
+  --icon-default: #808080;
+}
+
+/* Handwritten — ruled notebook with handwriting feel */
+[data-theme='handwritten'] {
+  --bg-primary: #fdfcf7;
+  --bg-secondary: #f8f5ea;
+  --bg-tertiary: #f1ecdb;
+  --bg-editor: #fdfcf7;
+  --text-primary: #1e3a8a;
+  --text-secondary: #334e8a;
+  --text-muted: #6b7fa8;
+  --border: #c9d6e8;
+  --border-subtle: #dde5f0;
+  --accent: #dc2626;
+  --accent-light: #ef4444;
+  --accent-lighter: #fca5a5;
+  --accent-bg: rgba(220, 38, 38, 0.06);
+  --accent-border: rgba(220, 38, 38, 0.25);
+  --accent-gradient: linear-gradient(135deg, #dc2626, #ef4444);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(252, 165, 165, 0.05));
+  --gutter-bg: #f1ecdb;
+  --gutter-hover: #e5dfcb;
+  --shadow-sm: 0 1px 3px rgba(30, 58, 138, 0.06);
+  --shadow-md: 0 4px 12px rgba(30, 58, 138, 0.08);
+  --shadow-lg: 0 10px 28px rgba(30, 58, 138, 0.10);
+  --code-bg: #f1ecdb;
+  --code-text: #b91c1c;
+  --code-block-bg: #f8f5ea;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(220, 38, 38, 0.04);
+  --table-stripe: #f8f5ea;
+  --table-border: #c9d6e8;
+  --table-header-bg: linear-gradient(180deg, #f1ecdb, #e8e2d0);
+  --link-color: #1d4ed8;
+  --link-hover: #2563eb;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: #fef08a;
+  --scrollbar-thumb: #b6c4d8;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(253, 252, 247, 0.92);
+  --glass-border: rgba(30, 58, 138, 0.08);
+  --color-info: #1d4ed8;
+  --color-info-bg: rgba(29, 78, 216, 0.07);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.07);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.07);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.07);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.07);
+  --icon-markdown: #1d4ed8;
+  --icon-data: #15803d;
+  --icon-config: #b45309;
+  --icon-image: #dc2626;
+  --icon-default: #6b7fa8;
+}
+
+/* Paper — aged book / kraft paper feel */
+[data-theme='paper'] body,
+[data-theme='paper'] .markdown-body {
+  font-family: 'Lora', 'Georgia', 'Noto Serif JP', serif;
+  line-height: 1.75;
+}
+[data-theme='paper'] body {
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.4  0 0 0 0 0.2  0 0 0 0.11 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-repeat: repeat;
+  background-size: 240px 240px;
+}
+[data-theme='paper'] #viewer-pane {
+  background-color: var(--bg-primary);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.4  0 0 0 0 0.2  0 0 0 0.09 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  box-shadow:
+    inset 0 0 0 1px rgba(139, 90, 43, 0.10),
+    inset 0 0 140px rgba(139, 90, 43, 0.06);
+}
+[data-theme='paper'] .markdown-body p {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+[data-theme='paper'] .markdown-body > h1 + p::first-letter,
+[data-theme='paper'] .markdown-body > h2 + p::first-letter {
+  float: left;
+  font-family: 'Playfair Display', 'Lora', Georgia, serif;
+  font-size: 4.2em;
+  line-height: 0.85;
+  padding: 6px 10px 0 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+[data-theme='paper'] .markdown-body ul > li::marker {
+  content: '\2756  ';
+  color: var(--accent);
+}
+[data-theme='paper'] .markdown-body img {
+  padding: 10px;
+  background: #f7f0de;
+  border: 1px solid var(--border);
+  box-shadow: 0 3px 10px rgba(91, 74, 50, 0.18);
+}
+[data-theme='paper'] ::selection {
+  background: rgba(246, 229, 141, 0.8);
+  color: #3e2f1c;
+}
+[data-theme='paper'] ::-webkit-scrollbar-thumb {
+  background: rgba(139, 90, 43, 0.38);
+  border-radius: 4px;
+}
+[data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 90, 43, 0.55);
+}
+[data-theme='paper'] .markdown-body h1,
+[data-theme='paper'] .markdown-body h2,
+[data-theme='paper'] .markdown-body h3 {
+  font-family: 'Playfair Display', 'Lora', Georgia, 'Noto Serif JP', serif;
+  letter-spacing: 0.01em;
+}
+[data-theme='paper'] .markdown-body h1 {
+  text-align: center;
+  border-bottom: 3px double var(--border);
+  padding-bottom: 0.5em;
+  margin-top: 1.4em;
+  font-weight: 700;
+}
+[data-theme='paper'] .markdown-body h2 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+  font-weight: 600;
+}
+[data-theme='paper'] .markdown-body a {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--accent-light);
+}
+[data-theme='paper'] .markdown-body mark {
+  background: linear-gradient(transparent 55%, rgba(246, 229, 141, 0.75) 55%);
+  padding: 0 2px;
+}
+[data-theme='paper'] .markdown-body code,
+[data-theme='paper'] .markdown-body pre {
+  font-family: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+}
+[data-theme='paper'] .markdown-body pre.hljs {
+  background: rgba(255, 252, 238, 0.55);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 20px rgba(139, 90, 43, 0.04);
+}
+[data-theme='paper'] .markdown-body blockquote {
+  position: relative;
+  font-style: italic;
+  font-family: 'Playfair Display', 'Lora', Georgia, serif;
+  padding-left: 2.2em;
+  background: rgba(244, 236, 216, 0.5);
+}
+[data-theme='paper'] .markdown-body blockquote::before {
+  content: '\201C';
+  position: absolute;
+  left: 6px;
+  top: -10px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 4em;
+  color: var(--accent);
+  opacity: 0.35;
+  line-height: 1;
+  pointer-events: none;
+}
+[data-theme='paper'] .markdown-body hr {
+  border: none;
+  background: none;
+  height: auto;
+  margin: 2.2em 0;
+  text-align: center;
+  color: var(--accent);
+  letter-spacing: 1em;
+  font-size: 1.1em;
+}
+[data-theme='paper'] .markdown-body hr::before {
+  content: '\2766  \2766  \2766';
+  opacity: 0.55;
+}
+[data-theme='paper'] .markdown-body table {
+  border: 1px solid var(--border);
+}
+[data-theme='paper'] .markdown-body th {
+  background: rgba(139, 90, 43, 0.08);
+  font-family: 'Playfair Display', 'Lora', serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+[data-theme='paper'] .markdown-body th,
+[data-theme='paper'] .markdown-body td {
+  border: 1px solid var(--border);
+}
+
+/* Whiteboard — marker-on-board feel */
+[data-theme='whiteboard'] body,
+[data-theme='whiteboard'] .markdown-body {
+  font-family: 'Architects Daughter', 'Kalam', 'Caveat', 'Comic Sans MS', cursive;
+  letter-spacing: 0.01em;
+}
+[data-theme='whiteboard'] .markdown-body h1,
+[data-theme='whiteboard'] .markdown-body h2 {
+  font-family: 'Permanent Marker', 'Architects Daughter', cursive;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+[data-theme='whiteboard'] .markdown-body h3,
+[data-theme='whiteboard'] .markdown-body h4,
+[data-theme='whiteboard'] .markdown-body h5,
+[data-theme='whiteboard'] .markdown-body h6 {
+  font-family: 'Architects Daughter', 'Permanent Marker', cursive;
+  font-weight: 700;
+}
+[data-theme='whiteboard'] .markdown-body h1 {
+  color: #e63946;
+  text-decoration: underline wavy #e63946;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 8px;
+}
+[data-theme='whiteboard'] .markdown-body h2 {
+  color: #1e40af;
+  border-bottom: 3px solid #1e40af;
+  padding-bottom: 4px;
+}
+[data-theme='whiteboard'] .markdown-body h3 { color: #15803d; }
+[data-theme='whiteboard'] .markdown-body code,
+[data-theme='whiteboard'] .markdown-body pre {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  letter-spacing: 0;
+}
+[data-theme='whiteboard'] .markdown-body pre.hljs {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.08);
+  transform: rotate(-0.25deg);
+}
+[data-theme='whiteboard'] .markdown-body blockquote {
+  border-left: 6px solid #15803d;
+  background: rgba(21, 128, 61, 0.05);
+}
+[data-theme='whiteboard'] .markdown-body a {
+  text-decoration: underline wavy #1e40af;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+[data-theme='whiteboard'] .markdown-body mark {
+  background: #fde047;
+  padding: 0 3px;
+  border-radius: 1px;
+  transform: rotate(-0.2deg);
+  display: inline-block;
+}
+[data-theme='whiteboard'] .markdown-body hr {
+  background: none;
+  border: none;
+  height: 2px;
+  background-image: repeating-linear-gradient(90deg, #0a0a0a 0 10px, transparent 10px 18px);
+}
+[data-theme='whiteboard'] .markdown-body table {
+  border: 2px solid #0a0a0a;
+}
+[data-theme='whiteboard'] .markdown-body th,
+[data-theme='whiteboard'] .markdown-body td {
+  border: 1px solid #0a0a0a;
+}
+[data-theme='whiteboard'] #viewer-pane {
+  box-shadow: inset 0 0 0 3px #d4d4d4, inset 0 0 50px rgba(0, 0, 0, 0.015);
+}
+
+/* Handwritten — ruled notebook background + handwriting font */
+[data-theme='handwritten'] body,
+[data-theme='handwritten'] .markdown-body {
+  font-family: 'Kalam', 'Caveat', 'Klee One', 'Comic Sans MS', cursive;
+}
+[data-theme='handwritten'] #viewer-pane,
+[data-theme='handwritten'] #viewer.markdown-body {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 31px,
+    rgba(30, 58, 138, 0.14) 32px
+  );
+  background-attachment: local;
+}
+[data-theme='handwritten'] .markdown-body h1,
+[data-theme='handwritten'] .markdown-body h2,
+[data-theme='handwritten'] .markdown-body h3,
+[data-theme='handwritten'] .markdown-body h4,
+[data-theme='handwritten'] .markdown-body h5,
+[data-theme='handwritten'] .markdown-body h6 {
+  font-family: 'Caveat', 'Kalam', cursive;
+  font-weight: 700;
+}
+[data-theme='handwritten'] .markdown-body code,
+[data-theme='handwritten'] .markdown-body pre {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
 /* ===== Base ===== */
 *,
 *::before,
@@ -3371,4 +3783,291 @@ a.wiki-link:hover {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ===== Theme Picker ===== */
+.theme-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.theme-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-menu[hidden] {
+  display: none;
+}
+
+.theme-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.theme-menu-item:hover,
+.theme-menu-item:focus-visible {
+  background: var(--accent-bg);
+  color: var(--accent);
+  outline: none;
+}
+
+.theme-menu-item-active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.theme-menu-item-swatch {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.theme-menu-item-swatch-light { background: linear-gradient(135deg, #ffffff 50%, #6366f1 50%); }
+.theme-menu-item-swatch-dark { background: linear-gradient(135deg, #0f1117 50%, #818cf8 50%); }
+.theme-menu-item-swatch-paper { background: linear-gradient(135deg, #f4ecd8 50%, #8b5a2b 50%); }
+.theme-menu-item-swatch-whiteboard { background: linear-gradient(135deg, #ffffff 50%, #e63946 50%); }
+.theme-menu-item-swatch-handwritten { background: linear-gradient(135deg, #fdfcf7 50%, #dc2626 50%); }
+
+.theme-menu-item-check {
+  margin-left: auto;
+  opacity: 0;
+  color: var(--accent);
+}
+
+.theme-menu-item-active .theme-menu-item-check {
+  opacity: 1;
+}
+
+/* ===== Theme-aware Mermaid SVG text overrides =====
+   Mermaid bakes font-family into inline styles for sequence / gantt / state
+   diagrams, so themeVariables.fontFamily alone doesn't propagate. Force the
+   theme's font on all text nodes inside rendered diagrams via CSS. */
+
+[data-theme='paper'] .mermaid-rendered,
+[data-theme='paper'] .mermaid-rendered text,
+[data-theme='paper'] .mermaid-rendered .messageText,
+[data-theme='paper'] .mermaid-rendered .labelText,
+[data-theme='paper'] .mermaid-rendered .noteText,
+[data-theme='paper'] .mermaid-rendered .loopText,
+[data-theme='paper'] .mermaid-rendered .actor,
+[data-theme='paper'] .mermaid-rendered .actor > tspan,
+[data-theme='paper'] .mermaid-rendered foreignObject span {
+  font-family: 'Lora', 'Georgia', 'Noto Serif JP', serif !important;
+}
+
+[data-theme='whiteboard'] .mermaid-rendered,
+[data-theme='whiteboard'] .mermaid-rendered text,
+[data-theme='whiteboard'] .mermaid-rendered .messageText,
+[data-theme='whiteboard'] .mermaid-rendered .labelText,
+[data-theme='whiteboard'] .mermaid-rendered .noteText,
+[data-theme='whiteboard'] .mermaid-rendered .loopText,
+[data-theme='whiteboard'] .mermaid-rendered .actor,
+[data-theme='whiteboard'] .mermaid-rendered .actor > tspan,
+[data-theme='whiteboard'] .mermaid-rendered foreignObject span {
+  font-family: 'Architects Daughter', 'Kalam', 'Caveat', cursive !important;
+}
+[data-theme='whiteboard'] .mermaid-rendered .actor-line,
+[data-theme='whiteboard'] .mermaid-rendered line.loopLine {
+  stroke: #0a0a0a !important;
+  stroke-width: 1.5 !important;
+}
+[data-theme='whiteboard'] .mermaid-rendered .messageLine0,
+[data-theme='whiteboard'] .mermaid-rendered .messageLine1 {
+  stroke-linecap: round;
+  stroke: #0a0a0a !important;
+  stroke-width: 1.5 !important;
+}
+
+[data-theme='handwritten'] .mermaid-rendered,
+[data-theme='handwritten'] .mermaid-rendered text,
+[data-theme='handwritten'] .mermaid-rendered .messageText,
+[data-theme='handwritten'] .mermaid-rendered .labelText,
+[data-theme='handwritten'] .mermaid-rendered .noteText,
+[data-theme='handwritten'] .mermaid-rendered .loopText,
+[data-theme='handwritten'] .mermaid-rendered .actor,
+[data-theme='handwritten'] .mermaid-rendered .actor > tspan,
+[data-theme='handwritten'] .mermaid-rendered foreignObject span {
+  font-family: 'Kalam', 'Caveat', 'Klee One', 'Comic Sans MS', cursive !important;
+}
+[data-theme='handwritten'] .mermaid-rendered .actor-line,
+[data-theme='handwritten'] .mermaid-rendered line.loopLine {
+  stroke: #1e3a8a !important;
+  stroke-width: 1.5 !important;
+}
+[data-theme='handwritten'] .mermaid-rendered .messageLine0,
+[data-theme='handwritten'] .mermaid-rendered .messageLine1 {
+  stroke-linecap: round;
+  stroke: #1e3a8a !important;
+  stroke-width: 1.5 !important;
+}
+
+/* Sequence diagram shapes — actor boxes, notes, label boxes, activation bars */
+[data-theme='paper'] .mermaid-rendered rect.actor,
+[data-theme='paper'] .mermaid-rendered .actor rect {
+  fill: #ede1c4 !important;
+  stroke: #a0724d !important;
+  stroke-width: 1.5 !important;
+}
+[data-theme='paper'] .mermaid-rendered .note,
+[data-theme='paper'] .mermaid-rendered rect.note {
+  fill: #f6e58d !important;
+  stroke: #a0724d !important;
+}
+[data-theme='paper'] .mermaid-rendered .labelBox {
+  fill: #e4d8b5 !important;
+  stroke: #c49770 !important;
+}
+[data-theme='paper'] .mermaid-rendered .activation0,
+[data-theme='paper'] .mermaid-rendered .activation1,
+[data-theme='paper'] .mermaid-rendered .activation2 {
+  fill: #e4d8b5 !important;
+  stroke: #c49770 !important;
+}
+
+[data-theme='whiteboard'] .mermaid-rendered rect.actor,
+[data-theme='whiteboard'] .mermaid-rendered .actor rect {
+  fill: #ffffff !important;
+  stroke: #0a0a0a !important;
+  stroke-width: 2 !important;
+}
+[data-theme='whiteboard'] .mermaid-rendered .note,
+[data-theme='whiteboard'] .mermaid-rendered rect.note {
+  fill: #fef3c7 !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 1.5 !important;
+}
+[data-theme='whiteboard'] .mermaid-rendered .labelBox {
+  fill: #fef3c7 !important;
+  stroke: #404040 !important;
+}
+[data-theme='whiteboard'] .mermaid-rendered .activation0,
+[data-theme='whiteboard'] .mermaid-rendered .activation1,
+[data-theme='whiteboard'] .mermaid-rendered .activation2 {
+  fill: #fafafa !important;
+  stroke: #0a0a0a !important;
+  stroke-width: 1.5 !important;
+}
+
+[data-theme='handwritten'] .mermaid-rendered rect.actor,
+[data-theme='handwritten'] .mermaid-rendered .actor rect {
+  fill: #fdfcf7 !important;
+  stroke: #1e3a8a !important;
+  stroke-width: 1.5 !important;
+}
+[data-theme='handwritten'] .mermaid-rendered .note,
+[data-theme='handwritten'] .mermaid-rendered rect.note {
+  fill: #fef08a !important;
+  stroke: #fbbf24 !important;
+}
+[data-theme='handwritten'] .mermaid-rendered .labelBox {
+  fill: #f8f5ea !important;
+  stroke: #c9d6e8 !important;
+}
+[data-theme='handwritten'] .mermaid-rendered .activation0,
+[data-theme='handwritten'] .mermaid-rendered .activation1,
+[data-theme='handwritten'] .mermaid-rendered .activation2 {
+  fill: #f8f5ea !important;
+  stroke: #1e3a8a !important;
+  stroke-width: 1.2 !important;
+}
+
+/* Paper — aged-paper texture on the diagram canvas + semi-transparent shapes
+   so the background noise shows through the actor/note rectangles. */
+[data-theme='paper'] .mermaid-container {
+  background-color: #f4ecd8;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.4  0 0 0 0 0.2  0 0 0 0.13 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 1px rgba(139, 90, 43, 0.08),
+    inset 0 0 60px rgba(139, 90, 43, 0.06),
+    0 2px 6px rgba(91, 74, 50, 0.15);
+}
+[data-theme='paper'] .mermaid-rendered rect.actor,
+[data-theme='paper'] .mermaid-rendered .actor rect {
+  fill: rgba(237, 225, 196, 0.55) !important;
+  stroke: #8b5a2b !important;
+  stroke-width: 1.3 !important;
+  filter: drop-shadow(0 2px 2px rgba(91, 74, 50, 0.22));
+}
+[data-theme='paper'] .mermaid-rendered .note,
+[data-theme='paper'] .mermaid-rendered rect.note {
+  fill: rgba(246, 229, 141, 0.75) !important;
+  stroke: #b45309 !important;
+  stroke-width: 1.1 !important;
+  filter: drop-shadow(0 1px 2px rgba(91, 74, 50, 0.22));
+}
+[data-theme='paper'] .mermaid-rendered .labelBox {
+  fill: rgba(228, 216, 181, 0.6) !important;
+  stroke: #c49770 !important;
+}
+[data-theme='paper'] .mermaid-rendered .activation0,
+[data-theme='paper'] .mermaid-rendered .activation1,
+[data-theme='paper'] .mermaid-rendered .activation2 {
+  fill: rgba(228, 216, 181, 0.7) !important;
+  stroke: #c49770 !important;
+}
+/* Flowchart / state / class nodes on paper — same treatment */
+[data-theme='paper'] .mermaid-rendered .node rect,
+[data-theme='paper'] .mermaid-rendered .node circle,
+[data-theme='paper'] .mermaid-rendered .node ellipse,
+[data-theme='paper'] .mermaid-rendered .node polygon {
+  fill: rgba(237, 225, 196, 0.55) !important;
+  stroke: #8b5a2b !important;
+  filter: drop-shadow(0 1px 2px rgba(91, 74, 50, 0.18));
+}
+
+/* Paper — single full-screen grain overlay (fixed, covers everything).
+   Using one layer only prevents heavy multiply stacking on elements that have
+   a non-paper background (tab-bar, modals) which previously produced a dark
+   band near the top of long pages. */
+[data-theme='paper'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='gs'><feTurbulence type='fractalNoise' baseFrequency='3.5' numOctaves='2' stitchTiles='stitch' seed='5'/><feColorMatrix values='0 0 0 0 0.25  0 0 0 0 0.15  0 0 0 0 0.05  0 0 0 0.75 0'/></filter><rect width='100%25' height='100%25' filter='url(%23gs)'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='gl'><feTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2' stitchTiles='stitch' seed='11'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.08  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23gl)'/></svg>");
+  background-repeat: repeat, repeat;
+  background-size: 180px 180px, 420px 420px;
+  mix-blend-mode: multiply;
+  opacity: 0.42;
+  z-index: 99999;
+}
+/* Paper — unify tab-bar / toolbar background with the paper color so the
+   grain overlay does not amplify an already-different shade into a visible
+   band across the top. */
+[data-theme='paper'] .tab-bar,
+[data-theme='paper'] #toolbar {
+  background-color: var(--bg-primary);
 }

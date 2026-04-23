@@ -41,15 +41,33 @@ test.describe('DocView E2E', () => {
     await expect(page.locator('.search-overlay')).toBeVisible();
   });
 
-  test('theme toggle works', async ({ page }) => {
+  test('theme picker switches theme', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('md-viewer-theme', 'light'));
     await page.reload();
     await page.waitForSelector('.filetree-item');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
     await page.locator('#btn-theme').click();
+    await expect(page.locator('#theme-menu')).toBeVisible();
+    await page.locator('#theme-menu [data-theme-value="dark"]').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('#theme-menu')).toBeHidden();
+  });
+
+  test('theme picker exposes all themes', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item');
+    await page.locator('#btn-theme').click();
+    for (const theme of ['light', 'dark', 'paper', 'whiteboard', 'handwritten']) {
+      await expect(page.locator(`#theme-menu [data-theme-value="${theme}"]`)).toBeVisible();
+    }
+    await page.locator('#theme-menu [data-theme-value="paper"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'paper');
+    await page.locator('#btn-theme').click();
+    await page.locator('#theme-menu [data-theme-value="handwritten"]').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'handwritten');
   });
 
   test('breadcrumb updates', async ({ page }) => {

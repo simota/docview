@@ -28,112 +28,242 @@ import 'katex/dist/katex.min.css';
 let mermaidCounter = 0;
 let diagramCounter = 0;
 
+function uniqueSuffix(): string {
+  return Math.random().toString(36).slice(2, 8);
+}
+
+import type { Theme } from './theme';
+
+type MermaidVars = Record<string, string>;
+
+const MERMAID_PALETTES: Record<Theme, { fontFamily: string; vars: MermaidVars }> = {
+  light: {
+    fontFamily: '"Inter", "Noto Sans JP", sans-serif',
+    vars: {
+      primaryColor: '#eef2ff',
+      primaryTextColor: '#312e81',
+      primaryBorderColor: '#a5b4fc',
+      secondaryColor: '#f5f3ff',
+      secondaryTextColor: '#4338ca',
+      secondaryBorderColor: '#c4b5fd',
+      tertiaryColor: '#faf5ff',
+      tertiaryTextColor: '#6d28d9',
+      tertiaryBorderColor: '#d8b4fe',
+      lineColor: '#6366f1',
+      textColor: '#1e1b4b',
+      mainBkg: '#eef2ff',
+      nodeBorder: '#a5b4fc',
+      clusterBkg: '#f5f3ff',
+      clusterBorder: '#c4b5fd',
+      titleColor: '#4338ca',
+      edgeLabelBackground: '#ffffff',
+      nodeTextColor: '#312e81',
+      actorBkg: '#eef2ff',
+      actorBorder: '#818cf8',
+      actorTextColor: '#312e81',
+      actorLineColor: '#a5b4fc',
+      signalColor: '#6366f1',
+      signalTextColor: '#312e81',
+      labelBoxBkgColor: '#f5f3ff',
+      labelBoxBorderColor: '#c4b5fd',
+      labelTextColor: '#4338ca',
+      loopTextColor: '#4338ca',
+      noteBkgColor: '#fef3c7',
+      noteTextColor: '#78350f',
+      noteBorderColor: '#fbbf24',
+      activationBkgColor: '#e0e7ff',
+      activationBorderColor: '#818cf8',
+      sequenceNumberColor: '#ffffff',
+      pie1: '#6366f1', pie2: '#8b5cf6', pie3: '#a855f7', pie4: '#c084fc',
+      pie5: '#818cf8', pie6: '#6d28d9', pie7: '#a78bfa', pie8: '#7c3aed',
+    },
+  },
+  dark: {
+    fontFamily: '"Inter", "Noto Sans JP", sans-serif',
+    vars: {
+      primaryColor: '#2d3263',
+      primaryTextColor: '#e4e6f0',
+      primaryBorderColor: '#4f52a8',
+      secondaryColor: '#1e2744',
+      secondaryTextColor: '#c7cae0',
+      secondaryBorderColor: '#3a4070',
+      tertiaryColor: '#1a2338',
+      tertiaryTextColor: '#b0b4cc',
+      tertiaryBorderColor: '#2e3558',
+      lineColor: '#6366f1',
+      textColor: '#e4e6f0',
+      mainBkg: '#1e2040',
+      nodeBorder: '#6366f1',
+      clusterBkg: '#161830',
+      clusterBorder: '#333660',
+      titleColor: '#a5b4fc',
+      edgeLabelBackground: '#1a1d2e',
+      nodeTextColor: '#e4e6f0',
+      actorBkg: '#2d3263',
+      actorBorder: '#6366f1',
+      actorTextColor: '#e4e6f0',
+      actorLineColor: '#4f52a8',
+      signalColor: '#818cf8',
+      signalTextColor: '#e4e6f0',
+      labelBoxBkgColor: '#1e2040',
+      labelBoxBorderColor: '#4f52a8',
+      labelTextColor: '#c7cae0',
+      loopTextColor: '#a5b4fc',
+      noteBkgColor: '#2a2d52',
+      noteTextColor: '#e4e6f0',
+      noteBorderColor: '#6366f1',
+      activationBkgColor: '#2d3263',
+      activationBorderColor: '#818cf8',
+      sequenceNumberColor: '#1e2040',
+      pie1: '#6366f1', pie2: '#8b5cf6', pie3: '#a855f7', pie4: '#c084fc',
+      pie5: '#818cf8', pie6: '#6d28d9', pie7: '#a78bfa', pie8: '#7c3aed',
+    },
+  },
+  paper: {
+    fontFamily: '"Lora", "Georgia", "Noto Serif JP", serif',
+    vars: {
+      primaryColor: '#ede1c4',
+      primaryTextColor: '#3e2f1c',
+      primaryBorderColor: '#a0724d',
+      secondaryColor: '#e4d8b5',
+      secondaryTextColor: '#5b4a32',
+      secondaryBorderColor: '#c49770',
+      tertiaryColor: '#f7f0de',
+      tertiaryTextColor: '#6b4423',
+      tertiaryBorderColor: '#d4c49c',
+      lineColor: '#8b5a2b',
+      textColor: '#3e2f1c',
+      mainBkg: '#ede1c4',
+      nodeBorder: '#a0724d',
+      clusterBkg: '#f4ecd8',
+      clusterBorder: '#cbb994',
+      titleColor: '#6b4423',
+      edgeLabelBackground: '#f4ecd8',
+      nodeTextColor: '#3e2f1c',
+      actorBkg: '#ede1c4',
+      actorBorder: '#a0724d',
+      actorTextColor: '#3e2f1c',
+      actorLineColor: '#8b5a2b',
+      signalColor: '#8b5a2b',
+      signalTextColor: '#3e2f1c',
+      labelBoxBkgColor: '#e4d8b5',
+      labelBoxBorderColor: '#c49770',
+      labelTextColor: '#5b4a32',
+      loopTextColor: '#6b4423',
+      noteBkgColor: '#f6e58d',
+      noteTextColor: '#3e2f1c',
+      noteBorderColor: '#a0724d',
+      activationBkgColor: '#e4d8b5',
+      activationBorderColor: '#c49770',
+      sequenceNumberColor: '#f7f0de',
+      pie1: '#8b5a2b', pie2: '#a0724d', pie3: '#c49770', pie4: '#6b4423',
+      pie5: '#9b2c2c', pie6: '#b45309', pie7: '#15803d', pie8: '#7c3aed',
+    },
+  },
+  whiteboard: {
+    fontFamily: '"Inter", "Noto Sans JP", sans-serif',
+    vars: {
+      primaryColor: '#ffffff',
+      primaryTextColor: '#0a0a0a',
+      primaryBorderColor: '#0a0a0a',
+      secondaryColor: '#fef3c7',
+      secondaryTextColor: '#1a1a1a',
+      secondaryBorderColor: '#404040',
+      tertiaryColor: '#fafafa',
+      tertiaryTextColor: '#0a0a0a',
+      tertiaryBorderColor: '#404040',
+      lineColor: '#0a0a0a',
+      textColor: '#0a0a0a',
+      mainBkg: '#ffffff',
+      nodeBorder: '#0a0a0a',
+      clusterBkg: '#fafafa',
+      clusterBorder: '#404040',
+      titleColor: '#e63946',
+      edgeLabelBackground: '#ffffff',
+      nodeTextColor: '#0a0a0a',
+      actorBkg: '#ffffff',
+      actorBorder: '#0a0a0a',
+      actorTextColor: '#0a0a0a',
+      actorLineColor: '#404040',
+      signalColor: '#e63946',
+      signalTextColor: '#0a0a0a',
+      labelBoxBkgColor: '#fef3c7',
+      labelBoxBorderColor: '#404040',
+      labelTextColor: '#0a0a0a',
+      loopTextColor: '#1e40af',
+      noteBkgColor: '#fef3c7',
+      noteTextColor: '#78350f',
+      noteBorderColor: '#fbbf24',
+      activationBkgColor: '#fafafa',
+      activationBorderColor: '#0a0a0a',
+      sequenceNumberColor: '#ffffff',
+      pie1: '#e63946', pie2: '#1e40af', pie3: '#15803d', pie4: '#d97706',
+      pie5: '#7c3aed', pie6: '#0891b2', pie7: '#be123c', pie8: '#4338ca',
+    },
+  },
+  handwritten: {
+    fontFamily: '"Kalam", "Caveat", "Klee One", "Comic Sans MS", cursive',
+    vars: {
+      primaryColor: '#fdfcf7',
+      primaryTextColor: '#1e3a8a',
+      primaryBorderColor: '#1e3a8a',
+      secondaryColor: '#f8f5ea',
+      secondaryTextColor: '#334e8a',
+      secondaryBorderColor: '#6b7fa8',
+      tertiaryColor: '#f1ecdb',
+      tertiaryTextColor: '#1e3a8a',
+      tertiaryBorderColor: '#c9d6e8',
+      lineColor: '#1e3a8a',
+      textColor: '#1e3a8a',
+      mainBkg: '#fdfcf7',
+      nodeBorder: '#1e3a8a',
+      clusterBkg: '#f8f5ea',
+      clusterBorder: '#c9d6e8',
+      titleColor: '#dc2626',
+      edgeLabelBackground: '#fdfcf7',
+      nodeTextColor: '#1e3a8a',
+      actorBkg: '#fdfcf7',
+      actorBorder: '#1e3a8a',
+      actorTextColor: '#1e3a8a',
+      actorLineColor: '#6b7fa8',
+      signalColor: '#dc2626',
+      signalTextColor: '#1e3a8a',
+      labelBoxBkgColor: '#f8f5ea',
+      labelBoxBorderColor: '#c9d6e8',
+      labelTextColor: '#334e8a',
+      loopTextColor: '#dc2626',
+      noteBkgColor: '#fef08a',
+      noteTextColor: '#1e3a8a',
+      noteBorderColor: '#fbbf24',
+      activationBkgColor: '#f8f5ea',
+      activationBorderColor: '#1e3a8a',
+      sequenceNumberColor: '#fdfcf7',
+      pie1: '#1e3a8a', pie2: '#dc2626', pie3: '#15803d', pie4: '#b45309',
+      pie5: '#7c3aed', pie6: '#1d4ed8', pie7: '#b91c1c', pie8: '#334e8a',
+    },
+  },
+};
+
 // Mermaid theme settings — separated from the module so they can be passed
 // after the lazy import resolves without re-importing the full library.
-function buildMermaidConfig(isDark: boolean) {
+function buildMermaidConfig(theme: Theme) {
+  const palette = MERMAID_PALETTES[theme] ?? MERMAID_PALETTES.light;
+  const handDrawn = theme === 'whiteboard' || theme === 'handwritten';
   return {
     startOnLoad: false,
     theme: 'base' as const,
+    look: (handDrawn ? 'handDrawn' : 'classic') as 'handDrawn' | 'classic',
+    handDrawnSeed: 1,
     securityLevel: 'strict' as const,
-    fontFamily: '"Inter", "Noto Sans JP", sans-serif',
-    themeVariables: isDark
-      ? {
-          // Dark theme — soft indigo palette
-          primaryColor: '#2d3263',
-          primaryTextColor: '#e4e6f0',
-          primaryBorderColor: '#4f52a8',
-          secondaryColor: '#1e2744',
-          secondaryTextColor: '#c7cae0',
-          secondaryBorderColor: '#3a4070',
-          tertiaryColor: '#1a2338',
-          tertiaryTextColor: '#b0b4cc',
-          tertiaryBorderColor: '#2e3558',
-          lineColor: '#6366f1',
-          textColor: '#e4e6f0',
-          mainBkg: '#1e2040',
-          nodeBorder: '#6366f1',
-          clusterBkg: '#161830',
-          clusterBorder: '#333660',
-          titleColor: '#a5b4fc',
-          edgeLabelBackground: '#1a1d2e',
-          nodeTextColor: '#e4e6f0',
-          actorBkg: '#2d3263',
-          actorBorder: '#6366f1',
-          actorTextColor: '#e4e6f0',
-          actorLineColor: '#4f52a8',
-          signalColor: '#818cf8',
-          signalTextColor: '#e4e6f0',
-          labelBoxBkgColor: '#1e2040',
-          labelBoxBorderColor: '#4f52a8',
-          labelTextColor: '#c7cae0',
-          loopTextColor: '#a5b4fc',
-          noteBkgColor: '#2a2d52',
-          noteTextColor: '#e4e6f0',
-          noteBorderColor: '#6366f1',
-          activationBkgColor: '#2d3263',
-          activationBorderColor: '#818cf8',
-          sequenceNumberColor: '#1e2040',
-          pie1: '#6366f1',
-          pie2: '#8b5cf6',
-          pie3: '#a855f7',
-          pie4: '#c084fc',
-          pie5: '#818cf8',
-          pie6: '#6d28d9',
-          pie7: '#a78bfa',
-          pie8: '#7c3aed',
-        }
-      : {
-          // Light theme — clean indigo palette
-          primaryColor: '#eef2ff',
-          primaryTextColor: '#312e81',
-          primaryBorderColor: '#a5b4fc',
-          secondaryColor: '#f5f3ff',
-          secondaryTextColor: '#4338ca',
-          secondaryBorderColor: '#c4b5fd',
-          tertiaryColor: '#faf5ff',
-          tertiaryTextColor: '#6d28d9',
-          tertiaryBorderColor: '#d8b4fe',
-          lineColor: '#6366f1',
-          textColor: '#1e1b4b',
-          mainBkg: '#eef2ff',
-          nodeBorder: '#a5b4fc',
-          clusterBkg: '#f5f3ff',
-          clusterBorder: '#c4b5fd',
-          titleColor: '#4338ca',
-          edgeLabelBackground: '#ffffff',
-          nodeTextColor: '#312e81',
-          actorBkg: '#eef2ff',
-          actorBorder: '#818cf8',
-          actorTextColor: '#312e81',
-          actorLineColor: '#a5b4fc',
-          signalColor: '#6366f1',
-          signalTextColor: '#312e81',
-          labelBoxBkgColor: '#f5f3ff',
-          labelBoxBorderColor: '#c4b5fd',
-          labelTextColor: '#4338ca',
-          loopTextColor: '#4338ca',
-          noteBkgColor: '#fef3c7',
-          noteTextColor: '#78350f',
-          noteBorderColor: '#fbbf24',
-          activationBkgColor: '#e0e7ff',
-          activationBorderColor: '#818cf8',
-          sequenceNumberColor: '#ffffff',
-          pie1: '#6366f1',
-          pie2: '#8b5cf6',
-          pie3: '#a855f7',
-          pie4: '#c084fc',
-          pie5: '#818cf8',
-          pie6: '#6d28d9',
-          pie7: '#a78bfa',
-          pie8: '#7c3aed',
-        },
-    flowchart: { curve: 'basis' as const, padding: 16 },
+    fontFamily: palette.fontFamily,
+    themeVariables: palette.vars,
+    flowchart: { curve: handDrawn ? ('linear' as const) : ('basis' as const), padding: 16 },
     sequence: { mirrorActors: false, bottomMarginAdj: 2 },
   };
 }
 
 // Track current theme for mermaid re-initialization after lazy load
-let mermaidIsDark = false;
+let mermaidTheme: Theme = 'light';
 
 const md = new MarkdownIt({
   html: false,
@@ -142,12 +272,12 @@ const md = new MarkdownIt({
   highlight(str_: string, lang: string): string {
     const str = str_.replace(/^([ \t]*\n)+/, '').trimEnd();
     if (lang === 'mermaid') {
-      const id = `mermaid-${mermaidCounter++}`;
+      const id = `mermaid-${mermaidCounter++}-${uniqueSuffix()}`;
       return `<div class="mermaid-container"><div class="mermaid-label">Diagram</div><pre class="mermaid" id="${id}">${md.utils.escapeHtml(str)}</pre></div>`;
     }
     const DIAGRAM_TYPES = new Set(['d2', 'plantuml', 'ditaa']);
     if (DIAGRAM_TYPES.has(lang)) {
-      const id = `diagram-${diagramCounter++}`;
+      const id = `diagram-${diagramCounter++}-${uniqueSuffix()}`;
       const labelMap: Record<string, string> = { d2: 'D2', plantuml: 'PlantUML', ditaa: 'Ditaa' };
       return `<div class="diagram-container" data-diagram-type="${lang}" data-diagram-id="${id}"><div class="diagram-label">${labelMap[lang] || lang}</div><pre class="diagram-source" id="${id}">${md.utils.escapeHtml(str)}</pre><div class="diagram-rendered" id="${id}-rendered"></div></div>`;
     }
@@ -326,13 +456,14 @@ async function getMermaid(): Promise<typeof import('mermaid').default> {
   if (!mermaidModule) {
     const mod = await import('mermaid');
     mermaidModule = mod.default;
-    mermaidModule.initialize(buildMermaidConfig(mermaidIsDark));
+    mermaidModule.initialize(buildMermaidConfig(mermaidTheme));
   }
   return mermaidModule;
 }
 
-export async function renderMermaidDiagrams(): Promise<void> {
-  const elements = document.querySelectorAll<HTMLElement>('pre.mermaid');
+export async function renderMermaidDiagrams(container?: ParentNode): Promise<void> {
+  const scope: ParentNode = container ?? document;
+  const elements = scope.querySelectorAll<HTMLElement>('pre.mermaid');
   if (elements.length === 0) return; // skip lazy load when no diagrams present
 
   // Load mermaid only when the page actually contains mermaid blocks
@@ -356,11 +487,11 @@ export async function renderMermaidDiagrams(): Promise<void> {
   }
 }
 
-export function updateMermaidTheme(isDark: boolean): void {
-  mermaidIsDark = isDark;
+export function updateMermaidTheme(theme: Theme): void {
+  mermaidTheme = theme;
   // Re-initialize only if the module has already been loaded; otherwise the
   // updated flag is picked up when getMermaid() is first called.
   if (mermaidModule) {
-    mermaidModule.initialize(buildMermaidConfig(isDark));
+    mermaidModule.initialize(buildMermaidConfig(theme));
   }
 }

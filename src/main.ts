@@ -1,5 +1,5 @@
 import { renderMarkdown, renderMermaidDiagrams, renderExternalDiagrams, updateMermaidTheme } from './markdown';
-import { initTheme, toggleTheme } from './theme';
+import { initTheme, setTheme, type Theme, THEMES } from './theme';
 import { FileTree, initSidebarResize } from './filetree';
 import { TableOfContents } from './toc';
 import { SearchModal } from './search';
@@ -357,7 +357,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
   switch (type) {
     case 'markdown':
       target.innerHTML = renderMarkdown(content);
-      renderMermaidDiagrams();
+      renderMermaidDiagrams(target);
       renderExternalDiagrams(target);
       fixRelativeImages(path, target);
       if (target === viewer) {
@@ -1127,7 +1127,7 @@ let fileTree: FileTree | null = null;
 
 async function init() {
   const currentTheme = initTheme();
-  updateMermaidTheme(currentTheme === 'dark');
+  updateMermaidTheme(currentTheme);
 
   const { server: hasServer, initialFile } = await detectServerMode();
 
@@ -1195,11 +1195,80 @@ init();
 
 // --- Event listeners ---
 btnHelp.addEventListener('click', () => helpModal.open());
-btnTheme.addEventListener('click', () => {
-  const newTheme = toggleTheme();
-  updateMermaidTheme(newTheme === 'dark');
-  if (currentFilePath) reloadCurrentFile();
+const themeMenu = document.getElementById('theme-menu') as HTMLElement | null;
+
+function setThemeMenuOpen(open: boolean) {
+  if (!themeMenu) return;
+  themeMenu.hidden = !open;
+  btnTheme.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = themeMenu.querySelector<HTMLButtonElement>(
+      current ? `[data-theme-value="${current}"]` : '.theme-menu-item',
+    );
+    target?.focus();
+  }
+}
+
+function applyTheme(theme: Theme) {
+  setTheme(theme);
+  updateMermaidTheme(theme);
+  if (currentFilePath) {
+    reloadCurrentFile();
+    if (splitActive && splitViewer) loadIntoSplit(currentFilePath);
+  }
+}
+
+btnTheme.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!themeMenu) {
+    const order = [...THEMES];
+    const stored = (document.documentElement.getAttribute('data-theme') as Theme | null) ?? 'light';
+    const next = order[(order.indexOf(stored) + 1) % order.length];
+    applyTheme(next);
+    return;
+  }
+  setThemeMenuOpen(Boolean(themeMenu.hidden));
 });
+
+if (themeMenu) {
+  themeMenu.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-theme-value]');
+    if (!btn) return;
+    const theme = btn.dataset.themeValue as Theme | undefined;
+    if (theme && (THEMES as readonly string[]).includes(theme)) {
+      applyTheme(theme);
+      setThemeMenuOpen(false);
+      btnTheme.focus();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (themeMenu.hidden) return;
+    const target = e.target as Node;
+    if (!themeMenu.contains(target) && target !== btnTheme && !btnTheme.contains(target)) {
+      setThemeMenuOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (themeMenu.hidden) return;
+    if (e.key === 'Escape') {
+      setThemeMenuOpen(false);
+      btnTheme.focus();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = Array.from(themeMenu.querySelectorAll<HTMLButtonElement>('.theme-menu-item'));
+      if (items.length === 0) return;
+      const active = document.activeElement as HTMLElement | null;
+      const idx = items.findIndex((el) => el === active);
+      const next = e.key === 'ArrowDown'
+        ? items[(idx + 1 + items.length) % items.length]
+        : items[(idx - 1 + items.length) % items.length];
+      next.focus();
+    }
+  });
+}
 btnOpen.addEventListener('click', () => fileInput.click());
 btnSidebar.addEventListener('click', toggleSidebar);
 btnToc.addEventListener('click', toggleToc);
