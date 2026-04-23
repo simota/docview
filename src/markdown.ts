@@ -27,6 +27,165 @@ import 'katex/dist/katex.min.css';
 
 let mermaidCounter = 0;
 let diagramCounter = 0;
+let diagramFullscreenOverlay: HTMLDivElement | null = null;
+let diagramFullscreenTitle: HTMLHeadingElement | null = null;
+let diagramFullscreenStage: HTMLDivElement | null = null;
+
+function closeDiagramFullscreen() {
+  if (!diagramFullscreenOverlay || !diagramFullscreenStage) return;
+  diagramFullscreenOverlay.style.display = 'none';
+  diagramFullscreenStage.innerHTML = '';
+  document.body.classList.remove('diagram-fullscreen-open');
+}
+
+function ensureDiagramFullscreenOverlay() {
+  if (diagramFullscreenOverlay && diagramFullscreenTitle && diagramFullscreenStage) {
+    return {
+      overlay: diagramFullscreenOverlay,
+      title: diagramFullscreenTitle,
+      stage: diagramFullscreenStage,
+    };
+  }
+
+  diagramFullscreenOverlay = document.createElement('div');
+  diagramFullscreenOverlay.className = 'diagram-fullscreen-overlay';
+  diagramFullscreenOverlay.style.display = 'none';
+  diagramFullscreenOverlay.setAttribute('role', 'dialog');
+  diagramFullscreenOverlay.setAttribute('aria-modal', 'true');
+  diagramFullscreenOverlay.setAttribute('aria-labelledby', 'diagram-fullscreen-title');
+
+  const modal = document.createElement('div');
+  modal.className = 'diagram-fullscreen-modal';
+
+  const header = document.createElement('div');
+  header.className = 'diagram-fullscreen-header';
+
+  diagramFullscreenTitle = document.createElement('h2');
+  diagramFullscreenTitle.id = 'diagram-fullscreen-title';
+  diagramFullscreenTitle.className = 'diagram-fullscreen-title';
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'diagram-fullscreen-close';
+  closeButton.setAttribute('aria-label', 'Close fullscreen diagram');
+  closeButton.innerHTML = '&times;';
+  closeButton.addEventListener('click', () => closeDiagramFullscreen());
+
+  header.appendChild(diagramFullscreenTitle);
+  header.appendChild(closeButton);
+
+  diagramFullscreenStage = document.createElement('div');
+  diagramFullscreenStage.className = 'diagram-fullscreen-stage';
+
+  modal.appendChild(header);
+  modal.appendChild(diagramFullscreenStage);
+  diagramFullscreenOverlay.appendChild(modal);
+  document.body.appendChild(diagramFullscreenOverlay);
+
+  diagramFullscreenOverlay.addEventListener('click', (e) => {
+    if (e.target === diagramFullscreenOverlay) closeDiagramFullscreen();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && diagramFullscreenOverlay?.style.display !== 'none') {
+      closeDiagramFullscreen();
+    }
+  });
+
+  return {
+    overlay: diagramFullscreenOverlay,
+    title: diagramFullscreenTitle,
+    stage: diagramFullscreenStage,
+  };
+}
+
+function openDiagramFullscreen(source: SVGSVGElement, title: string) {
+  const overlay = ensureDiagramFullscreenOverlay();
+  overlay.title.textContent = title;
+  overlay.stage.innerHTML = '';
+  const clone = source.cloneNode(true);
+  if (clone instanceof SVGSVGElement) {
+    initFullscreenDiagramInteraction(clone);
+    overlay.stage.appendChild(clone);
+  }
+  overlay.overlay.style.display = 'flex';
+  document.body.classList.add('diagram-fullscreen-open');
+}
+
+function initFullscreenDiagramInteraction(svg: SVGSVGElement) {
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  function applyTransform() {
+    svg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    svg.style.cursor = isDragging ? 'grabbing' : scale > 1 ? 'grab' : 'zoom-in';
+  }
+
+  svg.addEventListener('wheel', (e: WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.12 : 0.12;
+    scale = Math.max(1, Math.min(6, scale + delta));
+    if (scale === 1) {
+      translateX = 0;
+      translateY = 0;
+    }
+    applyTransform();
+  }, { passive: false });
+
+  svg.addEventListener('dblclick', () => {
+    scale = scale > 1 ? 1 : 2;
+    translateX = 0;
+    translateY = 0;
+    applyTransform();
+  });
+
+  svg.addEventListener('mousedown', (e: MouseEvent) => {
+    if (scale <= 1) return;
+    isDragging = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+    applyTransform();
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e: MouseEvent) => {
+    if (!isDragging) return;
+    translateX = e.clientX - startX;
+    translateY = e.clientY - startY;
+    applyTransform();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    applyTransform();
+  });
+
+  applyTransform();
+}
+
+function attachDiagramFullscreen(surface: HTMLElement, title: string) {
+  const svg = surface.querySelector('svg');
+  if (!(svg instanceof SVGSVGElement) || surface.querySelector('.diagram-fullscreen-btn')) return;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'diagram-fullscreen-btn';
+  button.textContent = 'Fullscreen';
+  button.setAttribute('aria-label', `Open ${title} in fullscreen`);
+  button.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentSvg = surface.querySelector('svg');
+    if (currentSvg instanceof SVGSVGElement) openDiagramFullscreen(currentSvg, title);
+  });
+
+  surface.appendChild(button);
+}
 
 function uniqueSuffix(): string {
   return Math.random().toString(36).slice(2, 8);
@@ -442,6 +601,8 @@ export async function renderExternalDiagrams(container: HTMLElement): Promise<vo
         target.innerHTML = cleanSvg;
         pre.style.display = 'none';
         block.classList.add('diagram-rendered-ok');
+        const label = block.querySelector<HTMLElement>('.diagram-label')?.textContent?.trim() || 'Diagram';
+        attachDiagramFullscreen(target, label);
       }
     } catch { /* show source as fallback */ }
   }
@@ -479,6 +640,8 @@ export async function renderMermaidDiagrams(container?: ParentNode): Promise<voi
       if (wrapper) {
         const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
         wrapper.innerHTML = `<div class="mermaid-rendered">${cleanSvg}</div>`;
+        const rendered = wrapper.querySelector<HTMLElement>('.mermaid-rendered');
+        if (rendered) attachDiagramFullscreen(rendered, 'Mermaid diagram');
       }
     } catch {
       el.classList.add('mermaid-error');

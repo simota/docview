@@ -251,6 +251,7 @@ const SUPPORTED_EXTENSIONS = new Set([
 ]);
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
+const SEARCH_CONTEXT_LINES = 20;
 
 const IMAGE_MIME = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -643,6 +644,10 @@ const server = createServer(async (req, res) => {
 
     const results = [];
     const useRegex = url.searchParams.get('regex') === '1';
+    const contextParam = Number.parseInt(url.searchParams.get('context') || '', 10);
+    const contextLines = Number.isFinite(contextParam)
+      ? Math.max(0, Math.min(contextParam, 50))
+      : SEARCH_CONTEXT_LINES;
     let matcher;
     if (useRegex) {
       // Reject patterns likely to cause catastrophic backtracking (ReDoS)
@@ -682,10 +687,14 @@ const server = createServer(async (req, res) => {
               const lines = content.split('\n');
               for (let i = 0; i < lines.length && results.length < 100; i++) {
                 if (matcher.test(lines[i])) {
+                  const start = Math.max(0, i - contextLines);
+                  const end = Math.min(lines.length, i + contextLines + 1);
                   results.push({
                     path: relative(targetDir, fullPath),
                     line: i + 1,
                     text: lines[i],
+                    contextStartLine: start + 1,
+                    contextLines: lines.slice(start, end),
                   });
                 }
               }

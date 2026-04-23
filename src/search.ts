@@ -1,9 +1,16 @@
-type FileSelectCallback = (path: string) => void;
+interface SearchSelection {
+  path: string;
+  line?: number | null;
+}
+
+type FileSelectCallback = (selection: SearchSelection) => void;
 
 interface SearchResult {
   path: string;
   line: number;
   text: string;
+  contextStartLine?: number;
+  contextLines?: string[];
 }
 
 export class SearchModal {
@@ -117,7 +124,11 @@ export class SearchModal {
       if (e.key === 'Enter') {
         const active = this.results.querySelector('.search-item.active') as HTMLElement;
         if (active?.dataset.path) {
-          this.onSelect(active.dataset.path);
+          const line = active.dataset.line ? parseInt(active.dataset.line, 10) : null;
+          this.onSelect({
+            path: active.dataset.path,
+            line: Number.isFinite(line) ? line : null,
+          });
           this.close();
         }
       }
@@ -212,13 +223,39 @@ export class SearchModal {
       const results: SearchResult[] = await res.json();
 
       this.results.innerHTML = results.length
-        ? results.map((r, i) =>
-          `<div class="search-item ${i === 0 ? 'active' : ''}" data-path="${this.escapeAttr(r.path)}"><span class="search-icon">📄</span><div class="search-detail"><span class="search-path">${this.escapeHtml(r.path)}<span class="search-line">:${r.line}</span></span><span class="search-text">${this.escapeHtml(r.text.trim())}</span></div></div>`
-        ).join('')
+        ? results.map((r, i) => this.renderFullTextResult(r, i, query)).join('')
         : '<div class="search-empty">No results found</div>';
 
       this.bindClicks();
     } catch { /* ignore */ }
+  }
+
+  private renderFullTextResult(result: SearchResult, index: number, query: string): string {
+    const contextStartLine = result.contextStartLine ?? result.line;
+    const contextLines = result.contextLines?.length ? result.contextLines : [result.text];
+    const contextHtml = contextLines
+      .map((text, offset) => {
+        const lineNumber = contextStartLine + offset;
+        const isHit = lineNumber === result.line;
+        return `<div class="search-context-line ${isHit ? 'search-context-line--hit' : ''}">
+          <span class="search-context-num">${lineNumber}</span>
+          <span class="search-context-text">${this.highlightSearchText(text, query)}</span>
+        </div>`;
+      })
+      .join('');
+
+    return `<div class="search-item search-item-fulltext ${index === 0 ? 'active' : ''}" data-path="${this.escapeAttr(result.path)}" data-line="${result.line}">
+      <span class="search-icon">📄</span>
+      <div class="search-detail">
+        <div class="search-hit-header">
+          <span class="search-path">${this.escapeHtml(result.path)}</span>
+          <span class="search-line">Line ${result.line}</span>
+        </div>
+        <div class="search-context" aria-label="Match context">
+          ${contextHtml}
+        </div>
+      </div>
+    </div>`;
   }
 
   private highlight(text: string, query: string): string {
@@ -228,6 +265,38 @@ export class SearchModal {
     const match = text.slice(idx, idx + query.length);
     const after = text.slice(idx + query.length);
     return `${this.escapeHtml(before)}<mark>${this.escapeHtml(match)}</mark>${this.escapeHtml(after)}`;
+  }
+
+  private highlightSearchText(text: string, query: string): string {
+    const regex = this.buildHighlightRegex(query);
+    if (!regex) return this.escapeHtml(text);
+
+    let highlighted = '';
+    let lastIndex = 0;
+
+    for (const match of text.matchAll(regex)) {
+      const matchedText = match[0];
+      const start = match.index ?? 0;
+      if (!matchedText) break;
+      highlighted += this.escapeHtml(text.slice(lastIndex, start));
+      highlighted += `<mark>${this.escapeHtml(matchedText)}</mark>`;
+      lastIndex = start + matchedText.length;
+    }
+
+    if (lastIndex === 0) return this.escapeHtml(text);
+    highlighted += this.escapeHtml(text.slice(lastIndex));
+    return highlighted;
+  }
+
+  private buildHighlightRegex(query: string): RegExp | null {
+    if (!query) return null;
+    try {
+      return this.useRegex
+        ? new RegExp(query, 'gi')
+        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    } catch {
+      return null;
+    }
   }
 
   private escapeHtml(s: string): string {
@@ -242,7 +311,11 @@ export class SearchModal {
     this.results.querySelectorAll<HTMLElement>('.search-item').forEach((item) => {
       item.addEventListener('click', () => {
         if (item.dataset.path) {
-          this.onSelect(item.dataset.path);
+          const line = item.dataset.line ? parseInt(item.dataset.line, 10) : null;
+          this.onSelect({
+            path: item.dataset.path,
+            line: Number.isFinite(line) ? line : null,
+          });
           this.close();
         }
       });

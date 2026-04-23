@@ -853,22 +853,26 @@ body.dragging::after {
 }
 
 /* ===== Viewer ===== */
-#viewer {
+#viewer,
+#viewer-right {
   flex: 1;
   padding: 40px 48px;
   overflow-y: auto;
   background: var(--bg-primary);
 }
 
-#viewer::-webkit-scrollbar {
+#viewer::-webkit-scrollbar,
+#viewer-right::-webkit-scrollbar {
   width: 6px;
 }
 
-#viewer::-webkit-scrollbar-track {
+#viewer::-webkit-scrollbar-track,
+#viewer-right::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
 }
 
-#viewer::-webkit-scrollbar-thumb {
+#viewer::-webkit-scrollbar-thumb,
+#viewer-right::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
@@ -1192,6 +1196,7 @@ body.dragging::after {
   overflow-x: auto;
   box-shadow: var(--shadow-md);
   min-height: 120px;
+  position: relative;
 }
 
 .mermaid-rendered svg {
@@ -1202,6 +1207,15 @@ body.dragging::after {
 
 [data-theme='dark'] .mermaid-rendered svg {
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* ER diagram: Mermaid auto-derives row fills via HSL (odd ~93% lightness) which
+   collides with light textColor in dark mode. Force dark-appropriate fills. */
+[data-theme='dark'] .mermaid-rendered g.row-rect-odd > path[stroke='none'] {
+  fill: #252847 !important;
+}
+[data-theme='dark'] .mermaid-rendered g.row-rect-even > path[stroke='none'] {
+  fill: #1e2040 !important;
 }
 
 /* Mermaid SVG node styling overrides */
@@ -1958,7 +1972,7 @@ body.dragging::after {
 }
 
 .search-modal {
-  width: 560px;
+  width: min(880px, 92vw);
   max-width: 90vw;
   background: var(--bg-primary);
   border-radius: var(--radius-xl);
@@ -1984,32 +1998,36 @@ body.dragging::after {
 }
 
 .search-results {
-  max-height: 50vh;
+  max-height: 62vh;
   overflow-y: auto;
 }
 
 .search-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  padding: 8px 18px;
+  padding: 12px 18px;
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .search-item:hover,
 .search-item.active {
   background: var(--accent-bg);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .search-icon {
   font-size: 14px;
   flex-shrink: 0;
+  margin-top: 3px;
 }
 
 .search-path {
   font-size: 13px;
   color: var(--text-primary);
+  word-break: break-all;
 }
 
 .search-path mark {
@@ -2022,22 +2040,74 @@ body.dragging::after {
 .search-line {
   color: var(--text-muted);
   font-size: 11px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
 }
 
 .search-detail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
   overflow: hidden;
+  width: 100%;
 }
 
-.search-text {
-  font-size: 12px;
-  color: var(--text-muted);
+.search-hit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
   font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.search-context-line {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 2px 0;
+}
+
+.search-context-line--hit {
+  background: var(--accent-bg);
+  border-radius: var(--radius-sm);
+}
+
+.search-context-num {
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.search-context-text {
+  color: var(--text-secondary);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.search-context-line--hit .search-context-text {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.search-context-text mark {
+  background: var(--mark-bg);
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
 .search-empty {
@@ -2455,6 +2525,90 @@ body.dragging::after {
 .help-close:hover {
   background: var(--accent-bg);
   color: var(--accent);
+}
+
+.diagram-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(8px);
+  z-index: 1100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+body.diagram-fullscreen-open {
+  overflow: hidden;
+}
+
+.diagram-fullscreen-modal {
+  width: min(1400px, 100%);
+  height: min(100%, calc(100vh - 40px));
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.diagram-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.diagram-fullscreen-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.diagram-fullscreen-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.diagram-fullscreen-close:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.diagram-fullscreen-stage {
+  flex: 1;
+  overflow: hidden;
+  padding: 24px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram-fullscreen-stage svg {
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  transform-origin: center center;
+  transition: transform 0.08s ease-out;
+  will-change: transform;
 }
 
 .help-content {
@@ -3140,6 +3294,7 @@ mark.find-current {
   .tab-bar, .reconnect-banner, .json-view-toggle,
   .find-bar, .slide-overlay, .header-anchor,
   .error-banner, .welcome, .progress-bar,
+  .diagram-fullscreen-btn, .diagram-fullscreen-overlay,
   .diagram-label, .viewer-pane-split,
   .backlinks-section, .filetree-filter {
     display: none !important;
@@ -3455,6 +3610,8 @@ mark.find-current {
 .export-mode .search-overlay,
 .export-mode .find-bar,
 .export-mode .progress-bar,
+.export-mode .diagram-fullscreen-btn,
+.export-mode .diagram-fullscreen-overlay,
 .export-mode .copy-btn,
 .export-mode .mermaid-label,
 .export-mode .code-lang,
@@ -3620,6 +3777,68 @@ mark.find-current {
 }
 
 /* ===== Split View ===== */
+.compare-pane-header {
+  display: none;
+}
+
+.split-view .compare-pane-header {
+  display: flex;
+}
+
+.compare-pane-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.compare-pane-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compare-pane-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compare-sync-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.compare-sync-btn:hover,
+.compare-sync-btn[aria-pressed="true"] {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-lighter);
+}
+
+.compare-pane-active {
+  box-shadow: inset 0 0 0 2px var(--accent-lighter);
+}
+
+.compare-empty-state {
+  display: grid;
+  place-content: center;
+  min-height: 100%;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
 .split-view #viewer-pane {
   flex: 1;
   min-width: 0;
@@ -3692,11 +3911,35 @@ a.wiki-link:hover {
   justify-content: center;
   padding: 16px;
   background: var(--bg-primary);
+  position: relative;
 }
 
 .diagram-rendered svg {
   max-width: 100%;
   height: auto;
+}
+
+.diagram-fullscreen-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+
+.diagram-fullscreen-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-lighter);
 }
 
 .diagram-rendered-ok .diagram-source {
