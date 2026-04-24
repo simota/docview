@@ -94,6 +94,82 @@ function isSvg(path: string): boolean {
   return path.toLowerCase().endsWith('.svg');
 }
 
+// ---- Clipboard helpers ----
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to legacy path
+  }
+  // Fallback: execCommand for non-secure contexts
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'absolute';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function flashCopyFeedback(btn: HTMLButtonElement, ok: boolean): void {
+  const prevTitle = btn.title;
+  btn.classList.add(ok ? 'album-tile__copy--ok' : 'album-tile__copy--err');
+  btn.title = ok ? 'Copied!' : 'Copy failed';
+  setTimeout(() => {
+    btn.classList.remove('album-tile__copy--ok', 'album-tile__copy--err');
+    btn.title = prevTitle;
+  }, 1200);
+}
+
+function showToast(message: string): void {
+  const existing = document.querySelector('.album-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'album-toast';
+  toast.textContent = message;
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  document.body.appendChild(toast);
+  // Trigger fade-in
+  requestAnimationFrame(() => toast.classList.add('album-toast--visible'));
+  setTimeout(() => {
+    toast.classList.remove('album-toast--visible');
+    setTimeout(() => toast.remove(), 200);
+  }, 1400);
+}
+
+async function copyNamesForKeyboardShortcut(): Promise<void> {
+  // If multi-selection exists, copy all selected names (album order).
+  // Otherwise, copy the keyboard-selected tile's name.
+  let names: string[] = [];
+  if (_multiSelected.size > 0) {
+    names = _currentImages.filter((img) => _multiSelected.has(img.path)).map((img) => img.name);
+  } else if (_selectedIndex >= 0 && _selectedIndex < _currentImages.length) {
+    const img = _currentImages[_selectedIndex];
+    if (img) names = [img.name];
+  }
+  if (names.length === 0) return;
+  const text = names.join('\n');
+  const ok = await copyTextToClipboard(text);
+  if (ok) {
+    const label = names.length === 1 ? `Copied: ${names[0]}` : `Copied ${names.length} filenames`;
+    showToast(label);
+  } else {
+    showToast('Copy failed');
+  }
+}
+
 // ---- Lightbox Zoom/Pan helpers ----
 
 function lbApplyTransform(imgEl: HTMLElement): void {
@@ -678,6 +754,15 @@ function buildKeyboardHandler(): (e: KeyboardEvent) => void {
         }
         break;
       }
+      case 'c':
+      case 'C': {
+        // Skip when modifier keys are held (let browser copy/paste work)
+        if (e.metaKey || e.ctrlKey || e.altKey) break;
+        if (_multiSelected.size === 0 && _selectedIndex < 0) break;
+        e.preventDefault();
+        void copyNamesForKeyboardShortcut();
+        break;
+      }
       case 'Escape':
         e.preventDefault();
         // First clear multi-selection if any, then deselect keyboard focus
@@ -757,8 +842,25 @@ function renderGrid(images: AlbumImage[]): string {
         </div>
       </div>
       <div class="album-tile__meta">
-        <span class="album-tile__name" title="${esc(img.name)}">${esc(img.name)}</span>
-        <span class="album-tile__size">${formatSize(img.size)}</span>
+        <div class="album-tile__meta-text">
+          <span class="album-tile__name" title="${esc(img.name)}">${esc(img.name)}</span>
+          <span class="album-tile__size">${formatSize(img.size)}</span>
+        </div>
+        <button
+          type="button"
+          class="album-tile__copy"
+          data-copy-index="${i}"
+          aria-label="ファイル名をコピー"
+          title="ファイル名をコピー"
+        >
+          <svg class="album-tile__copy-icon album-tile__copy-icon--copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <svg class="album-tile__copy-icon album-tile__copy-icon--ok" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
       </div>
     </div>`;
   }).join('');
@@ -869,10 +971,29 @@ export async function renderAlbum(
   // Wire tile clicks → Lightbox or multi-select
   albumView.querySelectorAll<HTMLElement>('.album-tile').forEach((tile, i) => {
     tile.addEventListener('click', (e) => {
+      // Skip if the click originated from the copy button (handled separately)
+      const target = e.target as HTMLElement;
+      if (target.closest('.album-tile__copy')) return;
       e.stopPropagation();
       setSelected(i);
       const img = _currentImages[i];
       if (img) handleImageClick(img, i, e);
+    });
+    // Copy-filename button
+    const copyBtn = tile.querySelector<HTMLButtonElement>('.album-tile__copy');
+    copyBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const img = _currentImages[i];
+      if (!img) return;
+      const ok = await copyTextToClipboard(img.name);
+      flashCopyFeedback(copyBtn, ok);
+    });
+    copyBtn?.addEventListener('keydown', (e) => {
+      // Prevent Enter/Space from bubbling up to tile handlers which open Lightbox
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.stopPropagation();
+      }
     });
     tile.addEventListener('focus', () => {
       _selectedIndex = i;
