@@ -3806,6 +3806,7 @@ mark.find-current {
   body.contact-sheet-printing .album-banner,
   body.contact-sheet-printing .album-empty,
   body.contact-sheet-printing .album-loading,
+  body.contact-sheet-printing .album-toast,
   body.contact-sheet-printing #viewer-pane,
   body.contact-sheet-printing #app > :not(.contact-sheet-preview) {
     display: none !important;
@@ -4758,11 +4759,20 @@ a.wiki-link:hover {
 /* ---- Meta (filename + size) ---- */
 .album-tile__meta {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
   padding: 6px 8px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-subtle);
+}
+
+.album-tile__meta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
 }
 
 .album-tile__name {
@@ -4777,6 +4787,94 @@ a.wiki-link:hover {
 .album-tile__size {
   font-size: 10px;
   color: var(--text-muted);
+}
+
+/* ---- Copy filename button ---- */
+.album-tile__copy {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.album-tile:hover .album-tile__copy,
+.album-tile:focus-within .album-tile__copy,
+.album-tile__copy:focus-visible {
+  opacity: 1;
+}
+
+.album-tile__copy:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.album-tile__copy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.album-tile__copy--ok {
+  opacity: 1 !important;
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.album-tile__copy--err {
+  opacity: 1 !important;
+  color: #d64545;
+  border-color: #d64545;
+}
+
+.album-tile__copy-icon--ok {
+  display: none;
+}
+
+.album-tile__copy.album-tile__copy--ok .album-tile__copy-icon--copy {
+  display: none;
+}
+
+.album-tile__copy.album-tile__copy--ok .album-tile__copy-icon--ok {
+  display: inline;
+}
+
+/* ---- Copy toast ---- */
+.album-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  padding: 8px 16px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 10000;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* ---- Empty state ---- */

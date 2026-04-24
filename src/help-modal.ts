@@ -48,7 +48,9 @@ function buildSections(): ShortcutSection[] {
       items: [
         ['↑ ↓ ← →', 'Move selection'],
         ['Enter', 'Open in Lightbox'],
-        ['Esc', 'Deselect tile'],
+        ['Space', 'Toggle multi-select'],
+        ['C', 'Copy filename(s) to clipboard'],
+        ['Esc', 'Clear selection'],
       ],
     },
     {
