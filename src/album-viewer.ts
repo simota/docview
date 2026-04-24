@@ -37,6 +37,9 @@ let _keyboardHandler: ((e: KeyboardEvent) => void) | null = null;
 let _observer: IntersectionObserver | null = null;
 
 // ---- Multi-select state ----
+// MAX_COMPARE gates only the Compare button visibility (compare view supports
+// up to 4 panes). Selection itself is unlimited so Download/Print can handle
+// larger batches.
 const MAX_COMPARE = 4;
 const _multiSelected = new Set<string>(); // path set
 let _lastClickedIndex = -1; // for Shift+Click range select
@@ -580,13 +583,14 @@ function updateCompareButton(): void {
   let btn = toolbar.querySelector<HTMLButtonElement>('.album-compare-btn');
   const count = _multiSelected.size;
 
-  if (count >= 2) {
+  // Compare view supports 2-4 panes; hide the button outside that range.
+  if (count >= 2 && count <= MAX_COMPARE) {
     if (!btn) {
       btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'album-compare-btn';
       btn.addEventListener('click', () => {
-        const paths = Array.from(_multiSelected);
+        const paths = Array.from(_multiSelected).slice(0, MAX_COMPARE);
         if (paths.length >= 2 && _compareCallback) {
           _compareCallback(paths);
         }
@@ -617,11 +621,6 @@ function toggleMultiSelect(path: string, index: number): void {
   if (_multiSelected.has(path)) {
     _multiSelected.delete(path);
   } else {
-    if (_multiSelected.size >= MAX_COMPARE) {
-      // Remove the oldest entry (first in iteration order)
-      const first = _multiSelected.values().next();
-      if (!first.done) _multiSelected.delete(first.value);
-    }
     _multiSelected.add(path);
   }
   _lastClickedIndex = index;
@@ -638,10 +637,7 @@ function rangeSelect(endIndex: number): void {
   for (let i = start; i <= end; i++) {
     const img = _currentImages[i];
     if (!img) continue;
-    if (!_multiSelected.has(img.path)) {
-      if (_multiSelected.size >= MAX_COMPARE) break;
-      _multiSelected.add(img.path);
-    }
+    _multiSelected.add(img.path);
   }
   _lastClickedIndex = endIndex;
   syncTileSelectionClass();

@@ -112,6 +112,12 @@ flowchart TD
   writeFileSync('/tmp/md-test-docs/compare-special/foo,bar.png', TINY_PNG);
   writeFileSync('/tmp/md-test-docs/compare-special/100%.png', TINY_PNG);
 
+  // gallery-many/ — 6 images to verify selection cap removal for Download/Print.
+  mkdirSync('/tmp/md-test-docs/gallery-many', { recursive: true });
+  for (let i = 1; i <= 6; i++) {
+    writeFileSync(`/tmp/md-test-docs/gallery-many/m${i}.png`, TINY_PNG);
+  }
+
   // Apache-style combined access log with one unparseable line in the middle.
   // Used to verify the log table's `#` column uses the original file-line
   // number, not the parsed-entries index (codex review P2).

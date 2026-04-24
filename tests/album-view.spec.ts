@@ -800,3 +800,40 @@ test.describe('Download ZIP', () => {
     expect(res.status()).toBe(400);
   });
 });
+
+test.describe('Multi-select cap removed for Download/Print', () => {
+  test('can select more than 4 tiles; Download/Print reflect the count', async ({ page }) => {
+    await page.goto('/#album=gallery-many');
+    await page.waitForSelector('.album-tile');
+    await expect(page.locator('.album-tile')).toHaveCount(6);
+
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    for (let i = 0; i < 6; i++) {
+      await page.locator('.album-tile').nth(i).click({ modifiers: [modifier] });
+    }
+
+    await expect(page.locator('.album-download-btn__label')).toHaveText('Download (6)');
+    await expect(page.locator('.album-print-btn__label')).toHaveText('Print (6)');
+  });
+
+  test('Compare button is hidden once selection exceeds 4', async ({ page }) => {
+    await page.goto('/#album=gallery-many');
+    await page.waitForSelector('.album-tile');
+
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    // Select 4 → Compare button visible
+    for (let i = 0; i < 4; i++) {
+      await page.locator('.album-tile').nth(i).click({ modifiers: [modifier] });
+    }
+    await expect(page.locator('.album-compare-btn')).toBeVisible();
+    await expect(page.locator('.album-compare-btn')).toHaveText('Compare (4)');
+
+    // Select a 5th → Compare must hide
+    await page.locator('.album-tile').nth(4).click({ modifiers: [modifier] });
+    await expect(page.locator('.album-compare-btn')).toBeHidden();
+
+    // Download/Print keep counting
+    await expect(page.locator('.album-download-btn__label')).toHaveText('Download (5)');
+    await expect(page.locator('.album-print-btn__label')).toHaveText('Print (5)');
+  });
+});
