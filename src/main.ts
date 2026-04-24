@@ -51,6 +51,11 @@ let leftComparePath: HTMLSpanElement | null = null;
 let rightComparePath: HTMLSpanElement | null = null;
 let btnSyncScroll: HTMLButtonElement | null = null;
 
+// --- Compare view (multi-pane image compare) state ---
+let compareActive = false;
+let comparePane: HTMLElement | null = null;
+let syncCompareZoom = false;
+
 // --- DOM refs ---
 const viewer = document.getElementById('viewer') as HTMLDivElement;
 const viewerPane = document.getElementById('viewer-pane') as HTMLDivElement;
@@ -77,10 +82,72 @@ let splitProgressBar: HTMLElement | null = null;
 const findBar = new FindBar(viewer);
 
 // --- Tab bar (#14) ---
+// Compare view tabs are stored with a synthetic path `__compare__=<p1>,<p2>,...`
+// so they share the existing TabBar infrastructure without a new tab model.
+const COMPARE_TAB_PREFIX = '__compare__=';
+
+function isCompareTabPath(path: string): boolean {
+  return path.startsWith(COMPARE_TAB_PREFIX);
+}
+
+function parseCompareTabPath(path: string): string[] | null {
+  if (!isCompareTabPath(path)) return null;
+  const csv = path.slice(COMPARE_TAB_PREFIX.length);
+  const paths = csv
+    .split(',')
+    .filter((p) => p.length > 0)
+    .map((p) => {
+      try {
+        return decodeURIComponent(p);
+      } catch {
+        return p;
+      }
+    });
+  return paths.length >= 2 ? paths : null;
+}
+
+function buildCompareTabPath(paths: string[]): string {
+  return `${COMPARE_TAB_PREFIX}${paths.map(encodeURIComponent).join(',')}`;
+}
+
+function buildCompareTabTitle(paths: string[]): string {
+  const names = paths.map((p) => p.split('/').pop() ?? p);
+  // "Compare: a.png, b.png" or "Compare: a.png, b.png (+2)" when more
+  if (paths.length === 2) return `Compare: ${names[0]} + ${names[1]}`;
+  if (paths.length === 3) return `Compare: ${names[0]} + ${names[1]} + ${names[2]}`;
+  // 4: show first two + count suffix
+  return `Compare: ${names[0]}, ${names[1]} (+${names.length - 2})`;
+}
+
+function handleTabSelect(path: string): void {
+  if (isCompareTabPath(path)) {
+    const paths = parseCompareTabPath(path);
+    if (paths) void renderCompare(paths, { fromTabSwitch: true });
+    return;
+  }
+  // Switching to a non-compare tab closes compare view (if open)
+  if (compareActive) closeCompareView({ skipAlbumRestore: true });
+  void loadServerFile(path);
+}
+
+function handleTabClose(path: string): void {
+  if (!path) {
+    showWelcome();
+    return;
+  }
+  if (isCompareTabPath(path)) {
+    const paths = parseCompareTabPath(path);
+    if (paths) void renderCompare(paths, { fromTabSwitch: true });
+    return;
+  }
+  if (compareActive) closeCompareView({ skipAlbumRestore: true });
+  void loadServerFile(path);
+}
+
 const tabBar = new TabBar(
   tabBarEl,
-  (path) => loadServerFile(path),
-  (path) => { if (path) loadServerFile(path); else showWelcome(); }
+  (path) => handleTabSelect(path),
+  (path) => handleTabClose(path),
 );
 let splitTabBar: TabBar | null = null;
 
@@ -134,6 +201,8 @@ const helpModal = new HelpModal();
 const urlBar = new UrlBar((target) => {
   if (target.kind === 'local') {
     openFileLocation(target.path, target.line, target.lineEnd, getNavigationPane());
+  } else if (target.kind === 'album') {
+    void loadAlbumView(target.albumPath, target.recursive);
   } else {
     void loadRemoteUrl(target.url);
   }
@@ -325,19 +394,46 @@ function handlePaneScroll(pane: PaneId) {
 viewer.addEventListener('scroll', () => handlePaneScroll('left'));
 
 // --- URL hash routing (#9) ---
-// Format: #file=<path>[&line=<N>[-<M>]]
+// Format: #file=<path>[&line=<N>[-<M>]] or #album=<path>[&recursive=0|1]
+// or #compare=<path1>&compare=<path2>[&compare=<path3>[&compare=<path4>]]
 interface ParsedHash {
   path: string | null;
   line: number | null;
   lineEnd: number | null;
+  albumPath: string | null;
+  albumRecursive: boolean;
+  comparePaths: string[] | null;
 }
 
 function parseHash(hash: string = location.hash): ParsedHash {
   const raw = hash.startsWith('#') ? hash.slice(1) : hash;
-  if (!raw) return { path: null, line: null, lineEnd: null };
+  if (!raw) return { path: null, line: null, lineEnd: null, albumPath: null, albumRecursive: false, comparePaths: null };
   // URLSearchParams.get() already percent-decodes; do not decode again here or
   // filenames containing `%` (e.g. `100%.md`) break or throw.
   const params = new URLSearchParams(raw);
+
+  const compareRaw = params.get('compare');
+  if (compareRaw !== null) {
+    const compareValues = params.getAll('compare').filter((p) => p.length > 0);
+    const comparePaths = compareValues.length >= 2
+      ? compareValues
+      : compareRaw.split(',').filter((p) => p.length > 0);
+    if (comparePaths.length >= 2) {
+      return { path: null, line: null, lineEnd: null, albumPath: null, albumRecursive: false, comparePaths };
+    }
+  }
+
+  const albumPath = params.get('album');
+  if (albumPath !== null) {
+    return {
+      path: null,
+      line: null,
+      lineEnd: null,
+      albumPath,
+      albumRecursive: params.get('recursive') === '1',
+      comparePaths: null,
+    };
+  }
   const path = params.get('file');
   const lineStr = params.get('line');
   let line: number | null = null;
@@ -352,7 +448,23 @@ function parseHash(hash: string = location.hash): ParsedHash {
       }
     }
   }
-  return { path, line, lineEnd };
+  return { path, line, lineEnd, albumPath: null, albumRecursive: false, comparePaths: null };
+}
+
+function buildAlbumHash(albumPath: string, recursive: boolean): string {
+  let h = `#album=${encodeURIComponent(albumPath)}`;
+  if (recursive) h += '&recursive=1';
+  return h;
+}
+
+function buildCompareHash(paths: string[]): string {
+  const params = new URLSearchParams();
+  paths.forEach((path) => params.append('compare', path));
+  return `#${params.toString()}`;
+}
+
+function sameStringArray(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 function buildHash(path: string | null, line?: number | null, lineEnd?: number | null): string {
@@ -778,8 +890,381 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function showWelcome() {
+function leaveCompareViewForNavigation(): void {
+  if (compareActive) closeCompareView({ skipAlbumRestore: true });
+}
+
+function clearAlbumTracking(): void {
+  _currentAlbumPath = null;
+  _currentAlbumRecursive = false;
+  if (_albumSseDebounce) {
+    clearTimeout(_albumSseDebounce);
+    _albumSseDebounce = null;
+  }
+}
+
+function isAlbumEventPath(path: string, albumPath: string): boolean {
+  if (albumPath === '.') return true;
+  return path === albumPath || path.startsWith(`${albumPath}/`);
+}
+
+// --- Album view ---
+async function loadAlbumView(albumPath: string, recursive = false): Promise<void> {
+  leaveCompareViewForNavigation();
+  clearAlbumTracking();
+  saveScrollPosition('left');
   currentFilePath = null;
+  _currentAlbumPath = albumPath;
+  _currentAlbumRecursive = recursive;
+  document.title = `Album: ${albumPath} — DocView`;
+  updateBreadcrumb(`Album: ${albumPath}`);
+  toc.clear();
+  updatePaneLabels();
+  history.replaceState(null, '', buildAlbumHash(albumPath, recursive));
+
+  viewer.innerHTML = `<div class="loading-skeleton">${'<div class="skel-line"></div>'.repeat(6)}</div>`;
+
+  const { renderAlbum, disposeAlbum } = await import('./album-viewer.js');
+  disposeAlbum();
+
+  await renderAlbum(
+    albumPath,
+    viewer,
+    (imagePath: string) => {
+      _currentAlbumPath = null;
+      void loadServerFile(imagePath);
+    },
+    recursive,
+    (paths: string[]) => {
+      void renderCompare(paths);
+    },
+  );
+}
+
+async function reloadCurrentAlbum(): Promise<void> {
+  if (_currentAlbumPath === null || currentFilePath !== null || compareActive) return;
+  const { refreshAlbum } = await import('./album-viewer.js');
+  await refreshAlbum(
+    _currentAlbumPath,
+    viewer,
+    (imagePath: string) => {
+      _currentAlbumPath = null;
+      void loadServerFile(imagePath);
+    },
+    _currentAlbumRecursive,
+    (paths: string[]) => {
+      void renderCompare(paths);
+    },
+  );
+}
+
+// --- Compare view (multi-pane image compare, F5) ---
+
+interface CloseCompareOptions {
+  /** Skip restoring album view after close (used when switching tabs). */
+  skipAlbumRestore?: boolean;
+  /** Skip removing the tab entry (used when tab close triggered this). */
+  skipTabRemoval?: boolean;
+}
+
+function closeCompareView(opts: CloseCompareOptions = {}): void {
+  if (!compareActive) return;
+  compareActive = false;
+  syncCompareZoom = false;
+  const closedPaths = _currentComparePaths.slice();
+  _currentComparePaths = [];
+  if (comparePane) {
+    comparePane.remove();
+    comparePane = null;
+  }
+  workspace.classList.remove('compare-view-active');
+
+  // Remove the compare tab entry
+  if (!opts.skipTabRemoval && closedPaths.length >= 2) {
+    const tabPath = buildCompareTabPath(closedPaths);
+    // Directly splice the tab list without re-triggering onClose navigation
+    removeTabSilent(tabBar, tabPath);
+  }
+
+  if (opts.skipAlbumRestore) return;
+
+  // Restore album view in the viewer if we came from album
+  if (_currentAlbumPath !== null) {
+    void loadAlbumView(_currentAlbumPath, _currentAlbumRecursive);
+  } else if (currentFilePath) {
+    // Re-activate the current file tab
+    tabBar.setActive(currentFilePath);
+    history.replaceState(null, '', buildHash(currentFilePath));
+  } else {
+    history.replaceState(null, '', location.pathname + location.search);
+    showWelcome();
+  }
+}
+
+// TabBar internal shape reused for silent tab manipulation (compare view needs
+// to add/remove tabs without recursive onClose/onSelect firing).
+interface TabBarInternals {
+  tabs: Array<{ path: string; name: string; kind?: 'file' | 'compare' }>;
+  activePath: string | null;
+  render: () => void;
+}
+
+// Open or re-activate a compare tab with a custom display title.
+function openCompareTab(bar: TabBar, tabPath: string, title: string): void {
+  const anyBar = bar as unknown as TabBarInternals;
+  const existing = anyBar.tabs.find((t) => t.path === tabPath);
+  if (existing) {
+    existing.name = title;
+    existing.kind = 'compare';
+  } else {
+    anyBar.tabs.push({ path: tabPath, name: title, kind: 'compare' });
+  }
+  anyBar.activePath = tabPath;
+  anyBar.render();
+}
+
+// Remove a tab entry without triggering onSelect/onClose callbacks.
+function removeTabSilent(bar: TabBar, tabPath: string): void {
+  const anyBar = bar as unknown as TabBarInternals;
+  const idx = anyBar.tabs.findIndex((t) => t.path === tabPath);
+  if (idx < 0) return;
+  anyBar.tabs.splice(idx, 1);
+  if (anyBar.activePath === tabPath) {
+    anyBar.activePath = null;
+  }
+  anyBar.render();
+}
+
+interface RenderCompareOptions {
+  /** True when triggered by a tab switch (skip re-opening the tab). */
+  fromTabSwitch?: boolean;
+}
+
+let _currentComparePaths: string[] = [];
+
+async function renderCompare(paths: string[], opts: RenderCompareOptions = {}): Promise<void> {
+  if (paths.length < 2 || paths.length > 4) return;
+
+  // Close any existing compare view (but keep the tab slot for replacement)
+  if (compareActive) closeCompareView({ skipAlbumRestore: true, skipTabRemoval: true });
+
+  compareActive = true;
+  syncCompareZoom = false;
+  _currentComparePaths = paths.slice();
+
+  // Register a compare tab entry so users can switch back via tabs
+  if (!opts.fromTabSwitch) {
+    const tabPath = buildCompareTabPath(paths);
+    openCompareTab(tabBar, tabPath, buildCompareTabTitle(paths));
+  } else {
+    tabBar.setActive(buildCompareTabPath(paths));
+  }
+
+  // Update URL
+  history.replaceState(null, '', buildCompareHash(paths));
+
+  document.title = `Compare: ${paths.length} images — DocView`;
+  updateBreadcrumb(`Compare: ${paths.length} images`);
+  toc.clear();
+
+  // Build the compare pane overlay over the viewer area
+  const pane = document.createElement('div');
+  pane.id = 'compare-view-pane';
+  pane.className = 'compare-view-pane';
+  workspace.classList.add('compare-view-active');
+
+  const colsClass = `compare-grid--cols-${paths.length}`;
+  const truncTitle = paths.map((p) => p.split('/').pop() ?? p).join(' + ');
+  const displayTitle = truncTitle.length > 60 ? `${paths.length} images` : truncTitle;
+
+  pane.innerHTML = `
+    <div class="compare-toolbar">
+      <span class="compare-toolbar__title">Compare: ${escapeHtml(displayTitle)}</span>
+      <label class="compare-sync-zoom-label">
+        <input type="checkbox" id="compare-sync-zoom" ${syncCompareZoom ? 'checked' : ''}/>
+        Sync Zoom
+      </label>
+      <button type="button" class="compare-close-btn" aria-label="Close compare view">&#x2715; Close</button>
+    </div>
+    <div class="compare-grid ${colsClass}">
+      ${paths.map((p, i) => {
+    const name = p.split('/').pop() ?? p;
+    return `<div class="compare-pane-item" data-index="${i}" data-path="${escapeHtml(p)}">
+          <div class="compare-pane-item__header">
+            <span class="compare-pane-item__name" title="${escapeHtml(p)}">${escapeHtml(name)}</span>
+          </div>
+          <div class="compare-pane-item__img-wrap" id="compare-pane-wrap-${i}">
+            <div class="compare-loading">読み込み中...</div>
+          </div>
+        </div>`;
+  }).join('')}
+    </div>`;
+
+  // Keep compare inside the main viewer pane so it replaces the document area
+  // instead of becoming a separate flex column next to the tab bar.
+  viewerPane.appendChild(pane);
+  comparePane = pane;
+
+  // Wire close button
+  pane.querySelector('.compare-close-btn')?.addEventListener('click', () => closeCompareView());
+
+  // Wire sync zoom toggle
+  const syncZoomCheck = pane.querySelector<HTMLInputElement>('#compare-sync-zoom');
+  syncZoomCheck?.addEventListener('change', () => {
+    syncCompareZoom = syncZoomCheck.checked;
+  });
+
+  // Load images into each pane
+  await Promise.all(paths.map(async (p, i) => {
+    const wrap = pane.querySelector<HTMLElement>(`#compare-pane-wrap-${i}`);
+    if (!wrap) return;
+    await loadImageIntoComparePane(p, i, wrap);
+  }));
+}
+
+async function loadImageIntoComparePane(path: string, paneIndex: number, wrap: HTMLElement): Promise<void> {
+  const url = `/api/file?path=${encodeURIComponent(path)}`;
+
+  if (path.toLowerCase().endsWith('.svg')) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const svgText = await res.text();
+      const cleanSvg = DOMPurify.sanitize(svgText, {
+        USE_PROFILES: { html: true, svg: true, svgFilters: true },
+        ADD_TAGS: ['use', 'foreignObject'],
+      });
+      wrap.innerHTML = `<div class="image-view compare-image-view"><div class="svg-container">${cleanSvg}</div></div>`;
+    } catch {
+      wrap.innerHTML = '<div class="compare-load-error">画像を読み込めませんでした</div>';
+    }
+  } else {
+    const imgEl = document.createElement('img');
+    imgEl.className = 'compare-img';
+    imgEl.alt = path.split('/').pop() ?? path;
+    imgEl.src = url;
+    wrap.innerHTML = '';
+    const imgView = document.createElement('div');
+    imgView.className = 'image-view compare-image-view';
+    imgView.appendChild(imgEl);
+    wrap.appendChild(imgView);
+  }
+
+  // Init zoom for this pane
+  initComparePaneZoom(wrap, paneIndex);
+}
+
+// Zoom state per compare pane
+type CompareZoomState = {
+  scale: number;
+  translateX: number;
+  translateY: number;
+};
+
+const _compareZoomStates: CompareZoomState[] = [];
+let _compareZoomSyncRaf: number | null = null;
+
+function initComparePaneZoom(wrap: HTMLElement, paneIndex: number): void {
+  _compareZoomStates[paneIndex] = { scale: 1, translateX: 0, translateY: 0 };
+
+  const imgWrap = wrap.querySelector<HTMLElement>('.image-view, .compare-image-view');
+  if (!imgWrap) return;
+
+  const getEl = (): HTMLElement | null =>
+    imgWrap.querySelector<HTMLElement>('img, .svg-container');
+
+  function applyTransform(el: HTMLElement, state: CompareZoomState): void {
+    el.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+    el.style.cursor = state.scale > 1 ? 'grab' : 'zoom-in';
+  }
+
+  function broadcastZoom(state: CompareZoomState): void {
+    if (!syncCompareZoom) return;
+    if (_compareZoomSyncRaf !== null) cancelAnimationFrame(_compareZoomSyncRaf);
+    _compareZoomSyncRaf = requestAnimationFrame(() => {
+      _compareZoomSyncRaf = null;
+      _compareZoomStates.forEach((s, idx) => {
+        if (idx === paneIndex) return;
+        const otherWrap = comparePane?.querySelector<HTMLElement>(`#compare-pane-wrap-${idx}`);
+        if (!otherWrap) return;
+        const otherEl = otherWrap.querySelector<HTMLElement>('img, .svg-container');
+        if (!otherEl) return;
+        s.scale = state.scale;
+        s.translateX = state.translateX;
+        s.translateY = state.translateY;
+        applyTransform(otherEl, s);
+      });
+    });
+  }
+
+  imgWrap.addEventListener('wheel', (e: WheelEvent) => {
+    e.preventDefault();
+    const el = getEl();
+    if (!el) return;
+    const state = _compareZoomStates[paneIndex];
+    if (!state) return;
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    state.scale = Math.max(0.5, Math.min(5, state.scale + delta));
+    if (state.scale <= 1) { state.translateX = 0; state.translateY = 0; }
+    applyTransform(el, state);
+    broadcastZoom(state);
+  }, { passive: false });
+
+  imgWrap.addEventListener('dblclick', () => {
+    const el = getEl();
+    if (!el) return;
+    const state = _compareZoomStates[paneIndex];
+    if (!state) return;
+    state.scale = state.scale > 1 ? 1 : 2;
+    state.translateX = 0;
+    state.translateY = 0;
+    applyTransform(el, state);
+    broadcastZoom(state);
+  });
+
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  imgWrap.addEventListener('mousedown', (e: MouseEvent) => {
+    const state = _compareZoomStates[paneIndex];
+    if (!state || state.scale <= 1) return;
+    isDragging = true;
+    startX = e.clientX - state.translateX;
+    startY = e.clientY - state.translateY;
+    const el = getEl();
+    if (el) el.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  const mouseMoveHandler = (e: MouseEvent): void => {
+    if (!isDragging) return;
+    const state = _compareZoomStates[paneIndex];
+    if (!state) return;
+    state.translateX = e.clientX - startX;
+    state.translateY = e.clientY - startY;
+    const el = getEl();
+    if (el) applyTransform(el, state);
+    broadcastZoom(state);
+  };
+
+  const mouseUpHandler = (): void => {
+    if (isDragging) {
+      isDragging = false;
+      const state = _compareZoomStates[paneIndex];
+      const el = getEl();
+      if (el && state) el.style.cursor = state.scale > 1 ? 'grab' : 'zoom-in';
+    }
+  };
+
+  document.addEventListener('mousemove', mouseMoveHandler);
+  document.addEventListener('mouseup', mouseUpHandler);
+}
+
+function showWelcome() {
+  leaveCompareViewForNavigation();
+  currentFilePath = null;
+  clearAlbumTracking();
   const recent = getRecent().slice(0, 5);
   let recentSection = '';
   if (recent.length > 0) {
@@ -833,6 +1318,8 @@ function fileTypeToChunkKind(type: FileType): 'csv' | 'jsonl' | 'log' | null {
 
 // --- File loading ---
 async function loadServerFile(path: string) {
+  leaveCompareViewForNavigation();
+  clearAlbumTracking();
   saveScrollPosition('left');
   const type = detectFileType(path);
   const fileChanged = currentFilePath !== path;
@@ -927,6 +1414,8 @@ async function loadServerFile(path: string) {
 // Remote views are stateless: no tab entry, no hash update, no SSE tracking,
 // no scroll memory — each open is a fresh read through /api/remote.
 async function loadRemoteUrl(rawUrl: string) {
+  leaveCompareViewForNavigation();
+  clearAlbumTracking();
   saveScrollPosition('left');
   currentFilePath = null;
   currentHighlightedLine = null;
@@ -1009,6 +1498,8 @@ async function reloadCurrentFile() {
 }
 
 function loadLocalFile(file: File) {
+  leaveCompareViewForNavigation();
+  clearAlbumTracking();
   const type = detectFileType(file.name);
   currentFilePath = null;
   document.title = `${file.name} — DocView`;
@@ -1211,6 +1702,11 @@ function handleKeyboard(e: KeyboardEvent) {
 }
 
 // --- SSE ---
+// Debounce timer for album SSE refresh
+let _albumSseDebounce: ReturnType<typeof setTimeout> | null = null;
+let _currentAlbumPath: string | null = null;
+let _currentAlbumRecursive = false;
+
 function connectSSE() {
   const evtSource = new EventSource('/api/watch');
   evtSource.onmessage = (event) => {
@@ -1220,6 +1716,16 @@ function connectSSE() {
       if (data.event === 'change' && data.path === currentFilePath) reloadCurrentFile();
       if (data.event === 'change' && splitActive && data.path === splitFilePath) void loadIntoSplit(data.path);
       if (data.event === 'add' || data.event === 'unlink') fileTree?.refresh();
+
+      // Album live reload: only while the album view is the active main view.
+      if (_currentAlbumPath !== null && currentFilePath === null && !compareActive) {
+        if (isAlbumEventPath(data.path, _currentAlbumPath)) {
+          if (_albumSseDebounce) clearTimeout(_albumSseDebounce);
+          _albumSseDebounce = setTimeout(() => {
+            void reloadCurrentAlbum();
+          }, 500);
+        }
+      }
     } catch { /* ignore */ }
   };
   evtSource.onerror = () => {
@@ -1484,13 +1990,19 @@ async function init() {
   if (hasServer) {
     await loadCustomCSS();
 
-    fileTree = new FileTree(document.getElementById('filetree')!, (path) => {
-      if (splitActive && activePane === 'right') {
-        void loadIntoSplit(path);
-      } else {
-        void loadServerFile(path);
-      }
-    });
+    fileTree = new FileTree(
+      document.getElementById('filetree')!,
+      (path) => {
+        if (splitActive && activePane === 'right') {
+          void loadIntoSplit(path);
+        } else {
+          void loadServerFile(path);
+        }
+      },
+      (albumPath) => {
+        void loadAlbumView(albumPath, false);
+      },
+    );
     await fileTree.load();
 
     // Wire up TOC backlinks to navigate files
@@ -1517,19 +2029,25 @@ async function init() {
 
     // URL hash takes priority, then CLI initial file, then first file in tree
     const parsed = parseHash();
-    const startFile = parsed.path || initialFile;
 
-    if (startFile) {
-      if (parsed.path && parsed.line != null) {
-        setPendingLineJump('left', { line: parsed.line, lineEnd: parsed.lineEnd });
-      }
-      void loadServerFile(startFile);
+    if (parsed.comparePaths !== null) {
+      void renderCompare(parsed.comparePaths);
+    } else if (parsed.albumPath !== null) {
+      void loadAlbumView(parsed.albumPath, parsed.albumRecursive);
     } else {
-      const firstFile = sidebar.querySelector('.filetree-item[data-type="file"]') as HTMLElement;
-      if (firstFile?.dataset.path) {
-        void loadServerFile(firstFile.dataset.path);
+      const startFile = parsed.path || initialFile;
+      if (startFile) {
+        if (parsed.path && parsed.line != null) {
+          setPendingLineJump('left', { line: parsed.line, lineEnd: parsed.lineEnd });
+        }
+        void loadServerFile(startFile);
       } else {
-        showWelcome();
+        const firstFile = sidebar.querySelector('.filetree-item[data-type="file"]') as HTMLElement;
+        if (firstFile?.dataset.path) {
+          void loadServerFile(firstFile.dataset.path);
+        } else {
+          showWelcome();
+        }
       }
     }
   } else {
@@ -1662,7 +2180,26 @@ document.addEventListener('keydown', handleKeyboard);
 // Hash change navigation (#9)
 window.addEventListener('hashchange', () => {
   const parsed = parseHash();
-  if (!parsed.path) return;
+
+  if (parsed.comparePaths !== null) {
+    if (!compareActive || !sameStringArray(parsed.comparePaths, _currentComparePaths)) {
+      void renderCompare(parsed.comparePaths);
+    }
+    return;
+  }
+
+  if (parsed.albumPath !== null) {
+    if (compareActive || parsed.albumPath !== _currentAlbumPath || parsed.albumRecursive !== _currentAlbumRecursive) {
+      void loadAlbumView(parsed.albumPath, parsed.albumRecursive);
+    }
+    return;
+  }
+
+  if (!parsed.path) {
+    leaveCompareViewForNavigation();
+    return;
+  }
+  leaveCompareViewForNavigation();
   if (parsed.path !== currentFilePath) {
     if (parsed.line != null) {
       setPendingLineJump('left', { line: parsed.line, lineEnd: parsed.lineEnd });

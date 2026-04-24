@@ -1,5 +1,22 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+// Minimal valid 1×1 PNG (67 bytes) for album fixture images.
+// Generated from the canonical 1x1 transparent PNG binary.
+const TINY_PNG = Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4' +
+  '890000000a49444154789c6260000000020001e221bc330000000049454e44ae' +
+  '426082',
+  'hex',
+);
+
+// Minimal valid 1×1 red JPEG (631 bytes approximation via raw JFIF).
+// We use the same tiny PNG for .jpg since the server only checks the
+// extension — the browser never loads these images in headless tests.
+const TINY_JPG = TINY_PNG;
+
+// Minimal SVG image.
+const TINY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
 
 /**
  * Global Playwright setup — materializes the fixture directory that the
@@ -56,6 +73,44 @@ flowchart TD
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
+
+  // ---- Album view fixtures ----
+  // images/ — 3 direct images for grid rendering tests.
+  mkdirSync('/tmp/md-test-docs/images', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/images/a.png', TINY_PNG);
+  writeFileSync('/tmp/md-test-docs/images/b.jpg', TINY_JPG);
+  writeFileSync('/tmp/md-test-docs/images/c.svg', TINY_SVG);
+
+  // images/nested/ — 1 extra image for recursive scan test.
+  // Kept under images/ so it does not pollute the global file-search autocomplete
+  // used by url-bar.spec.ts (which searches for 'sub' and expects subdir/README.md
+  // to be the first candidate).
+  mkdirSync('/tmp/md-test-docs/images/nested', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/images/nested/d.png', TINY_PNG);
+
+  // Remove stale subdir/d.png that an earlier setup iteration may have created.
+  // Leaving it would pollute url-bar autocomplete ('sub' search returns d.png first).
+  rmSync('/tmp/md-test-docs/subdir/d.png', { force: true });
+
+  // empty-dir/ — 0 images for the "no images" message test.
+  // Note: buildTree excludes empty directories from the file tree, so this
+  // directory only appears in album API tests, not in filetree UI tests.
+  mkdirSync('/tmp/md-test-docs/empty-dir', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/empty-dir/.gitkeep', '');
+
+  // gallery4/ — 4 direct images for compare-grid 4-pane tests.
+  // Kept separate from images/ to avoid breaking existing album tests that
+  // assume images/ has exactly 3 direct images.
+  mkdirSync('/tmp/md-test-docs/gallery4', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/gallery4/g1.png', TINY_PNG);
+  writeFileSync('/tmp/md-test-docs/gallery4/g2.png', TINY_PNG);
+  writeFileSync('/tmp/md-test-docs/gallery4/g3.png', TINY_PNG);
+  writeFileSync('/tmp/md-test-docs/gallery4/g4.png', TINY_PNG);
+
+  // compare-special/ — filenames that exercise compare hash parsing.
+  mkdirSync('/tmp/md-test-docs/compare-special', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/compare-special/foo,bar.png', TINY_PNG);
+  writeFileSync('/tmp/md-test-docs/compare-special/100%.png', TINY_PNG);
 
   // Apache-style combined access log with one unparseable line in the middle.
   // Used to verify the log table's `#` column uses the original file-line

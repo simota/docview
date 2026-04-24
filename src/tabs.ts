@@ -3,9 +3,12 @@ import { fileIcon } from './filetree';
 type TabSelectCallback = (path: string) => void;
 type TabCloseCallback = (path: string) => void;
 
+export type TabKind = 'file' | 'compare';
+
 export interface Tab {
   path: string;
   name: string;
+  kind?: TabKind;
 }
 
 export class TabBar {
@@ -73,14 +76,26 @@ export class TabBar {
     this.container.innerHTML = this.tabs.map((tab) => {
       const isActive = tab.path === this.activePath;
       const safePath = this.escapeAttr(tab.path);
-      const parts = tab.path.split('/');
-      const fileName = parts[parts.length - 1] ?? tab.path;
-      const parentDir = parts.length >= 2 ? parts[parts.length - 2] : null;
-      const icon = fileIcon(fileName);
-      const labelHtml = parentDir
-        ? `${icon}<span class="tab-parent">${this.escapeHtml(parentDir)}/</span><span class="tab-filename">${this.escapeHtml(fileName)}</span>`
-        : `${icon}<span class="tab-filename">${this.escapeHtml(fileName)}</span>`;
-      return `<div class="tab-item ${isActive ? 'active' : ''}" data-path="${safePath}" title="${safePath}" draggable="true">
+      let labelHtml: string;
+      let titleAttr = safePath;
+      let extraClass = '';
+      if (tab.kind === 'compare') {
+        // Compare tabs use a custom name and dedicated icon.
+        const compareIcon =
+          '<svg class="tab-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>';
+        labelHtml = `${compareIcon}<span class="tab-filename">${this.escapeHtml(tab.name)}</span>`;
+        titleAttr = this.escapeAttr(tab.name);
+        extraClass = 'tab-compare';
+      } else {
+        const parts = tab.path.split('/');
+        const fileName = parts[parts.length - 1] ?? tab.path;
+        const parentDir = parts.length >= 2 ? parts[parts.length - 2] : null;
+        const icon = fileIcon(fileName);
+        labelHtml = parentDir
+          ? `${icon}<span class="tab-parent">${this.escapeHtml(parentDir)}/</span><span class="tab-filename">${this.escapeHtml(fileName)}</span>`
+          : `${icon}<span class="tab-filename">${this.escapeHtml(fileName)}</span>`;
+      }
+      return `<div class="tab-item ${extraClass} ${isActive ? 'active' : ''}" data-path="${safePath}" title="${titleAttr}" draggable="true">
         <span class="tab-name">${labelHtml}</span>
         <button class="tab-close" data-path="${safePath}" title="Close">&times;</button>
       </div>`;

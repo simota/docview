@@ -12,6 +12,7 @@ interface TreeResponse {
 }
 
 type FileSelectCallback = (path: string) => void;
+type AlbumCallback = (path: string) => void;
 
 // --- File type icons (#1, SVG) ---
 const SVG_MARKDOWN = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="9" rx="1"/><line x1="3" y1="12.5" x2="11" y2="12.5"/><line x1="3.5" y1="5" x2="7" y2="5"/><line x1="3.5" y1="7" x2="10.5" y2="7"/></svg>`;
@@ -69,6 +70,10 @@ function esc(s: string): string {
 }
 
 const ICON_CHEVRON = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+const ICON_ALBUM = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
+
+// Image extensions matching server.mjs IMAGE_EXTENSIONS
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 
 export class FileTree {
   private container: HTMLElement;
@@ -76,14 +81,16 @@ export class FileTree {
   private filterInput: HTMLInputElement;
   private treeList: HTMLElement;
   private onSelect: FileSelectCallback;
+  private onAlbum: AlbumCallback | null;
   private activePath: string | null = null;
   private openDirs = new Set<string>();
   private treeData: FileNode[] = [];
   private filterQuery = '';
 
-  constructor(container: HTMLElement, onSelect: FileSelectCallback) {
+  constructor(container: HTMLElement, onSelect: FileSelectCallback, onAlbum: AlbumCallback | null = null) {
     this.container = container;
     this.onSelect = onSelect;
+    this.onAlbum = onAlbum;
 
     this.rootLabel = document.createElement('div');
     this.rootLabel.className = 'filetree-root';
@@ -153,7 +160,20 @@ export class FileTree {
       if (node.type === 'dir') {
         const isOpen = this.openDirs.has(node.path);
         item.setAttribute('aria-expanded', String(isOpen));
-        item.innerHTML = `<span class="filetree-chevron ${isOpen ? 'open' : ''}">${ICON_CHEVRON}</span>${isOpen ? ICON_DIR_OPEN : ICON_DIR_CLOSED}<span class="filetree-name">${esc(node.name)}</span>`;
+
+        // Count image files in this directory (direct children only)
+        const imageCount = node.children
+          ? node.children.filter((c) => c.type === 'file' && IMAGE_EXTS.has('.' + (c.name.split('.').pop()?.toLowerCase() ?? ''))).length
+          : 0;
+
+        const albumBtnHtml = imageCount > 0 && this.onAlbum
+          ? `<button class="filetree-album-btn" title="Album view (${imageCount} images)" aria-label="Open album for ${esc(node.name)}">${ICON_ALBUM}<span class="filetree-album-count">${imageCount}</span></button>`
+          : '';
+
+        const renderDirInner = (open: boolean) =>
+          `<span class="filetree-chevron ${open ? 'open' : ''}">${ICON_CHEVRON}</span>${open ? ICON_DIR_OPEN : ICON_DIR_CLOSED}<span class="filetree-name">${esc(node.name)}</span>${albumBtnHtml}`;
+
+        item.innerHTML = renderDirInner(isOpen);
 
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'filetree-children';
@@ -166,15 +186,30 @@ export class FileTree {
 
         item.addEventListener('click', (e) => {
           e.stopPropagation();
+          // Album button click — handled by its own listener, don't toggle dir
+          if ((e.target as HTMLElement).closest('.filetree-album-btn')) return;
           const toggled = !this.openDirs.has(node.path);
           if (toggled) this.openDirs.add(node.path); else this.openDirs.delete(node.path);
           item.setAttribute('aria-expanded', String(toggled));
-          item.innerHTML = `<span class="filetree-chevron ${toggled ? 'open' : ''}">${ICON_CHEVRON}</span>${toggled ? ICON_DIR_OPEN : ICON_DIR_CLOSED}<span class="filetree-name">${esc(node.name)}</span>`;
+          item.innerHTML = renderDirInner(toggled);
           childrenContainer.style.display = toggled ? '' : 'none';
           if (toggled && node.children) {
             this.renderTree(node.children, childrenContainer, depth + 1);
           }
+          // Re-wire album button after re-render
+          item.querySelector('.filetree-album-btn')?.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            this.onAlbum?.(node.path);
+          });
         });
+
+        // Wire album button
+        if (imageCount > 0 && this.onAlbum) {
+          item.querySelector('.filetree-album-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.onAlbum?.(node.path);
+          });
+        }
 
         parent.appendChild(item);
         parent.appendChild(childrenContainer);
