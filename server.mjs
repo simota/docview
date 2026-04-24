@@ -501,6 +501,91 @@ const IMAGE_MIME = {
   '.bmp': 'image/bmp', '.ico': 'image/x-icon',
 };
 
+// --- Minimal ZIP writer (STORE method, no external deps) ---
+// Produces a standards-compliant .zip archive in memory from a list of
+// { name: string, data: Buffer } entries. Uses method=0 (stored) so there
+// is no deflate cost; image files are already compressed.
+
+const CRC32_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(buf) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) {
+    c = (c >>> 8) ^ CRC32_TABLE[(c ^ buf[i]) & 0xFF];
+  }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildZip(entries) {
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+
+  for (const entry of entries) {
+    const nameBuf = Buffer.from(entry.name, 'utf8');
+    const data = entry.data;
+    const crc = crc32(data);
+    const size = data.length;
+
+    const lfh = Buffer.alloc(30);
+    lfh.writeUInt32LE(0x04034b50, 0);      // local file header signature
+    lfh.writeUInt16LE(20, 4);              // version needed
+    lfh.writeUInt16LE(0x0800, 6);          // general purpose flag (UTF-8 name)
+    lfh.writeUInt16LE(0, 8);               // method = store
+    lfh.writeUInt16LE(0, 10);              // mod time
+    lfh.writeUInt16LE(0x21, 12);           // mod date (1980-01-01)
+    lfh.writeUInt32LE(crc, 14);
+    lfh.writeUInt32LE(size, 18);           // compressed size
+    lfh.writeUInt32LE(size, 22);           // uncompressed size
+    lfh.writeUInt16LE(nameBuf.length, 26);
+    lfh.writeUInt16LE(0, 28);              // extra field length
+    locals.push(lfh, nameBuf, data);
+
+    const cdh = Buffer.alloc(46);
+    cdh.writeUInt32LE(0x02014b50, 0);      // central dir header signature
+    cdh.writeUInt16LE(0x031E, 4);          // version made by (UNIX + 3.0)
+    cdh.writeUInt16LE(20, 6);              // version needed
+    cdh.writeUInt16LE(0x0800, 8);          // general purpose flag
+    cdh.writeUInt16LE(0, 10);              // method
+    cdh.writeUInt16LE(0, 12);              // mod time
+    cdh.writeUInt16LE(0x21, 14);           // mod date
+    cdh.writeUInt32LE(crc, 16);
+    cdh.writeUInt32LE(size, 20);
+    cdh.writeUInt32LE(size, 24);
+    cdh.writeUInt16LE(nameBuf.length, 28);
+    cdh.writeUInt16LE(0, 30);              // extra length
+    cdh.writeUInt16LE(0, 32);              // comment length
+    cdh.writeUInt16LE(0, 34);              // disk number start
+    cdh.writeUInt16LE(0, 36);              // internal attrs
+    cdh.writeUInt32LE(0, 38);              // external attrs
+    cdh.writeUInt32LE(offset, 42);         // LFH offset
+    centrals.push(cdh, nameBuf);
+
+    offset += lfh.length + nameBuf.length + data.length;
+  }
+
+  const centralSize = centrals.reduce((s, b) => s + b.length, 0);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);       // end of central dir signature
+  eocd.writeUInt16LE(0, 4);                // disk number
+  eocd.writeUInt16LE(0, 6);                // disk with central dir
+  eocd.writeUInt16LE(entries.length, 8);   // entries on this disk
+  eocd.writeUInt16LE(entries.length, 10);  // total entries
+  eocd.writeUInt32LE(centralSize, 12);     // central dir size
+  eocd.writeUInt32LE(offset, 16);          // central dir offset
+  eocd.writeUInt16LE(0, 20);               // comment length
+
+  return Buffer.concat([...locals, ...centrals, eocd]);
+}
+
 // SSE clients
 const sseClients = new Set();
 
@@ -1174,6 +1259,111 @@ const server = createServer(async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Internal server error' }));
     }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/download-zip') {
+    const MAX_BODY = 256 * 1024;        // request body (JSON of paths)
+    const MAX_FILES = 500;
+    const MAX_TOTAL_BYTES = 500 * 1024 * 1024;
+
+    let body = '';
+    for await (const chunk of req) {
+      body += chunk;
+      if (body.length > MAX_BODY) {
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body too large' }));
+        return;
+      }
+    }
+
+    let data;
+    try { data = JSON.parse(body); } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      return;
+    }
+
+    const paths = Array.isArray(data?.paths) ? data.paths : null;
+    if (!paths || paths.length === 0) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing paths' }));
+      return;
+    }
+    if (paths.length > MAX_FILES) {
+      res.writeHead(413, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Too many files (max ${MAX_FILES})` }));
+      return;
+    }
+
+    const entries = [];
+    const usedNames = new Map();
+    let totalBytes = 0;
+
+    for (const reqPath of paths) {
+      if (typeof reqPath !== 'string' || !reqPath) continue;
+      const resolved = await safePath(reqPath);
+      if (!resolved) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Access denied: ${reqPath}` }));
+        return;
+      }
+      const ext = extname(resolved).toLowerCase();
+      if (!IMAGE_EXTENSIONS.has(ext)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Unsupported file type: ${reqPath}` }));
+        return;
+      }
+      try {
+        const s = await stat(resolved);
+        if (!s.isFile()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Not a file: ${reqPath}` }));
+          return;
+        }
+        totalBytes += s.size;
+        if (totalBytes > MAX_TOTAL_BYTES) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Total size exceeds ${MAX_TOTAL_BYTES} bytes` }));
+          return;
+        }
+        const content = await readFile(resolved);
+
+        let name = basename(resolved);
+        if (usedNames.has(name)) {
+          const n = usedNames.get(name) + 1;
+          usedNames.set(name, n);
+          const dot = name.lastIndexOf('.');
+          name = dot > 0
+            ? `${name.slice(0, dot)} (${n})${name.slice(dot)}`
+            : `${name} (${n})`;
+        } else {
+          usedNames.set(name, 0);
+        }
+        entries.push({ name, data: content });
+      } catch {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `File not found: ${reqPath}` }));
+        return;
+      }
+    }
+
+    if (entries.length === 0) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No valid files to archive' }));
+      return;
+    }
+
+    const zip = buildZip(entries);
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `docview-${ts}.zip`;
+    res.writeHead(200, {
+      'Content-Type': 'application/zip',
+      'Content-Length': String(zip.length),
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'no-store',
+    });
+    res.end(zip);
     return;
   }
 

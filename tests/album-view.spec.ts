@@ -741,3 +741,62 @@ test.describe('Contact Sheet (F11)', () => {
     await expect(page.locator('.album-print-btn')).toHaveAttribute('aria-label', /all images/i);
   });
 });
+
+test.describe('Download ZIP', () => {
+  test('Download button is visible with initial label "Download"', async ({ page }) => {
+    await page.goto('/#album=images');
+    await page.waitForSelector('.album-download-btn');
+    await expect(page.locator('.album-download-btn__label')).toHaveText('Download');
+  });
+
+  test('Download button label reflects multi-selection count', async ({ page }) => {
+    await page.goto('/#album=images');
+    await page.waitForSelector('.album-download-btn');
+
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    const label = page.locator('.album-download-btn__label');
+
+    await page.locator('.album-tile').nth(0).click({ modifiers: [modifier] });
+    await expect(label).toHaveText('Download (1)');
+
+    await page.locator('.album-tile').nth(1).click({ modifiers: [modifier] });
+    await expect(label).toHaveText('Download (2)');
+
+    await expect(page.locator('.album-download-btn')).toHaveAttribute('aria-label', /selected 2/i);
+  });
+
+  test('/api/download-zip returns a valid zip for selected paths', async ({ request }) => {
+    const res = await request.post('/api/download-zip', {
+      data: { paths: ['images/a.png', 'images/b.jpg'] },
+    });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('application/zip');
+    expect(res.headers()['content-disposition']).toMatch(/attachment; filename="docview-.+\.zip"/);
+    const buf = await res.body();
+    // ZIP local file header magic
+    expect(buf.slice(0, 4).toString('hex')).toBe('504b0304');
+    // End of central directory record magic appears within the last 22 bytes of a no-comment archive
+    expect(buf.slice(-22, -18).toString('hex')).toBe('504b0506');
+  });
+
+  test('/api/download-zip rejects path traversal', async ({ request }) => {
+    const res = await request.post('/api/download-zip', {
+      data: { paths: ['../../etc/passwd'] },
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test('/api/download-zip rejects non-image extensions', async ({ request }) => {
+    const res = await request.post('/api/download-zip', {
+      data: { paths: ['readme.md'] },
+    });
+    // safePath may return 403 (file absent) or 400 (unsupported ext) depending on fixtures;
+    // both indicate the request was refused.
+    expect([400, 403]).toContain(res.status());
+  });
+
+  test('/api/download-zip rejects empty paths', async ({ request }) => {
+    const res = await request.post('/api/download-zip', { data: { paths: [] } });
+    expect(res.status()).toBe(400);
+  });
+});

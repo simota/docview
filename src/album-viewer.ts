@@ -628,6 +628,7 @@ function toggleMultiSelect(path: string, index: number): void {
   syncTileSelectionClass();
   updateCompareButton();
   updatePrintButton();
+  updateDownloadButton();
 }
 
 function rangeSelect(endIndex: number): void {
@@ -646,6 +647,7 @@ function rangeSelect(endIndex: number): void {
   syncTileSelectionClass();
   updateCompareButton();
   updatePrintButton();
+  updateDownloadButton();
 }
 
 function clearMultiSelection(): void {
@@ -653,6 +655,7 @@ function clearMultiSelection(): void {
   syncTileSelectionClass();
   updateCompareButton();
   updatePrintButton();
+  updateDownloadButton();
 }
 
 // ---- Tile interaction handler — F3 Lightbox or multi-select ----
@@ -1098,6 +1101,86 @@ function getPrintTargets(): AlbumImage[] {
 }
 
 /**
+ * Return the list of images targeted by the Download ZIP button.
+ * Same selection semantics as Print: selected subset, or full album when none selected.
+ */
+function getDownloadTargets(): AlbumImage[] {
+  if (_multiSelected.size === 0) return _currentImages;
+  return _currentImages.filter((img) => _multiSelected.has(img.path));
+}
+
+async function triggerDownloadZip(images: AlbumImage[]): Promise<void> {
+  if (images.length === 0) {
+    showToast('ダウンロードする画像がありません');
+    return;
+  }
+  const paths = images.map((img) => img.path);
+  try {
+    const res = await fetch('/api/download-zip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    });
+    if (!res.ok) {
+      let msg = `ZIP 作成に失敗しました (${res.status})`;
+      try {
+        const err = await res.json();
+        if (err?.error) msg = `ZIP 作成に失敗しました: ${err.error}`;
+      } catch { /* empty */ }
+      showToast(msg);
+      return;
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const filename = match?.[1] ?? 'docview.zip';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`Downloaded ${images.length} ${images.length === 1 ? 'file' : 'files'}`);
+  } catch (err) {
+    showToast(`ZIP 作成に失敗しました: ${String(err instanceof Error ? err.message : err)}`);
+  }
+}
+
+/**
+ * Update the Download ZIP button label / aria / disabled state based on current
+ * selection. Called whenever multi-select changes or album re-renders.
+ */
+function updateDownloadButton(): void {
+  const toolbar = _albumTarget?.querySelector<HTMLElement>('.album-toolbar');
+  const btn = toolbar?.querySelector<HTMLButtonElement>('.album-download-btn');
+  if (!btn) return;
+
+  const selectionCount = _multiSelected.size;
+  const totalCount = _currentImages.length;
+
+  const label = btn.querySelector<HTMLElement>('.album-download-btn__label');
+  if (label) {
+    label.textContent = selectionCount > 0 ? `Download (${selectionCount})` : 'Download';
+  }
+
+  if (totalCount === 0) {
+    btn.disabled = true;
+    btn.title = 'ダウンロードする画像がありません';
+    btn.setAttribute('aria-label', 'ダウンロードする画像がありません');
+  } else if (selectionCount > 0) {
+    btn.disabled = false;
+    btn.title = `選択中の ${selectionCount} 枚を ZIP でダウンロード`;
+    btn.setAttribute('aria-label', `Download selected ${selectionCount} images as ZIP`);
+  } else {
+    btn.disabled = false;
+    btn.title = `アルバム全 ${totalCount} 枚を ZIP でダウンロード`;
+    btn.setAttribute('aria-label', 'Download all images in this album as ZIP');
+  }
+}
+
+/**
  * Update the Print button label / aria / disabled state based on current
  * selection. Called whenever multi-select changes or album re-renders.
  */
@@ -1176,8 +1259,21 @@ function upsertPrintControls(toolbar: HTMLElement, images: AlbumImage[], dirPath
   toolbar.appendChild(colSelect);
   toolbar.appendChild(printBtn);
 
+  // Download ZIP button (same selection semantics as Print)
+  const downloadBtn = document.createElement('button');
+  downloadBtn.type = 'button';
+  downloadBtn.className = 'album-download-btn';
+  downloadBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="album-download-btn__label">Download</span>`;
+  if (images.length === 0) downloadBtn.disabled = true;
+  downloadBtn.addEventListener('click', () => {
+    const targets = getDownloadTargets();
+    void triggerDownloadZip(targets);
+  });
+  toolbar.appendChild(downloadBtn);
+
   // Set initial label/aria/title based on current state
   updatePrintButton();
+  updateDownloadButton();
 }
 
 /**
@@ -1253,6 +1349,7 @@ export async function refreshAlbum(
   syncTileSelectionClass();
   updateCompareButton();
   updatePrintButton();
+  updateDownloadButton();
   // Restore keyboard selection if still valid
   if (wasSelected >= 0 && wasSelected < _currentImages.length) {
     setSelected(wasSelected);
