@@ -44,6 +44,24 @@ function buildSections(): ShortcutSection[] {
       ],
     },
     {
+      title: 'Album Grid',
+      items: [
+        ['↑ ↓ ← →', 'Move selection'],
+        ['Enter', 'Open in Lightbox'],
+        ['Esc', 'Deselect tile'],
+      ],
+    },
+    {
+      title: 'Lightbox',
+      items: [
+        ['← / →', 'Previous / Next image'],
+        ['↑ / ↓  or  + / −', 'Zoom in / out'],
+        ['0', 'Reset zoom'],
+        ['Home / End', 'First / Last image'],
+        ['Esc', 'Close Lightbox'],
+      ],
+    },
+    {
       title: 'Other',
       items: [
         ['?', 'Show this help'],

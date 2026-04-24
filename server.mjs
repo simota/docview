@@ -1004,6 +1004,90 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/album') {
+    const dirParam = url.searchParams.get('path');
+    if (!dirParam) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing path parameter' }));
+      return;
+    }
+    const recursive = url.searchParams.get('recursive') === '1';
+    const limitParam = url.searchParams.get('limit');
+    const limitNum = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10) || 2000), 10000) : 2000;
+
+    const resolved = await safePath(dirParam);
+    if (!resolved) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Access denied' }));
+      return;
+    }
+
+    try {
+      const dirStat = await stat(resolved);
+      if (!dirStat.isDirectory()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Path is not a directory' }));
+        return;
+      }
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Directory not found' }));
+      return;
+    }
+
+    const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '.docview-cache']);
+
+    /** Collect image files recursively or non-recursively. Returns true if limit was hit. */
+    async function collectImages(dir, images) {
+      if (images.length >= limitNum) return true;
+      let entries;
+      try { entries = await readdir(dir, { withFileTypes: true }); }
+      catch { return false; }
+
+      for (const entry of entries) {
+        if (images.length >= limitNum) return true;
+        if (entry.name.startsWith('.')) continue;
+        if (EXCLUDED_DIRS.has(entry.name)) continue;
+
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (recursive) {
+            const truncated = await collectImages(fullPath, images);
+            if (truncated) return true;
+          }
+        } else {
+          const ext = extname(entry.name).toLowerCase();
+          if (IMAGE_EXTENSIONS.has(ext)) {
+            const relPath = relative(targetDir, fullPath);
+            try {
+              const s = await stat(fullPath);
+              images.push({
+                path: relPath,
+                name: entry.name,
+                size: s.size,
+                mtime: s.mtime.toISOString(),
+                ext,
+              });
+            } catch { /* skip inaccessible */ }
+          }
+        }
+      }
+      return false;
+    }
+
+    try {
+      const images = [];
+      const truncated = await collectImages(resolved, images);
+      const relDir = relative(targetDir, resolved) || '.';
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ dir: relDir, total: images.length, truncated, images }));
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Internal server error' }));
+    }
+    return;
+  }
+
   if (url.pathname === '/api/shutdown') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');

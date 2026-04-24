@@ -8,7 +8,8 @@ const SUGGEST_RECENT_LIMIT = 5;
 
 export type UrlBarTarget =
   | { kind: 'local'; path: string; line: number | null; lineEnd: number | null }
-  | { kind: 'remote'; url: string };
+  | { kind: 'remote'; url: string }
+  | { kind: 'album'; albumPath: string; recursive: boolean };
 
 type OpenCallback = (target: UrlBarTarget) => void;
 
@@ -190,6 +191,15 @@ export class UrlBar {
     const raw = this.input.value.trim();
     if (!raw) { this.clearStatus(); return; }
 
+    // Album hash shortcut: #album=<path>
+    if (raw.startsWith('#album=') || raw.startsWith('#album=')) {
+      try {
+        const params = new URLSearchParams(raw.slice(1));
+        const albumPath = params.get('album');
+        if (albumPath) { this.setInfo(`Album: ${albumPath}`); return; }
+      } catch { /* fall through */ }
+    }
+
     const result = resolveLocator(raw);
     if (result.kind === 'invalid') { this.setError(result.reason); return; }
     if (result.kind === 'remote') {
@@ -251,6 +261,20 @@ export class UrlBar {
 
     const raw = this.input.value.trim();
     if (!raw) return;
+
+    // Album hash shortcut: #album=<path>
+    if (raw.startsWith('#album=')) {
+      try {
+        const params = new URLSearchParams(raw.slice(1));
+        const albumPath = params.get('album');
+        if (albumPath) {
+          this.pushHistory(raw);
+          this.close();
+          this.onOpen({ kind: 'album', albumPath, recursive: params.get('recursive') === '1' });
+          return;
+        }
+      } catch { /* fall through */ }
+    }
 
     const result = resolveLocator(raw);
     if (result.kind === 'invalid') { this.setError(result.reason); return; }

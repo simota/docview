@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect x="0" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="20" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="40" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="60" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="80" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="100" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="120" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="140" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="160" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="180" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="200" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="220" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="240" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="260" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="280" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="300" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="320" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="340" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="360" y="0" width="20" height="400" fill="#f472b6" />
+  <rect x="380" y="0" width="20" height="400" fill="#7c3aed" />
+  <rect x="0" y="170" width="400" height="60" fill="rgba(15,23,42,0.8)" />
+  <text x="200" y="210" text-anchor="middle" font-family="ui-sans-serif,system-ui" font-size="22" fill="#fff">stripes</text>
+</svg>

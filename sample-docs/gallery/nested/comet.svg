@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="g-comet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a5b4fc" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="#fafafa" />
+  <rect x="60" y="60" width="280" height="280" rx="28" fill="url(#g-comet)" />
+  <text x="200" y="385" text-anchor="middle" font-family="ui-sans-serif,system-ui" font-size="18" fill="#475569">comet</text>
+</svg>

@@ -3788,6 +3788,130 @@ mark.find-current {
   a.wiki-link::after {
     content: '';
   }
+
+  /* ===== Contact Sheet (F11) ===== */
+
+  /* When printing a contact sheet, hide all normal UI */
+  body.contact-sheet-printing #toolbar,
+  body.contact-sheet-printing #sidebar,
+  body.contact-sheet-printing #toc-sidebar,
+  body.contact-sheet-printing .tab-bar,
+  body.contact-sheet-printing #workspace,
+  body.contact-sheet-printing .search-overlay,
+  body.contact-sheet-printing .find-bar,
+  body.contact-sheet-printing .progress-bar,
+  body.contact-sheet-printing .reconnect-banner,
+  body.contact-sheet-printing .album-toolbar,
+  body.contact-sheet-printing .album-grid,
+  body.contact-sheet-printing .album-banner,
+  body.contact-sheet-printing .album-empty,
+  body.contact-sheet-printing .album-loading,
+  body.contact-sheet-printing #viewer-pane,
+  body.contact-sheet-printing #app > :not(.contact-sheet-preview) {
+    display: none !important;
+  }
+
+  /* Show only the contact sheet preview */
+  body.contact-sheet-printing .contact-sheet-preview {
+    display: block !important;
+    background: white !important;
+    color: #1a1a1a !important;
+    font-family: sans-serif;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  /* @page override for contact sheet */
+  body.contact-sheet-printing {
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+
+  /* Contact sheet header */
+  .contact-sheet-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12pt;
+    border-bottom: 0.5pt solid #999;
+    padding-bottom: 6pt;
+    margin-bottom: 8pt;
+    font-size: 9pt;
+    color: #555;
+    flex-wrap: wrap;
+  }
+
+  .contact-sheet-header__path {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-family: monospace;
+    font-size: 10pt;
+  }
+
+  .contact-sheet-header__count {
+    color: #666;
+  }
+
+  .contact-sheet-header__date {
+    margin-left: auto;
+    color: #888;
+    font-size: 8pt;
+  }
+
+  /* Contact sheet grid */
+  .contact-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 4), 1fr);
+    gap: 4mm;
+  }
+
+  /* Individual tile */
+  .contact-sheet-tile {
+    break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2pt;
+    border: 0.5pt solid #ddd;
+    padding: 3pt;
+    background: white;
+  }
+
+  .contact-sheet-img-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #f5f5f5;
+  }
+
+  .contact-sheet-img {
+    max-width: 100%;
+    max-height: 38mm;
+    object-fit: contain;
+    display: block;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .contact-sheet-number {
+    font-size: 7pt;
+    color: #888;
+    font-weight: 700;
+    align-self: flex-start;
+  }
+
+  .contact-sheet-caption {
+    font-size: 7pt;
+    color: #444;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+  }
 }
 
 /* ===== Export Mode (?export) — headless screenshot support ===== */
@@ -4501,4 +4625,773 @@ a.wiki-link:hover {
 [data-theme='paper'] .tab-bar,
 [data-theme='paper'] #toolbar {
   background-color: var(--bg-primary);
+}
+
+/* ===== Album View ===== */
+
+.album-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: var(--bg-editor);
+  min-height: 100%;
+}
+
+/* ---- Toolbar ---- */
+.album-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  outline: none;
+}
+
+.album-toolbar__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-toolbar__count {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.album-toolbar__recursive {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.album-toolbar__recursive input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+/* ---- Warning banner ---- */
+.album-banner {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.album-banner--warn {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* ---- Grid ---- */
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+/* ---- Tile ---- */
+.album-tile {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  outline: none;
+}
+
+.album-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-border);
+}
+
+.album-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.album-tile--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-border), var(--shadow-sm);
+}
+
+/* ---- Image wrapper ---- */
+.album-tile__img-wrap {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.album-tile__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.15s ease;
+}
+
+.album-tile__img[src=''] {
+  opacity: 0;
+}
+
+/* ---- Meta (filename + size) ---- */
+.album-tile__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.album-tile__name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-tile__size {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ---- Empty state ---- */
+.album-empty {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ---- Loading ---- */
+.album-loading {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ===== Filetree Album Button ===== */
+.filetree-album-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  margin-left: 4px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-xs);
+  color: var(--accent);
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.filetree-item:hover .filetree-album-btn,
+.filetree-item:focus-within .filetree-album-btn {
+  opacity: 1;
+}
+
+.filetree-album-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.filetree-album-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.filetree-album-count {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* ===== Lightbox ===== */
+
+body.lightbox-open {
+  overflow: hidden;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  animation: lightbox-fadein 0.15s ease;
+}
+
+@keyframes lightbox-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 0;
+}
+
+.lightbox__container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+/* ---- Toolbar ---- */
+.lightbox__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
+  min-height: 48px;
+}
+
+.lightbox__filename {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.lightbox__counter {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lightbox__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s ease;
+  flex-shrink: 0;
+}
+
+.lightbox__close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox__close:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+/* ---- Stage (image + nav buttons) ---- */
+.lightbox__stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.lightbox__img-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 72px;
+  box-sizing: border-box;
+}
+
+.lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  transform-origin: center center;
+  cursor: zoom-in;
+  user-select: none;
+  transition: none;
+}
+
+.lightbox__img--svg {
+  background: transparent;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox__img--svg svg {
+  max-width: 100%;
+  max-height: 80vh;
+}
+
+.lightbox__loading,
+.lightbox__error {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+/* ---- Nav buttons ---- */
+.lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 64px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.12s ease, opacity 0.12s ease;
+  flex-shrink: 0;
+}
+
+.lightbox__nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox__nav:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.lightbox__nav:disabled,
+.lightbox__nav[aria-disabled='true'] {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.lightbox__nav-prev {
+  left: 12px;
+}
+
+.lightbox__nav-next {
+  right: 12px;
+}
+
+/* ---- Mobile: compact nav buttons ---- */
+@media (max-width: 640px) {
+  .lightbox__img-wrap {
+    padding: 0 52px;
+  }
+
+  .lightbox__nav {
+    width: 40px;
+    height: 56px;
+  }
+
+  .lightbox__nav-prev {
+    left: 4px;
+  }
+
+  .lightbox__nav-next {
+    right: 4px;
+  }
+
+  .lightbox__toolbar {
+    padding: 8px 12px;
+  }
+}
+
+/* ===== Album Multi-Select ===== */
+
+/* Tile checkmark indicator */
+.album-tile__check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.album-tile__img-wrap {
+  position: relative;
+}
+
+/* Multi-selected tile styling */
+.album-tile--multi-selected {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-lighter), var(--shadow-md) !important;
+}
+
+.album-tile--multi-selected .album-tile__img-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  pointer-events: none;
+}
+
+/* Compare button in album toolbar */
+.album-compare-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.album-compare-btn:hover {
+  opacity: 0.87;
+  transform: translateY(-1px);
+}
+
+.album-compare-btn:active {
+  transform: translateY(0);
+}
+
+.album-compare-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== Compare View (F5 Multi-pane) ===== */
+
+/* Hide viewer content but keep the tab bar visible so users can navigate
+ * between compare session and file tabs. */
+.compare-view-active #viewer-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.compare-view-active #viewer-pane > :not(#tab-bar):not(#compare-view-pane) {
+  display: none !important;
+}
+
+.compare-view-active #viewer-pane > #tab-bar {
+  display: flex !important;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-view-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-editor);
+}
+
+/* ---- Compare toolbar ---- */
+.compare-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.compare-toolbar__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-sync-zoom-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.compare-sync-zoom-label input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.compare-close-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.compare-close-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-lighter);
+}
+
+.compare-close-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Compare grid ---- */
+.compare-grid {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+
+.compare-grid--cols-2 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.compare-grid--cols-3 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* 3-pane: first item spans full first row */
+.compare-grid--cols-3 .compare-pane-item:first-child {
+  grid-column: 1 / -1;
+}
+
+.compare-grid--cols-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* Responsive: stack vertically on narrow screens */
+@media (max-width: 600px) {
+  .compare-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: unset !important;
+    overflow-y: auto;
+  }
+
+  .compare-grid .compare-pane-item:first-child {
+    grid-column: unset !important;
+  }
+}
+
+/* ---- Compare pane item ---- */
+.compare-pane-item {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.compare-pane-item__header {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.compare-pane-item__name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-pane-item__img-wrap {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  min-height: 0;
+}
+
+/* Inner image-view container within compare pane */
+.compare-image-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.compare-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  transform-origin: center center;
+  transition: none;
+  cursor: zoom-in;
+  user-select: none;
+}
+
+.compare-image-view .svg-container {
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  cursor: zoom-in;
+  user-select: none;
+}
+
+.compare-image-view .svg-container svg {
+  max-width: 100%;
+  max-height: 80%;
+}
+
+.compare-load-error {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+}
+
+.compare-loading {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+}
+
+/* ===== F11 Contact Sheet Export ===== */
+
+/* Print button + cols selector in album toolbar */
+.album-print-cols {
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-editor);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.album-print-cols:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.album-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.album-print-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.album-print-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.album-print-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Contact sheet preview — hidden during normal view, shown only at print time */
+.contact-sheet-preview {
+  display: none;
 }
