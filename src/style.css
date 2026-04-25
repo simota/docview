@@ -61,6 +61,7 @@
   --icon-data: #22c55e;
   --icon-config: #f59e0b;
   --icon-image: #ec4899;
+  --icon-video: #8b5cf6;
   --icon-default: #8e91ab;
 }
 
@@ -117,6 +118,7 @@
   --icon-data: #4ade80;
   --icon-config: #fbbf24;
   --icon-image: #f9a8d4;
+  --icon-video: #c4b5fd;
   --icon-default: #585b76;
 }
 
@@ -173,6 +175,7 @@
   --icon-data: #15803d;
   --icon-config: #b45309;
   --icon-image: #b91c1c;
+  --icon-video: #6b4423;
   --icon-default: #8b7a5c;
 }
 
@@ -229,6 +232,7 @@
   --icon-data: #15803d;
   --icon-config: #d97706;
   --icon-image: #e63946;
+  --icon-video: #6d28d9;
   --icon-default: #808080;
 }
 
@@ -285,6 +289,7 @@
   --icon-data: #15803d;
   --icon-config: #b45309;
   --icon-image: #dc2626;
+  --icon-video: #7c3aed;
   --icon-default: #6b7fa8;
 }
 
@@ -803,6 +808,7 @@ body.dragging::after {
 .file-icon--data { color: var(--icon-data); }
 .file-icon--config { color: var(--icon-config); }
 .file-icon--image { color: var(--icon-image); }
+.file-icon--video { color: var(--icon-video, var(--icon-image)); }
 .file-icon--default { color: var(--icon-default); }
 
 .filetree-chevron {
@@ -5644,4 +5650,128 @@ body.lightbox-open {
 /* Contact sheet preview — hidden during normal view, shown only at print time */
 .contact-sheet-preview {
   display: none;
+}
+
+/* ===== Video support (Phase 1) ===== */
+
+/* Single-file video viewer (#file=clip.mp4 path) */
+.video-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+}
+.video-view__player {
+  max-width: 100%;
+  max-height: 80vh;
+  background: #000;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.video-view__error {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 13px;
+  max-width: 600px;
+  text-align: center;
+}
+
+/* Video tile in the gallery grid */
+.album-tile__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+/* Centered ▶ overlay on video tiles */
+.album-tile__type-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  margin: auto;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  opacity: 0.92;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.album-tile:hover .album-tile__type-overlay {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Duration badge (Phase 2 fills in text; Phase 1 leaves it empty) */
+.album-tile__duration-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 1;
+  font-variant-numeric: tabular-nums;
+}
+.album-tile__duration-badge:empty {
+  display: none;
+}
+
+/* Lightbox video player */
+.lightbox__video {
+  max-width: 100%;
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  background: #000;
+  border-radius: 4px;
+  outline: none;
+}
+
+.lightbox__video-error {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(180, 30, 30, 0.92);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  max-width: 80%;
+  text-align: center;
+  z-index: 5;
+}
+
+.lightbox__play-overlay {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+.lightbox__play-overlay:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 4px;
+  border-radius: 50%;
 }

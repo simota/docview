@@ -274,9 +274,12 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.log',
   // Images
   '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico',
+  // Videos (Phase 1 — see docs/design/video-support.md)
+  '.mp4', '.m4v', '.webm', '.ogv', '.mov',
 ]);
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const SEARCH_CONTEXT_LINES = 20;
 
 // --- Remote URL fetching (Phase 3) ---
@@ -500,6 +503,45 @@ const IMAGE_MIME = {
   '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
   '.bmp': 'image/bmp', '.ico': 'image/x-icon',
 };
+
+const VIDEO_MIME = {
+  '.mp4': 'video/mp4',
+  '.m4v': 'video/mp4',
+  '.webm': 'video/webm',
+  '.ogv': 'video/ogg',
+  '.mov': 'video/quicktime',
+};
+
+/**
+ * Parse an HTTP Range header against a known total size.
+ *
+ * Supports:
+ *   - bytes=START-END   inclusive byte range
+ *   - bytes=START-      from START to end of file
+ *   - bytes=-SUFFIX     last SUFFIX bytes of file
+ *
+ * Returns { start, end } (both inclusive) or null when the range is malformed
+ * or unsatisfiable. Caller is responsible for emitting 416 vs 200 vs 206.
+ */
+function parseRange(header, total) {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header || '');
+  if (!m) return null;
+  const startStr = m[1];
+  const endStr = m[2];
+  let start = startStr === '' ? null : parseInt(startStr, 10);
+  let end = endStr === '' ? null : parseInt(endStr, 10);
+  if (start === null && end === null) return null;
+  if (start === null) {
+    // Suffix length form: bytes=-SUFFIX
+    if (end === 0) return null; // ambiguous — treat as unsatisfiable
+    start = Math.max(0, total - end);
+    end = total - 1;
+  }
+  if (end === null || end >= total) end = total - 1;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (start < 0 || start > end || start >= total) return null;
+  return { start, end };
+}
 
 // --- Minimal ZIP writer (STORE method, no external deps) ---
 // Produces a standards-compliant .zip archive in memory from a list of
@@ -879,6 +921,60 @@ const server = createServer(async (req, res) => {
         const mime = IMAGE_MIME[ext] || 'application/octet-stream';
         res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime });
         res.end(content);
+      } else if (VIDEO_EXTENSIONS.has(ext)) {
+        // Stream videos with HTTP Range support (206 Partial Content).
+        // <video> elements depend on this for seeking — without it, seek bars
+        // are non-functional and large files lock up the browser.
+        const total = fileStat.size;
+        const mime = VIDEO_MIME[ext] || 'application/octet-stream';
+        const rangeHeader = req.headers['range'];
+        const baseHeaders = {
+          'Content-Type': mime,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'no-store',
+          'X-File-Mtime': mtime,
+        };
+
+        if (rangeHeader) {
+          const range = parseRange(rangeHeader, total);
+          if (!range) {
+            res.writeHead(416, {
+              ...baseHeaders,
+              'Content-Range': `bytes */${total}`,
+              'Content-Length': '0',
+            });
+            res.end();
+            return;
+          }
+          const { start, end } = range;
+          const chunkLen = end - start + 1;
+          res.writeHead(206, {
+            ...baseHeaders,
+            'Content-Range': `bytes ${start}-${end}/${total}`,
+            'Content-Length': String(chunkLen),
+          });
+          if (req.method === 'HEAD') {
+            res.end();
+            return;
+          }
+          const stream = createReadStream(resolved, { start, end });
+          stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+          res.on('close', () => stream.destroy());
+          stream.pipe(res);
+        } else {
+          res.writeHead(200, {
+            ...baseHeaders,
+            'Content-Length': String(total),
+          });
+          if (req.method === 'HEAD') {
+            res.end();
+            return;
+          }
+          const stream = createReadStream(resolved);
+          stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+          res.on('close', () => stream.destroy());
+          stream.pipe(res);
+        }
       } else if (hasRange) {
         // Streaming line-range read — never loads the full file into memory
         const offset = Math.max(0, parseInt(offsetParam || '0', 10) || 0);
@@ -1089,7 +1185,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === '/api/album') {
+  if (url.pathname === '/api/album' || url.pathname === '/api/gallery') {
     const dirParam = url.searchParams.get('path');
     if (!dirParam) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -1099,6 +1195,27 @@ const server = createServer(async (req, res) => {
     const recursive = url.searchParams.get('recursive') === '1';
     const limitParam = url.searchParams.get('limit');
     const limitNum = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10) || 2000), 10000) : 2000;
+
+    // /api/album is the legacy image-only endpoint. /api/gallery accepts
+    // ?kind=image|video|all (default: all). The two endpoints share a single
+    // collector but differ in response shape so existing /api/album clients
+    // do not see a `kind` field appear unexpectedly.
+    const isGallery = url.pathname === '/api/gallery';
+    const kindParam = (url.searchParams.get('kind') || 'all').toLowerCase();
+    let wantImage = true;
+    let wantVideo = true;
+    if (isGallery) {
+      if (kindParam === 'image') { wantVideo = false; }
+      else if (kindParam === 'video') { wantImage = false; }
+      else if (kindParam !== 'all') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid kind: ${kindParam} (expected image|video|all)` }));
+        return;
+      }
+    } else {
+      // /api/album always returns images only (legacy contract).
+      wantVideo = false;
+    }
 
     const resolved = await safePath(dirParam);
     if (!resolved) {
@@ -1122,36 +1239,39 @@ const server = createServer(async (req, res) => {
 
     const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '.docview-cache']);
 
-    /** Collect image files recursively or non-recursively. Returns true if limit was hit. */
-    async function collectImages(dir, images) {
-      if (images.length >= limitNum) return true;
+    /** Collect media files (image and/or video) recursively or non-recursively. Returns true if the limit was hit. */
+    async function collectMedia(dir, items) {
+      if (items.length >= limitNum) return true;
       let entries;
       try { entries = await readdir(dir, { withFileTypes: true }); }
       catch { return false; }
 
       for (const entry of entries) {
-        if (images.length >= limitNum) return true;
+        if (items.length >= limitNum) return true;
         if (entry.name.startsWith('.')) continue;
         if (EXCLUDED_DIRS.has(entry.name)) continue;
 
         const fullPath = join(dir, entry.name);
         if (entry.isDirectory()) {
           if (recursive) {
-            const truncated = await collectImages(fullPath, images);
+            const truncated = await collectMedia(fullPath, items);
             if (truncated) return true;
           }
         } else {
           const ext = extname(entry.name).toLowerCase();
-          if (IMAGE_EXTENSIONS.has(ext)) {
+          const isImage = IMAGE_EXTENSIONS.has(ext);
+          const isVideo = VIDEO_EXTENSIONS.has(ext);
+          if ((wantImage && isImage) || (wantVideo && isVideo)) {
             const relPath = relative(targetDir, fullPath);
             try {
               const s = await stat(fullPath);
-              images.push({
+              items.push({
                 path: relPath,
                 name: entry.name,
                 size: s.size,
                 mtime: s.mtime.toISOString(),
                 ext,
+                kind: isImage ? 'image' : 'video',
               });
             } catch { /* skip inaccessible */ }
           }
@@ -1161,11 +1281,18 @@ const server = createServer(async (req, res) => {
     }
 
     try {
-      const images = [];
-      const truncated = await collectImages(resolved, images);
+      const items = [];
+      const truncated = await collectMedia(resolved, items);
       const relDir = relative(targetDir, resolved) || '.';
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ dir: relDir, total: images.length, truncated, images }));
+      if (isGallery) {
+        res.end(JSON.stringify({ root: relDir, dir: relDir, total: items.length, truncated, items }));
+      } else {
+        // Legacy /api/album shape — strip `kind` from each entry so existing
+        // clients see the exact same payload they did before video support.
+        const images = items.map(({ kind: _kind, ...rest }) => rest);
+        res.end(JSON.stringify({ dir: relDir, total: images.length, truncated, images }));
+      }
     } catch {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Internal server error' }));

@@ -14,6 +14,8 @@ export interface AlbumImage {
   size: number;
   mtime: string;
   ext: string;
+  /** Media kind. Always 'image' for /api/album responses; 'image' or 'video' for /api/gallery. */
+  kind?: 'image' | 'video';
 }
 
 export interface AlbumResponse {
@@ -21,6 +23,25 @@ export interface AlbumResponse {
   total: number;
   truncated: boolean;
   images: AlbumImage[];
+}
+
+export interface GalleryResponse {
+  root: string;
+  dir: string;
+  total: number;
+  truncated: boolean;
+  items: AlbumImage[];
+}
+
+const VIDEO_EXTS_SET = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
+
+function isVideoPath(path: string): boolean {
+  const ext = '.' + (path.split('.').pop()?.toLowerCase() ?? '');
+  return VIDEO_EXTS_SET.has(ext);
+}
+
+function itemKind(item: AlbumImage): 'image' | 'video' {
+  return item.kind ?? (isVideoPath(item.path) ? 'video' : 'image');
 }
 
 // Callback signature for opening a single image in the main viewer
@@ -289,6 +310,8 @@ function updatePreloadLinks(index: number, images: AlbumImage[]): void {
   for (const i of targets) {
     const img = images[i];
     if (!img || isSvg(img.path)) continue;
+    // Phase 1: do not preload videos (they're heavy and Range-streamed).
+    if (itemKind(img) === 'video') continue;
     const link = document.createElement('link');
     link.rel = 'preload';
     link.as = 'image';
@@ -335,9 +358,90 @@ function buildLightboxHtml(image: AlbumImage, index: number, total: number): str
     </div>`;
 }
 
-// ---- Lightbox image loader ----
+// ---- Lightbox media loader ----
 
-async function loadLightboxImage(image: AlbumImage, wrap: HTMLElement): Promise<void> {
+const VIDEO_VOLUME_KEY = 'docview.video.volume';
+const VIDEO_MUTED_KEY = 'docview.video.muted';
+
+function getStoredVolume(): number {
+  const raw = localStorage.getItem(VIDEO_VOLUME_KEY);
+  const v = raw == null ? NaN : parseFloat(raw);
+  return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1.0;
+}
+
+function setStoredVolume(v: number): void {
+  localStorage.setItem(VIDEO_VOLUME_KEY, String(Math.max(0, Math.min(1, v))));
+}
+
+function getStoredMuted(): boolean {
+  // Default true so autoplay policy doesn't reject the first play().
+  const raw = localStorage.getItem(VIDEO_MUTED_KEY);
+  if (raw == null) return true;
+  return raw === '1';
+}
+
+function setStoredMuted(m: boolean): void {
+  localStorage.setItem(VIDEO_MUTED_KEY, m ? '1' : '0');
+}
+
+async function loadLightboxVideo(item: AlbumImage, wrap: HTMLElement): Promise<void> {
+  wrap.innerHTML = '';
+  const url = `/api/file?path=${encodeURIComponent(item.path)}`;
+  const v = document.createElement('video');
+  v.className = 'lightbox__video';
+  v.controls = true;
+  v.autoplay = true;
+  v.muted = getStoredMuted();
+  v.playsInline = true;
+  v.preload = 'metadata';
+  v.src = url;
+  v.volume = getStoredVolume();
+  v.addEventListener('volumechange', () => {
+    setStoredVolume(v.volume);
+    setStoredMuted(v.muted);
+  });
+  v.addEventListener('error', () => {
+    if (!wrap.querySelector('.lightbox__video-error')) {
+      const ext = '.' + (item.path.split('.').pop()?.toLowerCase() ?? '');
+      const note = ext === '.mov'
+        ? 'この .mov はこのブラウザで再生できないコーデックの可能性があります (QuickTime コンテナ依存)。'
+        : 'この動画はこのブラウザで再生できません。';
+      const div = document.createElement('div');
+      div.className = 'lightbox__video-error';
+      div.textContent = note;
+      wrap.appendChild(div);
+    }
+  });
+  wrap.appendChild(v);
+
+  // Try autoplay; if blocked, surface a play button overlay.
+  const playOverlay = document.createElement('button');
+  playOverlay.type = 'button';
+  playOverlay.className = 'lightbox__play-overlay';
+  playOverlay.setAttribute('aria-label', '再生');
+  playOverlay.innerHTML = `<svg viewBox="0 0 24 24" width="64" height="64" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)"/><polygon points="10,8 10,16 16,12" fill="#fff"/></svg>`;
+  playOverlay.style.display = 'none';
+  playOverlay.addEventListener('click', () => {
+    void v.play().then(() => { playOverlay.style.display = 'none'; }).catch(() => { /* ignore */ });
+  });
+  wrap.appendChild(playOverlay);
+
+  try {
+    await v.play();
+  } catch {
+    playOverlay.style.display = '';
+  }
+}
+
+async function loadLightboxImage(item: AlbumImage, wrap: HTMLElement): Promise<void> {
+  if (itemKind(item) === 'video') {
+    await loadLightboxVideo(item, wrap);
+    return;
+  }
+  return loadLightboxImageInternal(item, wrap);
+}
+
+async function loadLightboxImageInternal(image: AlbumImage, wrap: HTMLElement): Promise<void> {
   wrap.innerHTML = '<div class="lightbox__loading">読み込み中...</div>';
 
   const url = `/api/file?path=${encodeURIComponent(image.path)}`;
@@ -470,27 +574,151 @@ function closeLightbox(): void {
   }
 }
 
+function getCurrentLightboxItem(): AlbumImage | null {
+  if (_lightboxIndex < 0 || _lightboxIndex >= _currentImages.length) return null;
+  return _currentImages[_lightboxIndex] ?? null;
+}
+
+function getLightboxVideoEl(): HTMLVideoElement | null {
+  return _lightboxEl?.querySelector<HTMLVideoElement>('.lightbox__video') ?? null;
+}
+
+function clamp01(n: number): number { return Math.max(0, Math.min(1, n)); }
+
 function buildLightboxKeyHandler(): (e: KeyboardEvent) => void {
   return (e: KeyboardEvent): void => {
     if (!_lightboxOpen) return;
 
+    const item = getCurrentLightboxItem();
+    const isVideo = item ? itemKind(item) === 'video' : false;
     const imgEl = _lightboxEl?.querySelector<HTMLElement>('.lightbox__img');
+    const videoEl = isVideo ? getLightboxVideoEl() : null;
 
+    // Common: Escape closes regardless of media type.
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      // If we're in fullscreen, exit fullscreen first instead of closing.
+      if (document.fullscreenElement) {
+        try { void document.exitFullscreen(); } catch { /* ignore */ }
+        return;
+      }
+      history.back();
+      return;
+    }
+
+    // Common navigation: ←/→ jumps to prev/next regardless of media kind.
+    // Shift+←/→ on video performs a 5-second seek.
+    if (e.key === 'ArrowRight') {
+      if (isVideo && e.shiftKey && videoEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 5); } catch { /* ignore */ }
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (_lightboxIndex < _currentImages.length - 1) {
+        void navigateLightbox(_lightboxIndex + 1);
+      }
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      if (isVideo && e.shiftKey && videoEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { videoEl.currentTime = Math.max(0, videoEl.currentTime - 5); } catch { /* ignore */ }
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (_lightboxIndex > 0) {
+        void navigateLightbox(_lightboxIndex - 1);
+      }
+      return;
+    }
+
+    if (isVideo && videoEl) {
+      // Video-specific shortcuts.
+      switch (e.key) {
+        case ' ':
+        case 'k':
+        case 'K':
+          e.preventDefault();
+          e.stopPropagation();
+          if (videoEl.paused) void videoEl.play().catch(() => { /* ignore */ });
+          else videoEl.pause();
+          return;
+        case 'm':
+        case 'M':
+          e.preventDefault();
+          e.stopPropagation();
+          videoEl.muted = !videoEl.muted;
+          setStoredMuted(videoEl.muted);
+          return;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          e.stopPropagation();
+          if (document.fullscreenElement) {
+            try { void document.exitFullscreen(); } catch { /* ignore */ }
+          } else {
+            try { void videoEl.requestFullscreen(); } catch { /* ignore */ }
+          }
+          return;
+        case 'j':
+        case 'J':
+          e.preventDefault();
+          e.stopPropagation();
+          try { videoEl.currentTime = Math.max(0, videoEl.currentTime - 10); } catch { /* ignore */ }
+          return;
+        case 'l':
+        case 'L':
+          e.preventDefault();
+          e.stopPropagation();
+          try { videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10); } catch { /* ignore */ }
+          return;
+        case 'ArrowUp':
+          e.preventDefault();
+          e.stopPropagation();
+          videoEl.volume = clamp01(videoEl.volume + 0.1);
+          setStoredVolume(videoEl.volume);
+          return;
+        case 'ArrowDown':
+          e.preventDefault();
+          e.stopPropagation();
+          videoEl.volume = clamp01(videoEl.volume - 0.1);
+          setStoredVolume(videoEl.volume);
+          return;
+        case 'Home':
+          e.preventDefault();
+          e.stopPropagation();
+          try { videoEl.currentTime = 0; } catch { /* ignore */ }
+          return;
+        case 'End':
+          e.preventDefault();
+          e.stopPropagation();
+          try { videoEl.currentTime = Math.max(0, (videoEl.duration || 0) - 0.05); } catch { /* ignore */ }
+          return;
+        default:
+          break;
+      }
+      // 0-9: percent jump (0%, 10%, ..., 90%)
+      if (/^[0-9]$/.test(e.key)) {
+        const pct = parseInt(e.key, 10) / 10;
+        const dur = videoEl.duration;
+        if (Number.isFinite(dur) && dur > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          try { videoEl.currentTime = dur * pct; } catch { /* ignore */ }
+        }
+        return;
+      }
+      return;
+    }
+
+    // Image-specific shortcuts (zoom).
     switch (e.key) {
-      case 'ArrowRight':
-        e.preventDefault();
-        e.stopPropagation();
-        if (_lightboxIndex < _currentImages.length - 1) {
-          void navigateLightbox(_lightboxIndex + 1);
-        }
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        e.stopPropagation();
-        if (_lightboxIndex > 0) {
-          void navigateLightbox(_lightboxIndex - 1);
-        }
-        break;
       case 'ArrowUp':
         e.preventDefault();
         e.stopPropagation();
@@ -523,12 +751,6 @@ function buildLightboxKeyHandler(): (e: KeyboardEvent) => void {
         e.preventDefault();
         e.stopPropagation();
         void navigateLightbox(_currentImages.length - 1);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        e.stopPropagation();
-        // Pop the history state we pushed when opening
-        history.back();
         break;
       default:
         break;
@@ -625,6 +847,20 @@ function updateCompareButton(): void {
     }
     btn.textContent = `Compare (${count})`;
     btn.style.display = '';
+    // Phase 1/2: video compare is unsupported. Disable the button when any
+    // selected path is a video so the user sees a clear reason.
+    const hasVideo = _currentImages.some(
+      (img) => _multiSelected.has(img.path) && itemKind(img) === 'video',
+    );
+    if (hasVideo) {
+      btn.disabled = true;
+      btn.title = '動画の Compare は未対応です (画像のみ選択してください)';
+      btn.setAttribute('aria-disabled', 'true');
+    } else {
+      btn.disabled = false;
+      btn.title = '';
+      btn.removeAttribute('aria-disabled');
+    }
   } else if (btn) {
     btn.style.display = 'none';
   }
@@ -808,6 +1044,28 @@ function buildKeyboardHandler(): (e: KeyboardEvent) => void {
   };
 }
 
+// ---- Video tile thumbnail seeking ----
+// Seek to roughly the middle frame so the tile shows representative content.
+// Falls back to a small offset for very short clips. Done once per element,
+// never auto-play.
+function attachVideoThumbnailSeek(video: HTMLVideoElement): void {
+  if (video.dataset.thumbSeek === '1') return;
+  video.dataset.thumbSeek = '1';
+  let seeked = false;
+  const onMeta = (): void => {
+    if (seeked) return;
+    seeked = true;
+    const dur = video.duration;
+    if (Number.isFinite(dur) && dur > 0) {
+      const target = dur < 0.4 ? Math.min(0.1, dur * 0.5) : dur * 0.5;
+      try { video.currentTime = target; } catch { /* ignore */ }
+    }
+  };
+  video.addEventListener('loadedmetadata', onMeta, { once: true });
+  // Pause again on first seek to keep the freeze frame stable.
+  video.addEventListener('seeked', () => { try { video.pause(); } catch { /* ignore */ } }, { once: true });
+}
+
 // ---- IntersectionObserver for prioritized loading ----
 function setupIntersectionObserver(target: HTMLElement): void {
   if (_observer) {
@@ -818,23 +1076,35 @@ function setupIntersectionObserver(target: HTMLElement): void {
   _observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        const img = entry.target as HTMLImageElement;
-        if (entry.isIntersecting && img.dataset.lazySrc) {
-          img.src = img.dataset.lazySrc;
-          delete img.dataset.lazySrc;
-          _observer?.unobserve(img);
+        if (!entry.isIntersecting) continue;
+        const el = entry.target as HTMLElement;
+        const lazySrc = el.dataset.lazySrc;
+        if (!lazySrc) continue;
+        if (el.tagName === 'VIDEO') {
+          const v = el as HTMLVideoElement;
+          attachVideoThumbnailSeek(v);
+          v.preload = 'metadata';
+          v.src = lazySrc;
+        } else {
+          (el as HTMLImageElement).src = lazySrc;
         }
+        delete el.dataset.lazySrc;
+        _observer?.unobserve(el);
       }
     },
     { root: null, rootMargin: '200px 0px', threshold: 0 },
   );
 
-  target.querySelectorAll<HTMLImageElement>('img[data-lazy-src]').forEach((img) => {
-    _observer?.observe(img);
-  });
+  target
+    .querySelectorAll<HTMLElement>('img[data-lazy-src], video[data-lazy-src]')
+    .forEach((el) => {
+      _observer?.observe(el);
+    });
 }
 
 // ---- Render ----
+const PLAY_OVERLAY_SVG = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.55)"/><polygon points="10,8 10,16 16,12" fill="#fff"/></svg>`;
+
 function renderGrid(images: AlbumImage[]): string {
   if (images.length === 0) {
     return `<div class="album-empty">画像がありません</div>`;
@@ -843,23 +1113,40 @@ function renderGrid(images: AlbumImage[]): string {
   const tiles = images.map((img, i) => {
     const src = `/api/file?path=${encodeURIComponent(img.path)}`;
     const isMultiSel = _multiSelected.has(img.path);
-    return `<div
-      class="album-tile${isMultiSel ? ' album-tile--multi-selected' : ''}"
-      data-index="${i}"
-      data-path="${esc(img.path)}"
-      role="gridcell"
-      tabindex="-1"
-      title="${esc(img.name)} (${formatSize(img.size)})"
-    >
-      <div class="album-tile__img-wrap">
-        <img
+    const kind = itemKind(img);
+
+    const mediaHtml = kind === 'video'
+      ? `<video
+          class="album-tile__video"
+          data-lazy-src="${esc(src)}"
+          preload="none"
+          muted
+          playsinline
+          tabindex="-1"
+          aria-label="video: ${esc(img.name)}"
+        ></video>
+        <span class="album-tile__type-overlay" aria-hidden="true">${PLAY_OVERLAY_SVG}</span>
+        <span class="album-tile__duration-badge" aria-hidden="true"></span>`
+      : `<img
           class="album-tile__img"
           data-lazy-src="${esc(src)}"
           src=""
           loading="lazy"
           decoding="async"
           alt="${esc(img.name)}"
-        />
+        />`;
+
+    return `<div
+      class="album-tile${isMultiSel ? ' album-tile--multi-selected' : ''}"
+      data-index="${i}"
+      data-path="${esc(img.path)}"
+      data-kind="${kind}"
+      role="gridcell"
+      tabindex="-1"
+      title="${esc(img.name)} (${formatSize(img.size)})"
+    >
+      <div class="album-tile__img-wrap">
+        ${mediaHtml}
         <div class="album-tile__check" aria-hidden="true" style="${isMultiSel ? '' : 'display:none'}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"/>
@@ -894,13 +1181,22 @@ function renderGrid(images: AlbumImage[]): string {
 }
 
 async function fetchAlbum(path: string, recursive: boolean): Promise<AlbumResponse> {
-  const params = new URLSearchParams({ path, recursive: recursive ? '1' : '0' });
-  const res = await fetch(`/api/album?${params.toString()}`);
+  // Query the unified gallery endpoint (image + video). Map back to the legacy
+  // AlbumResponse shape so the rest of the renderer can stay agnostic of the
+  // wire format.
+  const params = new URLSearchParams({ path, recursive: recursive ? '1' : '0', kind: 'all' });
+  const res = await fetch(`/api/gallery?${params.toString()}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
     throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
   }
-  return res.json() as Promise<AlbumResponse>;
+  const data = await res.json() as GalleryResponse;
+  return {
+    dir: data.dir,
+    total: data.total,
+    truncated: data.truncated,
+    images: data.items,
+  };
 }
 
 /**
