@@ -63,6 +63,32 @@ function setContactSheetCols(cols: ContactSheetCols): void {
   localStorage.setItem(CONTACT_SHEET_COLS_KEY, String(cols));
 }
 
+// ---- Tile size (slider) state ----
+const TILE_SIZE_KEY = 'album-tile-size';
+const TILE_SIZE_DEFAULT = 160;
+const TILE_SIZE_MIN = 100;
+const TILE_SIZE_MAX = 320;
+const TILE_SIZE_STEP = 20;
+
+function clampTileSize(n: number): number {
+  if (!Number.isFinite(n)) return TILE_SIZE_DEFAULT;
+  return Math.min(TILE_SIZE_MAX, Math.max(TILE_SIZE_MIN, Math.round(n)));
+}
+
+function getTileSize(): number {
+  const stored = localStorage.getItem(TILE_SIZE_KEY);
+  const n = stored != null ? parseInt(stored, 10) : NaN;
+  return Number.isFinite(n) ? clampTileSize(n) : TILE_SIZE_DEFAULT;
+}
+
+function setTileSize(px: number): void {
+  localStorage.setItem(TILE_SIZE_KEY, String(clampTileSize(px)));
+}
+
+function applyTileSize(grid: HTMLElement, px: number): void {
+  grid.style.setProperty('--album-tile-size', `${px}px`);
+}
+
 // ---- Lightbox state ----
 let _lightboxEl: HTMLElement | null = null;
 let _lightboxIndex = -1;
@@ -961,9 +987,14 @@ export async function renderAlbum(
     void renderAlbum(path, target, openImage, toggle2.checked, onCompare);
   });
 
-  // Add Print button to toolbar (F11 Contact Sheet)
+  // Apply persisted tile size to the freshly rendered grid
+  const grid = albumView.querySelector<HTMLElement>('.album-grid');
+  if (grid) applyTileSize(grid, getTileSize());
+
+  // Add toolbar controls: tile-size slider + Print/Download (F11 Contact Sheet)
   const toolbar2 = albumView.querySelector<HTMLElement>('.album-toolbar');
   if (toolbar2) {
+    if (grid) upsertTileSizeSlider(toolbar2, grid);
     upsertPrintControls(toolbar2, data.images, path);
   }
 
@@ -1207,6 +1238,56 @@ function updatePrintButton(): void {
     btn.title = `アルバム全 ${targetCount} 枚を印刷`;
     btn.setAttribute('aria-label', 'Print all images in this album');
   }
+}
+
+/**
+ * Create the tile-size slider in the album toolbar.
+ * The slider drives the `--album-tile-size` CSS variable on `.album-grid` and
+ * persists the chosen value in localStorage.
+ */
+function upsertTileSizeSlider(toolbar: HTMLElement, grid: HTMLElement): void {
+  if (toolbar.querySelector('.album-tile-size')) return;
+
+  const wrap = document.createElement('label');
+  wrap.className = 'album-tile-size';
+  wrap.title = 'タイルサイズ';
+
+  const minIcon = document.createElement('span');
+  minIcon.className = 'album-tile-size__icon album-tile-size__icon--min';
+  minIcon.setAttribute('aria-hidden', 'true');
+  minIcon.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>`;
+
+  const maxIcon = document.createElement('span');
+  maxIcon.className = 'album-tile-size__icon album-tile-size__icon--max';
+  maxIcon.setAttribute('aria-hidden', 'true');
+  maxIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="20" height="20" rx="3"/></svg>`;
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.className = 'album-tile-size__slider';
+  slider.min = String(TILE_SIZE_MIN);
+  slider.max = String(TILE_SIZE_MAX);
+  slider.step = String(TILE_SIZE_STEP);
+  slider.value = String(getTileSize());
+  slider.setAttribute('aria-label', 'タイルサイズ');
+
+  const syncSliderFill = (px: number): void => {
+    const pct = ((px - TILE_SIZE_MIN) / (TILE_SIZE_MAX - TILE_SIZE_MIN)) * 100;
+    slider.style.setProperty('--album-slider-pct', `${pct}%`);
+  };
+  syncSliderFill(getTileSize());
+
+  slider.addEventListener('input', () => {
+    const v = clampTileSize(parseInt(slider.value, 10));
+    applyTileSize(grid, v);
+    setTileSize(v);
+    syncSliderFill(v);
+  });
+
+  wrap.appendChild(minIcon);
+  wrap.appendChild(slider);
+  wrap.appendChild(maxIcon);
+  toolbar.appendChild(wrap);
 }
 
 /**
