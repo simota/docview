@@ -23,6 +23,7 @@ const SVG_TEXT = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" str
 const SVG_CODE = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4.5,4 1.5,7 4.5,10"/><polyline points="9.5,4 12.5,7 9.5,10"/><line x1="6.5" y1="2.5" x2="7.5" y2="11.5"/></svg>`;
 const SVG_MARKUP = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 1.5,7 4,10"/><polyline points="10,4 12.5,7 10,10"/><line x1="5.5" y1="11" x2="8.5" y2="3"/></svg>`;
 const SVG_IMAGE = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2.5" width="11" height="9" rx="1"/><circle cx="4.5" cy="5.5" r="1"/><polyline points="1.5,9.5 5,6.5 7.5,8.5 9.5,6.5 12.5,9.5"/></svg>`;
+const SVG_VIDEO = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="3" width="11" height="8" rx="1"/><polygon points="6,5.5 6,8.5 9,7" fill="currentColor" stroke="none"/></svg>`;
 const SVG_DEFAULT = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 1.5h5l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z"/><polyline points="8,1.5 8,4.5 11,4.5"/></svg>`;
 
 const EXT_MAP: Record<string, { category: string; svg: string }> = {
@@ -55,6 +56,11 @@ const EXT_MAP: Record<string, { category: string; svg: string }> = {
   webp:       { category: 'image',    svg: SVG_IMAGE },
   bmp:        { category: 'image',    svg: SVG_IMAGE },
   ico:        { category: 'image',    svg: SVG_IMAGE },
+  mp4:        { category: 'video',    svg: SVG_VIDEO },
+  m4v:        { category: 'video',    svg: SVG_VIDEO },
+  webm:       { category: 'video',    svg: SVG_VIDEO },
+  ogv:        { category: 'video',    svg: SVG_VIDEO },
+  mov:        { category: 'video',    svg: SVG_VIDEO },
 };
 
 export function fileIcon(name: string): string {
@@ -74,6 +80,32 @@ const ICON_ALBUM = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" 
 
 // Image extensions matching server.mjs IMAGE_EXTENSIONS
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
+// Video extensions matching server.mjs VIDEO_EXTENSIONS (.mkv intentionally excluded)
+const VIDEO_EXTS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
+
+function classifyMediaExt(name: string): 'image' | 'video' | null {
+  const ext = '.' + (name.split('.').pop()?.toLowerCase() ?? '');
+  if (IMAGE_EXTS.has(ext)) return 'image';
+  if (VIDEO_EXTS.has(ext)) return 'video';
+  return null;
+}
+
+function buildGalleryButtonAttrs(imageCount: number, videoCount: number, dirName: string): { title: string; ariaLabel: string; total: number } {
+  const total = imageCount + videoCount;
+  let title: string;
+  if (videoCount === 0) {
+    title = `Album view (${imageCount} images)`;
+  } else if (imageCount === 0) {
+    title = `Gallery view (${videoCount} videos)`;
+  } else {
+    title = `Gallery view (${total} items: ${imageCount} images, ${videoCount} videos)`;
+  }
+  return {
+    title,
+    ariaLabel: `${title} for ${dirName}`,
+    total,
+  };
+}
 
 export class FileTree {
   private container: HTMLElement;
@@ -161,13 +193,26 @@ export class FileTree {
         const isOpen = this.openDirs.has(node.path);
         item.setAttribute('aria-expanded', String(isOpen));
 
-        // Count image files in this directory (direct children only)
-        const imageCount = node.children
-          ? node.children.filter((c) => c.type === 'file' && IMAGE_EXTS.has('.' + (c.name.split('.').pop()?.toLowerCase() ?? ''))).length
-          : 0;
+        // Count media (image + video) files in this directory (direct children only).
+        // Phase 1: directly counts both kinds and renders one button. Phase 2 may
+        // diverge based on dominant kind.
+        let imageCount = 0;
+        let videoCount = 0;
+        if (node.children) {
+          for (const c of node.children) {
+            if (c.type !== 'file') continue;
+            const kind = classifyMediaExt(c.name);
+            if (kind === 'image') imageCount++;
+            else if (kind === 'video') videoCount++;
+          }
+        }
+        const mediaCount = imageCount + videoCount;
 
-        const albumBtnHtml = imageCount > 0 && this.onAlbum
-          ? `<button class="filetree-album-btn" title="Album view (${imageCount} images)" aria-label="Open album for ${esc(node.name)}">${ICON_ALBUM}<span class="filetree-album-count">${imageCount}</span></button>`
+        const albumBtnHtml = mediaCount > 0 && this.onAlbum
+          ? (() => {
+              const meta = buildGalleryButtonAttrs(imageCount, videoCount, node.name);
+              return `<button class="filetree-album-btn" title="${esc(meta.title)}" aria-label="${esc(meta.ariaLabel)}">${ICON_ALBUM}<span class="filetree-album-count">${mediaCount}</span></button>`;
+            })()
           : '';
 
         const renderDirInner = (open: boolean) =>
@@ -204,7 +249,7 @@ export class FileTree {
         });
 
         // Wire album button
-        if (imageCount > 0 && this.onAlbum) {
+        if (mediaCount > 0 && this.onAlbum) {
           item.querySelector('.filetree-album-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.onAlbum?.(node.path);

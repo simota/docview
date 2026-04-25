@@ -158,9 +158,10 @@ const CSV_EXT = new Set(['.csv', '.tsv']);
 const JSONL_EXT = new Set(['.jsonl', '.ndjson']);
 const CONFIG_EXT = new Set(['.toml', '.ini', '.conf', '.env', '.cfg', '.properties']);
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
+const VIDEO_EXT = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const LOG_EXT = new Set(['.log']);
 
-type FileType = 'markdown' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'image' | 'unknown';
+type FileType = 'markdown' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'image' | 'video' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
@@ -175,6 +176,7 @@ function detectFileType(path: string): FileType {
   if (CONFIG_EXT.has(ext)) return 'config';
   if (LOG_EXT.has(ext)) return 'log';
   if (IMAGE_EXT.has(ext)) return 'image';
+  if (VIDEO_EXT.has(ext)) return 'video';
   return 'unknown';
 }
 
@@ -794,6 +796,28 @@ function renderHighlighted(content: string, path: string, target: HTMLElement = 
   target.innerHTML = `<div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs has-line-nums"><code>${numbered}</code></pre></div>`;
 }
 
+async function renderVideo(path: string) {
+  const url = `/api/file?path=${encodeURIComponent(path)}`;
+  // Single-file mode: just show a controlled <video> inline. The album-style
+  // Lightbox (with prev/next nav) is reserved for gallery openings.
+  viewer.innerHTML = `<div class="video-view">
+    <video class="video-view__player"
+           src="${url}"
+           controls
+           preload="metadata"
+           playsinline></video>
+    <p class="image-caption">${escapeHtml(path)}</p>
+  </div>`;
+  const v = viewer.querySelector<HTMLVideoElement>('.video-view__player');
+  v?.addEventListener('error', () => {
+    if (!v.parentElement) return;
+    v.parentElement.insertAdjacentHTML(
+      'beforeend',
+      `<div class="video-view__error">この動画はこのブラウザで再生できないコーデックの可能性があります。${escapeHtml(path).endsWith('.mov') ? ' (.mov は QuickTime コンテナ依存)' : ''}</div>`,
+    );
+  });
+}
+
 async function renderImage(path: string) {
   const url = `/api/file?path=${encodeURIComponent(path)}`;
   if (path.toLowerCase().endsWith('.svg')) {
@@ -1345,6 +1369,17 @@ async function loadServerFile(path: string) {
   if (type === 'image') {
     await renderImage(path);
     // Fetch mtime for images too
+    try {
+      const headRes = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'HEAD' });
+      updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));
+    } catch { /* ignore */ }
+    toc.clear();
+    fileTree?.setActive(path);
+    return;
+  }
+
+  if (type === 'video') {
+    await renderVideo(path);
     try {
       const headRes = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'HEAD' });
       updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));

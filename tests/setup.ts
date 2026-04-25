@@ -18,6 +18,20 @@ const TINY_JPG = TINY_PNG;
 // Minimal SVG image.
 const TINY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
 
+// Minimal valid MP4 (146 bytes): ftyp(isom/mp41) + moov(mvhd only) + mdat(empty).
+// Constructed to satisfy ISO Base Media File Format requirements just enough for
+// the server to serve it with Accept-Ranges and for the browser to instantiate
+// a <video> element. Actual playback is not required for E2E tests.
+// Generated via Python struct: ftyp(24 bytes) + moov(114 bytes) + mdat(8 bytes) = 146 bytes.
+const TINY_MP4 = Buffer.from(
+  '000000186674797069736f6d0000020069736f6d6d703431' +
+  '000000726d6f6f760000006a6d766864000000000000000000000000000003e8' +
+  '00000000000100000100000000000000000000010000000000000000000000000000000100000000000000000000000000004000' +
+  '000000000000000000000000000000000000000000000000000000000000000002' +
+  '000000086d646174',
+  'hex',
+);
+
 /**
  * Global Playwright setup — materializes the fixture directory that the
  * auto-started server reads from. Kept here so tests are self-contained
@@ -129,4 +143,18 @@ flowchart TD
     '127.0.0.1 - - [01/Jan/2025:12:00:05 +0000] "GET /c HTTP/1.1" 500 321 "-" "curl/8"',
   ];
   write('access.log', apacheLines.join('\n') + '\n');
+
+  // ---- Video support Phase 1 fixtures ----
+
+  // videos/ — video-only directory: 2 mp4 files + 1 mkv (excluded from gallery).
+  mkdirSync('/tmp/md-test-docs/videos', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/videos/clip1.mp4', TINY_MP4);
+  writeFileSync('/tmp/md-test-docs/videos/clip2.mp4', TINY_MP4);
+  // notes.mkv: mkv is intentionally unsupported — must NOT appear in /api/gallery.
+  writeFileSync('/tmp/md-test-docs/videos/notes.mkv', Buffer.from('0x1a45dfa3', 'utf-8'));
+
+  // mixed/ — directory with both image and video files.
+  mkdirSync('/tmp/md-test-docs/mixed', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/mixed/photo1.png', TINY_PNG);
+  writeFileSync('/tmp/md-test-docs/mixed/clip3.mp4', TINY_MP4);
 }
