@@ -4791,9 +4791,28 @@ a.wiki-link:hover {
   text-overflow: ellipsis;
 }
 
+.album-tile__sub {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
 .album-tile__size {
   font-size: 10px;
   color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+.album-tile__mtime {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* ---- Copy filename button ---- */
@@ -5442,6 +5461,63 @@ body.lightbox-open {
   font-size: 13px;
   text-align: center;
   padding: 24px;
+}
+
+/* ===== Album sort controls ===== */
+
+.album-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.album-sort__key {
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.album-sort__key:hover {
+  border-color: var(--accent);
+}
+
+.album-sort__key:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.album-sort__dir {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  font-family: inherit;
+  user-select: none;
+}
+
+.album-sort__dir:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.album-sort__dir:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ===== F11 Contact Sheet Export ===== */

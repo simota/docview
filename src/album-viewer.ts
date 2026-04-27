@@ -84,6 +84,47 @@ function setContactSheetCols(cols: ContactSheetCols): void {
   localStorage.setItem(CONTACT_SHEET_COLS_KEY, String(cols));
 }
 
+// ---- Sort state ----
+type SortKey = 'name' | 'size' | 'mtime';
+type SortDir = 'asc' | 'desc';
+const SORT_KEY_LS = 'album-sort-key';
+const SORT_DIR_LS = 'album-sort-dir';
+const SORT_KEY_DEFAULT: SortKey = 'name';
+const SORT_DIR_DEFAULT: SortDir = 'asc';
+const VALID_SORT_KEYS: readonly SortKey[] = ['name', 'size', 'mtime'];
+const VALID_SORT_DIRS: readonly SortDir[] = ['asc', 'desc'];
+
+function getSortKey(): SortKey {
+  const v = localStorage.getItem(SORT_KEY_LS);
+  return (VALID_SORT_KEYS as readonly string[]).includes(v ?? '') ? (v as SortKey) : SORT_KEY_DEFAULT;
+}
+
+function setSortKey(k: SortKey): void {
+  localStorage.setItem(SORT_KEY_LS, k);
+}
+
+function getSortDir(): SortDir {
+  const v = localStorage.getItem(SORT_DIR_LS);
+  return (VALID_SORT_DIRS as readonly string[]).includes(v ?? '') ? (v as SortDir) : SORT_DIR_DEFAULT;
+}
+
+function setSortDir(d: SortDir): void {
+  localStorage.setItem(SORT_DIR_LS, d);
+}
+
+function sortImages(images: AlbumImage[], key: SortKey, dir: SortDir): AlbumImage[] {
+  const sign = dir === 'asc' ? 1 : -1;
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  return [...images].sort((a, b) => {
+    let cmp = 0;
+    if (key === 'name') cmp = collator.compare(a.name, b.name);
+    else if (key === 'size') cmp = a.size - b.size;
+    else cmp = a.mtime < b.mtime ? -1 : a.mtime > b.mtime ? 1 : 0;
+    if (cmp === 0) cmp = collator.compare(a.name, b.name);
+    return sign * cmp;
+  });
+}
+
 // ---- Tile size (slider) state ----
 const TILE_SIZE_KEY = 'album-tile-size';
 const TILE_SIZE_DEFAULT = 160;
@@ -138,6 +179,16 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function formatMtime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 function isSvg(path: string): boolean {
@@ -1156,7 +1207,10 @@ function renderGrid(images: AlbumImage[]): string {
       <div class="album-tile__meta">
         <div class="album-tile__meta-text">
           <span class="album-tile__name" title="${esc(img.name)}">${esc(img.name)}</span>
-          <span class="album-tile__size">${formatSize(img.size)}</span>
+          <span class="album-tile__sub">
+            <span class="album-tile__size">${formatSize(img.size)}</span>
+            <span class="album-tile__mtime" title="${esc(img.mtime)}">${esc(formatMtime(img.mtime))}</span>
+          </span>
         </div>
         <button
           type="button"
@@ -1256,7 +1310,7 @@ export async function renderAlbum(
     return;
   }
 
-  _currentImages = data.images;
+  _currentImages = sortImages(data.images, getSortKey(), getSortDir());
 
   const banner = data.truncated
     ? `<div class="album-banner album-banner--warn">
@@ -1274,7 +1328,7 @@ export async function renderAlbum(
       </label>
     </div>
     ${banner}
-    ${renderGrid(data.images)}
+    ${renderGrid(_currentImages)}
   `;
 
   // Re-wire toggle after re-render
@@ -1287,11 +1341,14 @@ export async function renderAlbum(
   const grid = albumView.querySelector<HTMLElement>('.album-grid');
   if (grid) applyTileSize(grid, getTileSize());
 
-  // Add toolbar controls: tile-size slider + Print/Download (F11 Contact Sheet)
+  // Add toolbar controls: sort + tile-size slider + Print/Download (F11 Contact Sheet)
   const toolbar2 = albumView.querySelector<HTMLElement>('.album-toolbar');
   if (toolbar2) {
+    upsertSortControls(toolbar2, () => {
+      void renderAlbum(path, target, openImage, recursive, onCompare);
+    });
     if (grid) upsertTileSizeSlider(toolbar2, grid);
-    upsertPrintControls(toolbar2, data.images, path);
+    upsertPrintControls(toolbar2, _currentImages, path);
   }
 
   // Wire tile clicks → Lightbox or multi-select
@@ -1541,6 +1598,61 @@ function updatePrintButton(): void {
  * The slider drives the `--album-tile-size` CSS variable on `.album-grid` and
  * persists the chosen value in localStorage.
  */
+const SORT_KEY_LABELS: Record<SortKey, string> = {
+  name: 'ファイル名',
+  size: 'サイズ',
+  mtime: '更新日時',
+};
+
+function upsertSortControls(toolbar: HTMLElement, onChange: () => void): void {
+  if (toolbar.querySelector('.album-sort')) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'album-sort';
+
+  const select = document.createElement('select');
+  select.className = 'album-sort__key';
+  select.setAttribute('aria-label', '並び順');
+  select.title = '並び順';
+  for (const k of VALID_SORT_KEYS) {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = SORT_KEY_LABELS[k];
+    select.appendChild(opt);
+  }
+  select.value = getSortKey();
+
+  const dirBtn = document.createElement('button');
+  dirBtn.type = 'button';
+  dirBtn.className = 'album-sort__dir';
+
+  const renderDir = (): void => {
+    const d = getSortDir();
+    dirBtn.dataset.dir = d;
+    dirBtn.setAttribute('aria-label', d === 'asc' ? '昇順 (クリックで降順)' : '降順 (クリックで昇順)');
+    dirBtn.title = d === 'asc' ? '昇順 (クリックで降順)' : '降順 (クリックで昇順)';
+    dirBtn.textContent = d === 'asc' ? '↑' : '↓';
+  };
+  renderDir();
+
+  select.addEventListener('change', () => {
+    const v = select.value as SortKey;
+    if (!(VALID_SORT_KEYS as readonly string[]).includes(v)) return;
+    setSortKey(v);
+    onChange();
+  });
+
+  dirBtn.addEventListener('click', () => {
+    setSortDir(getSortDir() === 'asc' ? 'desc' : 'asc');
+    renderDir();
+    onChange();
+  });
+
+  wrap.appendChild(select);
+  wrap.appendChild(dirBtn);
+  toolbar.appendChild(wrap);
+}
+
 function upsertTileSizeSlider(toolbar: HTMLElement, grid: HTMLElement): void {
   if (toolbar.querySelector('.album-tile-size')) return;
 
