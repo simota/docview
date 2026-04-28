@@ -1436,7 +1436,7 @@ const server = createServer(async (req, res) => {
         return;
       }
       const ext = extname(resolved).toLowerCase();
-      if (!IMAGE_EXTENSIONS.has(ext)) {
+      if (!IMAGE_EXTENSIONS.has(ext) && !VIDEO_EXTENSIONS.has(ext)) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: `Unsupported file type: ${reqPath}` }));
         return;

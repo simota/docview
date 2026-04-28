@@ -786,7 +786,7 @@ test.describe('Download ZIP', () => {
     expect(res.status()).toBe(403);
   });
 
-  test('/api/download-zip rejects non-image extensions', async ({ request }) => {
+  test('/api/download-zip rejects unsupported extensions (e.g. markdown)', async ({ request }) => {
     const res = await request.post('/api/download-zip', {
       data: { paths: ['readme.md'] },
     });
@@ -798,6 +798,46 @@ test.describe('Download ZIP', () => {
   test('/api/download-zip rejects empty paths', async ({ request }) => {
     const res = await request.post('/api/download-zip', { data: { paths: [] } });
     expect(res.status()).toBe(400);
+  });
+
+  test('/api/download-zip returns a valid zip for a single video file', async ({ request }) => {
+    const res = await request.post('/api/download-zip', {
+      data: { paths: ['videos/clip1.mp4'] },
+    });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('application/zip');
+    const buf = await res.body();
+    expect(buf.slice(0, 4).toString('hex')).toBe('504b0304');
+    expect(buf.slice(-22, -18).toString('hex')).toBe('504b0506');
+  });
+
+  test('/api/download-zip returns a valid zip for mixed image and video paths', async ({ request }) => {
+    const res = await request.post('/api/download-zip', {
+      data: { paths: ['mixed/photo1.png', 'mixed/clip3.mp4'] },
+    });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('application/zip');
+    const buf = await res.body();
+    expect(buf.slice(0, 4).toString('hex')).toBe('504b0304');
+    expect(buf.slice(-22, -18).toString('hex')).toBe('504b0506');
+  });
+
+  test('/api/download-zip accepts both .mp4 and .webm extensions', async ({ request }) => {
+    // .mp4 — regression guard for the video download-zip fix
+    const mp4Res = await request.post('/api/download-zip', {
+      data: { paths: ['videos/clip2.mp4'] },
+    });
+    expect(mp4Res.status()).toBe(200);
+    const mp4Buf = await mp4Res.body();
+    expect(mp4Buf.slice(0, 4).toString('hex')).toBe('504b0304');
+
+    // .webm — VIDEO_EXTENSIONS includes .webm; server must not reject it (400 would be a regression)
+    // The fixture directory has no .webm file so the server returns 404 (file not found),
+    // which is distinct from 400 (unsupported type) and confirms the extension is accepted.
+    const webmRes = await request.post('/api/download-zip', {
+      data: { paths: ['videos/nonexistent.webm'] },
+    });
+    expect(webmRes.status()).not.toBe(400);
   });
 });
 
