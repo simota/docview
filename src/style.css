@@ -1832,6 +1832,47 @@ body.dragging::after {
   .copy-btn:active { opacity: 1; }
 }
 
+/* ===== Collapse Button ===== */
+.collapse-btn {
+  position: absolute;
+  top: 8px;
+  right: 62px;
+  padding: 3px 6px;
+  font-size: 13px;
+  line-height: 1;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  z-index: 2;
+  user-select: none;
+}
+
+.code-block:hover .collapse-btn {
+  opacity: 1;
+}
+
+.collapse-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+@media (hover: none) {
+  .collapse-btn { opacity: 0.7; }
+  .collapse-btn:active { opacity: 1; }
+}
+
+.code-block.collapsed pre.hljs {
+  display: none;
+}
+
+.code-block.collapsed {
+  margin-bottom: 0.6em;
+}
+
 /* ===== TOC Sidebar (#1) ===== */
 #toc-sidebar {
   width: 200px;
