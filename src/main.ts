@@ -66,6 +66,7 @@ const btnOpen = document.getElementById('btn-open') as HTMLButtonElement;
 const btnOpenUrl = document.getElementById('btn-open-url') as HTMLButtonElement;
 const btnSidebar = document.getElementById('btn-sidebar') as HTMLButtonElement;
 const btnToc = document.getElementById('btn-toc') as HTMLButtonElement;
+const btnCollapseCode = document.getElementById('btn-collapse-code') as HTMLButtonElement;
 const btnSearch = document.getElementById('btn-search') as HTMLButtonElement;
 const btnPrint = document.getElementById('btn-print') as HTMLButtonElement;
 const btnExport = document.getElementById('btn-export') as HTMLButtonElement;
@@ -340,6 +341,41 @@ function addCopyButtons(target: HTMLElement = viewer) {
     block.style.position = 'relative';
     block.appendChild(btn);
   });
+}
+
+// --- Collapse button on code blocks ---
+function setBlockCollapsed(block: HTMLElement, collapsed: boolean) {
+  block.classList.toggle('collapsed', collapsed);
+  const btn = block.querySelector<HTMLButtonElement>('.collapse-btn');
+  if (btn) {
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.textContent = collapsed ? '▸' : '▾';
+  }
+}
+
+function addCollapseButtons(target: HTMLElement = viewer) {
+  target.querySelectorAll<HTMLElement>('.code-block').forEach((block) => {
+    if (block.querySelector('.collapse-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'collapse-btn';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Toggle code block');
+    btn.setAttribute('aria-expanded', 'true');
+    btn.textContent = '▾';
+    btn.addEventListener('click', () => {
+      setBlockCollapsed(block, !block.classList.contains('collapsed'));
+    });
+    block.style.position = 'relative';
+    block.appendChild(btn);
+  });
+}
+
+function toggleAllCodeBlocks() {
+  const blocks = Array.from(document.querySelectorAll<HTMLElement>('.code-block'));
+  if (blocks.length === 0) return;
+  const anyExpanded = blocks.some((b) => !b.classList.contains('collapsed'));
+  blocks.forEach((b) => setBlockCollapsed(b, anyExpanded));
+  btnCollapseCode.setAttribute('aria-pressed', String(anyExpanded));
 }
 
 // --- Scroll position memory (#7) ---
@@ -766,6 +802,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
   }
 
   addCopyButtons(target);
+  addCollapseButtons(target);
   initImageZoom(target);
   const lineJump = getPendingLineJump(pane);
   if (lineJump) {
@@ -2062,6 +2099,7 @@ init();
 
 // --- Event listeners ---
 btnHelp.addEventListener('click', () => helpModal.open());
+btnCollapseCode.addEventListener('click', toggleAllCodeBlocks);
 const themeMenu = document.getElementById('theme-menu') as HTMLElement | null;
 
 function setThemeMenuOpen(open: boolean) {
