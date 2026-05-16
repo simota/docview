@@ -57,6 +57,24 @@
   --radius-lg: 12px;
   --radius-xl: 14px;
   --radius-pill: 20px;
+  /* Motion tokens — three durations + canonical easing curves.
+     fast: micro-interaction (hover, focus, press). base: standard UI transition.
+     slow: page-level / modal / large content. */
+  --mo-fast: 120ms;
+  --mo-base: 200ms;
+  --mo-slow: 300ms;
+  --ease-standard: var(--ease-standard);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  /* Composite transition for interactive elements (buttons, tabs, links).
+     Only compositor-safe / paint-only properties — never layout. */
+  --transition-interactive:
+    background-color var(--mo-fast) ease,
+    color var(--mo-fast) ease,
+    border-color var(--mo-fast) ease,
+    transform var(--mo-fast) ease,
+    box-shadow var(--mo-fast) ease,
+    opacity var(--mo-fast) ease;
   /* File icon colors */
   --icon-markdown: #6366f1;
   --icon-data: #22c55e;
@@ -1492,7 +1510,7 @@ body {
   background: var(--bg-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.35s ease, color 0.35s ease;
+  transition: background-color var(--mo-slow) ease, color var(--mo-slow) ease;
 }
 
 body.dragging::after {
@@ -1588,7 +1606,7 @@ body.dragging::after {
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
 }
 
 .toolbar-btn:hover {
@@ -1642,9 +1660,9 @@ body.dragging::after {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
   overflow: hidden;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease;
+  transition: width var(--mo-slow) var(--ease-standard),
+              min-width var(--mo-slow) var(--ease-standard),
+              opacity var(--mo-base) ease;
 }
 
 #sidebar.sidebar-hidden {
@@ -1687,7 +1705,7 @@ body.dragging::after {
   text-overflow: ellipsis;
   border-radius: var(--radius-sm);
   margin: 1px 4px;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
   user-select: none;
 }
 
@@ -1705,7 +1723,7 @@ body.dragging::after {
 .filetree-item svg {
   flex-shrink: 0;
   opacity: 0.5;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--mo-fast) ease;
 }
 
 .filetree-item:hover svg {
@@ -1731,7 +1749,7 @@ body.dragging::after {
   opacity: 0.55;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition: opacity var(--mo-fast) ease, color var(--mo-fast) ease;
   font-weight: 400;
 }
 
@@ -1774,7 +1792,7 @@ body.dragging::after {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--mo-base) var(--ease-standard);
 }
 
 .filetree-chevron.open {
@@ -1909,7 +1927,7 @@ body.dragging::after {
   background-size: 0% 1.5px;
   background-position: 0 100%;
   background-repeat: no-repeat;
-  transition: background-size 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+  transition: background-size var(--mo-slow) var(--ease-standard), color var(--mo-base) ease;
   padding-bottom: 1px;
 }
 
@@ -2095,7 +2113,7 @@ body.dragging::after {
   height: auto;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow var(--mo-slow) ease;
 }
 
 .markdown-body img:hover {
@@ -2465,7 +2483,7 @@ body.dragging::after {
   opacity: 0;
   font-size: 0.85em;
   padding-right: 0.3em;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--mo-base) ease;
 }
 
 .markdown-body h1:hover .header-anchor,
@@ -2630,7 +2648,7 @@ body.dragging::after {
   cursor: pointer;
   color: var(--text-primary);
   text-align: left;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background var(--mo-fast), border-color var(--mo-fast);
 }
 
 .welcome-recent-item:hover {
@@ -2768,7 +2786,7 @@ body.dragging::after {
   border-radius: var(--radius-sm);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--mo-fast) ease, background var(--mo-fast) ease;
   z-index: 2;
 }
 
@@ -2802,7 +2820,7 @@ body.dragging::after {
   border-radius: var(--radius-sm);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--mo-fast) ease, background var(--mo-fast) ease;
   z-index: 2;
   user-select: none;
 }
@@ -2838,9 +2856,9 @@ body.dragging::after {
   overflow-y: auto;
   border-left: 1px solid var(--border-subtle);
   background: var(--bg-secondary);
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease;
+  transition: width var(--mo-slow) var(--ease-standard),
+              min-width var(--mo-slow) var(--ease-standard),
+              opacity var(--mo-base) ease;
 }
 
 #toc-sidebar.toc-hidden {
@@ -2885,7 +2903,7 @@ body.dragging::after {
   cursor: pointer;
   border-radius: var(--radius-xs);
   opacity: 0.6;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--mo-fast) ease, background var(--mo-fast) ease;
   flex-shrink: 0;
 }
 
@@ -2908,7 +2926,7 @@ body.dragging::after {
   text-decoration: none;
   border-radius: var(--radius-xs);
   border-left: 2px solid transparent;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2949,7 +2967,7 @@ body.dragging::after {
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--mo-fast), border-color var(--mo-fast);
   margin-bottom: -1px;
 }
 
@@ -3011,7 +3029,7 @@ body.dragging::after {
   gap: 10px;
   padding: 12px 18px;
   cursor: pointer;
-  transition: background 0.1s ease, box-shadow 0.1s ease;
+  transition: background var(--mo-fast) ease, box-shadow var(--mo-fast) ease;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -3195,7 +3213,7 @@ body.dragging::after {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+  transition: background var(--mo-fast) ease, color var(--mo-fast) ease, border-color var(--mo-fast) ease;
 }
 
 .url-bar-paste:hover {
@@ -3266,7 +3284,7 @@ body.dragging::after {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background var(--mo-fast) ease;
 }
 
 .url-bar-suggest-item:hover,
@@ -3325,7 +3343,7 @@ body.dragging::after {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
 }
 
 .json-toggle-btn.active {
@@ -3360,7 +3378,7 @@ body.dragging::after {
   width: 14px;
   font-size: 9px;
   color: var(--text-muted);
-  transition: transform 0.15s ease;
+  transition: transform var(--mo-fast) ease;
 }
 
 .jt-group[open] > summary::before {
@@ -3429,7 +3447,7 @@ body.dragging::after {
   user-select: none;
   font-size: 12px;
   cursor: pointer;
-  transition: opacity 0.12s, color 0.12s;
+  transition: opacity var(--mo-fast), color var(--mo-fast);
 }
 
 .line-num:hover,
@@ -3470,7 +3488,7 @@ body.dragging::after {
 .log-line-num {
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.12s, color 0.12s;
+  transition: opacity var(--mo-fast), color var(--mo-fast);
 }
 .log-line-num:hover,
 .log-line-num:focus-visible {
@@ -3493,7 +3511,7 @@ body.dragging::after {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity var(--mo-base), transform var(--mo-base);
   z-index: 1000;
 }
 .copy-toast-visible {
@@ -3550,7 +3568,7 @@ body.dragging::after {
   cursor: pointer;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
 }
 
 .tab-item:hover {
@@ -3709,7 +3727,7 @@ body.dragging::after {
   color: var(--text-muted);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition: background var(--mo-fast) ease, color var(--mo-fast) ease;
   padding: 0;
 }
 
@@ -3775,7 +3793,7 @@ body.diagram-fullscreen-open {
   cursor: pointer;
   font-size: 24px;
   line-height: 1;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition: background var(--mo-fast) ease, color var(--mo-fast) ease;
 }
 
 .diagram-fullscreen-close:hover {
@@ -3798,7 +3816,7 @@ body.diagram-fullscreen-open {
   height: auto;
   user-select: none;
   transform-origin: center center;
-  transition: transform 0.08s ease-out;
+  transition: transform var(--mo-fast) ease-out;
   will-change: transform;
 }
 
@@ -3883,7 +3901,7 @@ body.diagram-fullscreen-open {
   border: 1px solid var(--accent-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
 }
 
 .error-btn:hover {
@@ -3904,7 +3922,7 @@ body.diagram-fullscreen-open {
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-lg);
   z-index: 9999;
-  animation: slideUp 0.3s ease;
+  animation: slideUp var(--mo-slow) ease;
 }
 
 @keyframes slideUp {
@@ -3943,7 +3961,7 @@ body.diagram-fullscreen-open {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--mo-fast) ease;
 }
 
 .find-input:focus {
@@ -3975,7 +3993,7 @@ body.diagram-fullscreen-open {
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
   padding: 0;
 }
 
@@ -4065,7 +4083,7 @@ mark.find-current {
 .csv-sortable th {
   cursor: pointer;
   user-select: none;
-  transition: color 0.15s;
+  transition: color var(--mo-fast);
 }
 
 .csv-sortable th:hover {
@@ -4125,7 +4143,7 @@ mark.find-current {
   background: var(--bg-secondary, #f6f8fa);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--mo-fast), color var(--mo-fast);
 }
 
 .csv-col-toggle-all:hover,
@@ -4186,7 +4204,7 @@ mark.find-current {
   color: var(--text-primary);
   font-size: 16px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--mo-fast), border-color var(--mo-fast);
 }
 
 .chunk-page-btn:hover:not(:disabled) {
@@ -4257,7 +4275,7 @@ mark.find-current {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 13px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--mo-fast), box-shadow var(--mo-fast);
 }
 
 .chunk-search-input:focus {
@@ -4282,7 +4300,7 @@ mark.find-current {
   color: var(--text-secondary);
   font-size: 16px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--mo-fast);
   line-height: 1;
 }
 
@@ -4459,7 +4477,7 @@ mark.find-current {
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--transition-interactive);
 }
 
 .slide-btn:hover:not(:disabled) {
@@ -4967,7 +4985,7 @@ mark.find-current {
   width: 0%;
   background: var(--accent-gradient);
   box-shadow: 0 1px 4px var(--accent);
-  transition: width 0.1s ease-out;
+  transition: width var(--mo-fast) ease-out;
   flex-shrink: 0;
   border-radius: 0 0 2px 2px;
 }
@@ -4985,7 +5003,7 @@ mark.find-current {
   font-size: 12px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color var(--mo-base);
 }
 
 .filetree-filter:focus {
@@ -5019,7 +5037,7 @@ mark.find-current {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: var(--transition-interactive);
 }
 
 .search-regex-toggle:hover {
@@ -5045,7 +5063,7 @@ mark.find-current {
 /* ===== Image Zoom ===== */
 .image-view img,
 .image-view .svg-container {
-  transition: transform 0.15s ease;
+  transition: transform var(--mo-fast) ease;
   transform-origin: center center;
 }
 
@@ -5085,7 +5103,7 @@ mark.find-current {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: background 0.15s;
+  transition: background var(--mo-fast);
 }
 
 .backlink-item:hover {
@@ -5133,7 +5151,7 @@ mark.find-current {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background var(--mo-fast), color var(--mo-fast), border-color var(--mo-fast);
 }
 
 .compare-sync-btn:hover,
@@ -5182,7 +5200,7 @@ a.wiki-link {
   color: var(--link-color);
   text-decoration: none;
   border-bottom: 1px dashed var(--accent-lighter);
-  transition: all 0.15s;
+  transition: var(--transition-interactive);
 }
 
 a.wiki-link:hover {
@@ -5248,7 +5266,7 @@ a.wiki-link:hover {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background var(--mo-fast) ease, color var(--mo-fast) ease, border-color var(--mo-fast) ease;
   backdrop-filter: blur(8px);
   z-index: 2;
 }
@@ -5272,7 +5290,7 @@ a.wiki-link:hover {
   backdrop-filter: blur(8px);
   z-index: 2;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--mo-fast) ease;
   pointer-events: none;
 }
 
@@ -5297,7 +5315,7 @@ a.wiki-link:hover {
   color: var(--text-secondary);
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: background var(--mo-fast) ease, color var(--mo-fast) ease, transform var(--mo-fast) ease;
 }
 
 .diagram-toolbar-btn:hover {
@@ -5788,7 +5806,7 @@ a.wiki-link:hover {
   overflow: hidden;
   background: var(--bg-primary);
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  transition: transform var(--mo-fast) ease, box-shadow var(--mo-fast) ease, border-color var(--mo-fast) ease;
   outline: none;
 }
 
@@ -5823,7 +5841,7 @@ a.wiki-link:hover {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--mo-fast) ease;
 }
 
 .album-tile__img[src=''] {
@@ -5897,7 +5915,7 @@ a.wiki-link:hover {
   color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  transition: opacity var(--mo-fast) ease, background-color var(--mo-fast) ease, color var(--mo-fast) ease, border-color var(--mo-fast) ease;
 }
 
 .album-tile:hover .album-tile__copy,
@@ -5957,7 +5975,7 @@ a.wiki-link:hover {
   font-size: 12px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity var(--mo-base) ease, transform var(--mo-base) ease;
   z-index: 10000;
   max-width: 80vw;
   overflow: hidden;
@@ -6000,7 +6018,7 @@ a.wiki-link:hover {
   font-size: 10px;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.12s, background 0.12s;
+  transition: opacity var(--mo-fast), background var(--mo-fast);
   vertical-align: middle;
   line-height: 1;
 }
@@ -6038,7 +6056,7 @@ body.lightbox-open {
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  animation: lightbox-fadein 0.15s ease;
+  animation: lightbox-fadein var(--mo-fast) ease;
 }
 
 @keyframes lightbox-fadein {
@@ -6106,7 +6124,7 @@ body.lightbox-open {
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
   padding: 0;
-  transition: background 0.12s ease;
+  transition: background var(--mo-fast) ease;
   flex-shrink: 0;
 }
 
@@ -6186,7 +6204,7 @@ body.lightbox-open {
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
   z-index: 2;
-  transition: background 0.12s ease, opacity 0.12s ease;
+  transition: background var(--mo-fast) ease, opacity var(--mo-fast) ease;
   flex-shrink: 0;
 }
 
@@ -6285,7 +6303,7 @@ body.lightbox-open {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: opacity var(--mo-fast), transform var(--mo-fast);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -6381,7 +6399,7 @@ body.lightbox-open {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background var(--mo-fast), color var(--mo-fast), border-color var(--mo-fast);
   white-space: nowrap;
 }
 
@@ -6606,7 +6624,7 @@ body.lightbox-open {
   justify-content: center;
   color: var(--text-muted);
   opacity: 0.55;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition: opacity var(--mo-fast) ease, color var(--mo-fast) ease;
 }
 
 .album-tile-size:hover .album-tile-size__icon {
@@ -6638,7 +6656,7 @@ body.lightbox-open {
     var(--border) var(--album-slider-pct),
     var(--border) 100%
   );
-  transition: background 0.06s linear;
+  transition: background var(--mo-fast) linear;
 }
 
 /* WebKit / Blink — thumb */
@@ -6652,7 +6670,7 @@ body.lightbox-open {
   background: var(--bg-primary);
   border: 2px solid var(--accent);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform var(--mo-fast) ease, box-shadow var(--mo-fast) ease;
 }
 
 .album-tile-size__slider:hover::-webkit-slider-thumb {
@@ -6691,7 +6709,7 @@ body.lightbox-open {
   background: var(--bg-primary);
   border: 2px solid var(--accent);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform var(--mo-fast) ease, box-shadow var(--mo-fast) ease;
 }
 
 .album-tile-size__slider:hover::-moz-range-thumb {
@@ -6738,7 +6756,7 @@ body.lightbox-open {
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--mo-fast), color var(--mo-fast);
 }
 
 .album-print-btn:hover:not(:disabled) {
@@ -6771,7 +6789,7 @@ body.lightbox-open {
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--mo-fast), color var(--mo-fast);
 }
 
 .album-download-btn:hover:not(:disabled) {
@@ -6846,7 +6864,7 @@ body.lightbox-open {
   margin: auto;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
   opacity: 0.92;
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition: opacity var(--mo-fast) ease, transform var(--mo-fast) ease;
 }
 .album-tile:hover .album-tile__type-overlay {
   opacity: 1;
@@ -6943,6 +6961,18 @@ pre.mermaid svg g.label.attribute-comment p,
 .mermaid-rendered svg g.label.attribute-keys p,
 .mermaid-rendered svg g.label.attribute-comment p {
   color: var(--text-primary) !important;
+}
+
+/* ===== Mermaid stateDiagram / cluster — inner background override =====
+   Composite states and other clusters render an inner <rect class="inner"> that
+   Mermaid fills with a fixed light grey (~#f4f4f4) regardless of theme. That
+   produces a white rectangle on dark themes. Force it to the theme's secondary
+   background so the inner area matches the cluster header. */
+pre.mermaid svg g.cluster rect.inner,
+pre.mermaid svg g.statediagram-cluster rect.inner,
+.mermaid-rendered svg g.cluster rect.inner,
+.mermaid-rendered svg g.statediagram-cluster rect.inner {
+  fill: var(--bg-secondary) !important;
 }
 
 /* ===== High Contrast Mode (prefers-contrast: more) =====
