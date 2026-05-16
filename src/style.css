@@ -672,6 +672,421 @@
   --icon-default: #7a5500;
 }
 
+/* Origami — washi paper with folded creases, vermillion ink */
+[data-theme='origami'] {
+  --bg-primary: #faf6ee;
+  --bg-secondary: #f1ebde;
+  --bg-tertiary: #e7ddc7;
+  --bg-editor: #fdfaf3;
+  --text-primary: #1c1916;
+  --text-secondary: #3d3a35;
+  --text-muted: #7a766c;
+  --border: #cdc2a6;
+  --border-subtle: #e0d6bf;
+  --border-strong: #8a826b;
+  --accent: #c8503c;
+  --accent-light: #d56a58;
+  --accent-lighter: #e89684;
+  --accent-bg: rgba(200, 80, 60, 0.08);
+  --accent-border: rgba(200, 80, 60, 0.28);
+  --accent-gradient: linear-gradient(135deg, #c8503c, #d56a58, #e89684);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(200, 80, 60, 0.12), rgba(232, 150, 132, 0.06));
+  --gutter-bg: #e7ddc7;
+  --gutter-hover: #d4c9ad;
+  --shadow-sm: 0 1px 3px rgba(60, 50, 30, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 14px rgba(60, 50, 30, 0.10), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 12px 36px rgba(60, 50, 30, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --code-bg: #f1ebde;
+  --code-text: #2e7d32;
+  --code-block-bg: #f6f0e1;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(200, 80, 60, 0.05);
+  --table-stripe: #f1ebde;
+  --table-border: #cdc2a6;
+  --table-header-bg: linear-gradient(180deg, #e7ddc7, #ddd0b3);
+  --link-color: #a8412f;
+  --link-hover: #c8503c;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: #f5d76e;
+  --scrollbar-thumb: #c0b794;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(250, 246, 238, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --color-info: #1d4ed8;
+  --color-info-bg: rgba(29, 78, 216, 0.07);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.07);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.07);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.07);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.07);
+  --icon-markdown: #c8503c;
+  --icon-data: #15803d;
+  --icon-config: #b45309;
+  --icon-image: #a8412f;
+  --icon-video: #7c3aed;
+  --icon-default: #7a766c;
+}
+
+/* Brutalist — raw concrete, oversize typography, neon highlight as warning */
+[data-theme='brutalist'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0f0f0;
+  --bg-tertiary: #e0e0e0;
+  --bg-editor: #ffffff;
+  --text-primary: #000000;
+  --text-secondary: #1a1a1a;
+  --text-muted: #595959;
+  --border: #000000;
+  --border-subtle: #b0b0b0;
+  --border-strong: #000000;
+  --accent: #000000;
+  --accent-light: #1a1a1a;
+  --accent-lighter: #595959;
+  --accent-bg: rgba(255, 242, 0, 0.20);
+  --accent-border: #000000;
+  --accent-gradient: linear-gradient(135deg, #000000, #1a1a1a);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(255, 242, 0, 0.12));
+  --gutter-bg: #e0e0e0;
+  --gutter-hover: #cccccc;
+  --shadow-sm: 4px 4px 0 #000000;
+  --shadow-md: 6px 6px 0 #000000;
+  --shadow-lg: 10px 10px 0 #000000;
+  --code-bg: #f0f0f0;
+  --code-text: #c00000;
+  --code-block-bg: #f5f5f5;
+  --blockquote-border: #000000;
+  --blockquote-bg: rgba(255, 242, 0, 0.15);
+  --table-stripe: #f0f0f0;
+  --table-border: #000000;
+  --table-header-bg: #000000;
+  --link-color: #0000ee;
+  --link-hover: #ff0000;
+  --hr-gradient: none;
+  --mark-bg: #fff200;
+  --scrollbar-thumb: #000000;
+  --scrollbar-track: #e0e0e0;
+  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-border: #000000;
+  --color-info: #0000ee;
+  --color-info-bg: rgba(0, 0, 238, 0.06);
+  --color-success: #006400;
+  --color-success-bg: rgba(0, 100, 0, 0.06);
+  --color-warning: #c00000;
+  --color-warning-bg: rgba(192, 0, 0, 0.06);
+  --color-danger: #c00000;
+  --color-danger-bg: rgba(192, 0, 0, 0.10);
+  --color-important: #000000;
+  --color-important-bg: rgba(255, 242, 0, 0.18);
+  --icon-markdown: #000000;
+  --icon-data: #006400;
+  --icon-config: #c00000;
+  --icon-image: #0000ee;
+  --icon-video: #c00000;
+  --icon-default: #595959;
+}
+
+/* Newspaper — printed broadsheet, old-style serif, two-column flow */
+[data-theme='newspaper'] {
+  --bg-primary: #f3ecdb;
+  --bg-secondary: #ebe3cf;
+  --bg-tertiary: #ddd3b9;
+  --bg-editor: #f6f0e1;
+  --text-primary: #181818;
+  --text-secondary: #383838;
+  --text-muted: #6e6e6e;
+  --border: #c4b89e;
+  --border-subtle: #d5cab2;
+  --border-strong: #888069;
+  --accent: #8a1419;
+  --accent-light: #a5252b;
+  --accent-lighter: #c54a4f;
+  --accent-bg: rgba(138, 20, 25, 0.07);
+  --accent-border: rgba(138, 20, 25, 0.28);
+  --accent-gradient: linear-gradient(135deg, #8a1419, #a5252b);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(138, 20, 25, 0.12), rgba(197, 74, 79, 0.06));
+  --gutter-bg: #ddd3b9;
+  --gutter-hover: #ccc1a3;
+  --shadow-sm: 0 1px 2px rgba(40, 30, 10, 0.06);
+  --shadow-md: 0 2px 8px rgba(40, 30, 10, 0.08);
+  --shadow-lg: 0 6px 18px rgba(40, 30, 10, 0.10);
+  --code-bg: #ebe3cf;
+  --code-text: #14528a;
+  --code-block-bg: #efe8d3;
+  --blockquote-border: #8a1419;
+  --blockquote-bg: rgba(138, 20, 25, 0.04);
+  --table-stripe: #ebe3cf;
+  --table-border: #181818;
+  --table-header-bg: transparent;
+  --link-color: #14528a;
+  --link-hover: #8a1419;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), #181818, var(--border), transparent);
+  --mark-bg: #f0d860;
+  --scrollbar-thumb: #b6a982;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(243, 236, 219, 0.92);
+  --glass-border: rgba(24, 24, 24, 0.12);
+  --color-info: #14528a;
+  --color-info-bg: rgba(20, 82, 138, 0.06);
+  --color-success: #1c5c2c;
+  --color-success-bg: rgba(28, 92, 44, 0.06);
+  --color-warning: #8c4a06;
+  --color-warning-bg: rgba(140, 74, 6, 0.07);
+  --color-danger: #8a1419;
+  --color-danger-bg: rgba(138, 20, 25, 0.07);
+  --color-important: #5e2787;
+  --color-important-bg: rgba(94, 39, 135, 0.07);
+  --icon-markdown: #14528a;
+  --icon-data: #1c5c2c;
+  --icon-config: #8c4a06;
+  --icon-image: #8a1419;
+  --icon-video: #5e2787;
+  --icon-default: #6e6e6e;
+}
+
+/* Sumi — ink wash painting, five ink gradations, vermillion seal.
+   Variables aligned to the "five inks" (go-boku): 焦・濃・重・淡・清.
+   焦 (sho) #1a1714 — burnt, deepest. 濃 (no) #2b2723 — concentrated.
+   重 (ju) #4a453e — heavy. 淡 (tan) #888279 — pale. 清 (sei) #b8b2a4 — clear. */
+[data-theme='sumi'] {
+  --bg-primary: #fdfbf4;
+  --bg-secondary: #f5f1e6;
+  --bg-tertiary: #e9e3d2;
+  --bg-editor: #fefcf6;
+  --text-primary: #1a1714;
+  --text-secondary: #4a453e;
+  --text-muted: #888279;
+  --border: #c8c2b3;
+  --border-subtle: #ddd6c4;
+  --border-strong: #757064;
+  --accent: #a8332b;
+  --accent-light: #ba4a40;
+  --accent-lighter: #d07a72;
+  /* Five ink gradations as theme-scoped tokens for layered ink work. */
+  --sumi-sho: #1a1714;
+  --sumi-no: #2b2723;
+  --sumi-ju: #4a453e;
+  --sumi-tan: #888279;
+  --sumi-sei: #b8b2a4;
+  --accent-bg: rgba(168, 51, 43, 0.07);
+  --accent-border: rgba(168, 51, 43, 0.28);
+  --accent-gradient: linear-gradient(135deg, #a8332b, #ba4a40);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(168, 51, 43, 0.10), rgba(208, 122, 114, 0.05));
+  --gutter-bg: #e7e2d4;
+  --gutter-hover: #d6d0bd;
+  --shadow-sm: 0 1px 3px rgba(40, 35, 30, 0.06);
+  --shadow-md: 0 3px 12px rgba(40, 35, 30, 0.08);
+  --shadow-lg: 0 10px 28px rgba(40, 35, 30, 0.10);
+  --code-bg: #f3f0e7;
+  --code-text: #5a5036;
+  --code-block-bg: #f7f4eb;
+  --blockquote-border: #2b2723;
+  --blockquote-bg: transparent;
+  --table-stripe: #f3f0e7;
+  --table-border: #888279;
+  --table-header-bg: transparent;
+  --link-color: #4a453e;
+  --link-hover: #a8332b;
+  --hr-gradient: linear-gradient(90deg, transparent, #2b2723, transparent);
+  --mark-bg: #e8d873;
+  --scrollbar-thumb: #b6b0a0;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(251, 250, 246, 0.94);
+  --glass-border: rgba(43, 39, 35, 0.10);
+  --color-info: #2b4a8a;
+  --color-info-bg: rgba(43, 74, 138, 0.06);
+  --color-success: #2f6131;
+  --color-success-bg: rgba(47, 97, 49, 0.06);
+  --color-warning: #8a5a14;
+  --color-warning-bg: rgba(138, 90, 20, 0.07);
+  --color-danger: #a8332b;
+  --color-danger-bg: rgba(168, 51, 43, 0.07);
+  --color-important: #5e2787;
+  --color-important-bg: rgba(94, 39, 135, 0.07);
+  --icon-markdown: #4a453e;
+  --icon-data: #2f6131;
+  --icon-config: #8a5a14;
+  --icon-image: #a8332b;
+  --icon-video: #5e2787;
+  --icon-default: #888279;
+}
+
+/* Galaxy — deep space silence, nebula gradients, golden stars */
+[data-theme='galaxy'] {
+  --bg-primary: #03020a;
+  --bg-secondary: #0a0820;
+  --bg-tertiary: #14112e;
+  --bg-editor: #02010a;
+  --text-primary: #e8e6ff;
+  --text-secondary: #b8b5d6;
+  --text-muted: #8a87aa;
+  --border: #2a2654;
+  --border-subtle: #15123a;
+  --border-strong: #6c68a8;
+  --accent: #ffc14d;
+  --accent-light: #ffd47a;
+  --accent-lighter: #ffe6a8;
+  --accent-bg: rgba(255, 193, 77, 0.10);
+  --accent-border: rgba(255, 193, 77, 0.32);
+  --accent-gradient: linear-gradient(135deg, #ffc14d, #ff7a9b, #6a3b8c);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 193, 77, 0.12), rgba(106, 59, 140, 0.08));
+  --gutter-bg: #0a0820;
+  --gutter-hover: #14112e;
+  --shadow-sm: 0 0 6px rgba(255, 193, 77, 0.15);
+  --shadow-md: 0 0 18px rgba(255, 193, 77, 0.20), 0 0 8px rgba(106, 59, 140, 0.20);
+  --shadow-lg: 0 0 36px rgba(255, 193, 77, 0.25), 0 0 18px rgba(106, 59, 140, 0.25);
+  --code-bg: #0a0820;
+  --code-text: #6ee0ff;
+  --code-block-bg: #03020a;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(255, 193, 77, 0.05);
+  --table-stripe: #0a0820;
+  --table-border: #2a2654;
+  --table-header-bg: linear-gradient(180deg, #14112e, #1c1844);
+  --link-color: #6ee0ff;
+  --link-hover: #aef0ff;
+  --hr-gradient: linear-gradient(90deg, transparent, #6a3b8c, #ffc14d, #6a3b8c, transparent);
+  --mark-bg: #6a3b8c;
+  --scrollbar-thumb: #2a2654;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(3, 2, 10, 0.94);
+  --glass-border: rgba(255, 193, 77, 0.18);
+  --color-info: #6ee0ff;
+  --color-info-bg: rgba(110, 224, 255, 0.10);
+  --color-success: #76ffa0;
+  --color-success-bg: rgba(118, 255, 160, 0.10);
+  --color-warning: #ffc14d;
+  --color-warning-bg: rgba(255, 193, 77, 0.10);
+  --color-danger: #ff5c8a;
+  --color-danger-bg: rgba(255, 92, 138, 0.10);
+  --color-important: #c084ff;
+  --color-important-bg: rgba(192, 132, 255, 0.10);
+  --icon-markdown: #ffc14d;
+  --icon-data: #76ffa0;
+  --icon-config: #ff7a9b;
+  --icon-image: #6ee0ff;
+  --icon-video: #c084ff;
+  --icon-default: #8a87aa;
+}
+
+/* Codex — medieval manuscript, parchment, illuminated initials */
+[data-theme='codex'] {
+  --bg-primary: #e8dab8;
+  --bg-secondary: #ddcca4;
+  --bg-tertiary: #d0bd8e;
+  --bg-editor: #ede0c2;
+  --text-primary: #2b1a08;
+  --text-secondary: #3f2912;
+  --text-muted: #7a6a40;
+  --border: #b89a5c;
+  --border-subtle: #c8af72;
+  --border-strong: #6e5a35;
+  --accent: #9b1c1c;
+  --accent-light: #b22929;
+  --accent-lighter: #c95252;
+  --accent-bg: rgba(155, 28, 28, 0.07);
+  --accent-border: rgba(155, 28, 28, 0.30);
+  --accent-gradient: linear-gradient(135deg, #9b1c1c, #c19a35, #9b1c1c);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(155, 28, 28, 0.10), rgba(193, 154, 53, 0.06));
+  --gutter-bg: #d0bd8e;
+  --gutter-hover: #c1ad7a;
+  --shadow-sm: 0 1px 3px rgba(70, 50, 20, 0.10);
+  --shadow-md: 0 4px 14px rgba(70, 50, 20, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 36px rgba(70, 50, 20, 0.20), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --code-bg: #d0bd8e;
+  --code-text: #5a3e1a;
+  --code-block-bg: #d8c898;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(155, 28, 28, 0.04);
+  --table-stripe: #ddcca4;
+  --table-border: #6e5a35;
+  --table-header-bg: linear-gradient(180deg, #c19a35, #ad8a2a);
+  --link-color: #9b1c1c;
+  --link-hover: #c19a35;
+  --hr-gradient: linear-gradient(90deg, transparent, #9b1c1c, #c19a35, #9b1c1c, transparent);
+  --mark-bg: #c19a35;
+  --scrollbar-thumb: #a08550;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(232, 218, 184, 0.92);
+  --glass-border: rgba(110, 90, 53, 0.18);
+  --color-info: #1c3a8a;
+  --color-info-bg: rgba(28, 58, 138, 0.07);
+  --color-success: #1c5c2c;
+  --color-success-bg: rgba(28, 92, 44, 0.07);
+  --color-warning: #8a5a14;
+  --color-warning-bg: rgba(138, 90, 20, 0.08);
+  --color-danger: #9b1c1c;
+  --color-danger-bg: rgba(155, 28, 28, 0.08);
+  --color-important: #6a2a8a;
+  --color-important-bg: rgba(106, 42, 138, 0.08);
+  --icon-markdown: #9b1c1c;
+  --icon-data: #1c5c2c;
+  --icon-config: #8a5a14;
+  --icon-image: #c19a35;
+  --icon-video: #6a2a8a;
+  --icon-default: #7a6a40;
+}
+
+/* Spotlight — focused reading, dim ambient + warm pool of light */
+[data-theme='spotlight'] {
+  --bg-primary: #0e0d12;
+  --bg-secondary: #161520;
+  --bg-tertiary: #1e1d2e;
+  --bg-editor: #0a0910;
+  --text-primary: #fef6e0;
+  --text-secondary: #d4cfb8;
+  --text-muted: #908a72;
+  --border: #2a2840;
+  --border-subtle: #1a1928;
+  --border-strong: #6a6580;
+  --accent: #ffb24d;
+  --accent-light: #ffc471;
+  --accent-lighter: #ffd99a;
+  --accent-bg: rgba(255, 178, 77, 0.10);
+  --accent-border: rgba(255, 178, 77, 0.32);
+  --accent-gradient: linear-gradient(135deg, #ffb24d, #ffc471, #ffd99a);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 178, 77, 0.12), rgba(255, 217, 154, 0.06));
+  --gutter-bg: #161520;
+  --gutter-hover: #1e1d2e;
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.50);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.60);
+  --code-bg: #161520;
+  --code-text: #ffd47a;
+  --code-block-bg: #0a0910;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(255, 178, 77, 0.05);
+  --table-stripe: #161520;
+  --table-border: #2a2840;
+  --table-header-bg: linear-gradient(180deg, #1e1d2e, #2a2840);
+  --link-color: #ffc471;
+  --link-hover: #ffd99a;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: #6a4a14;
+  --scrollbar-thumb: #2a2840;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(14, 13, 18, 0.92);
+  --glass-border: rgba(255, 178, 77, 0.18);
+  --color-info: #74c0ff;
+  --color-info-bg: rgba(116, 192, 255, 0.10);
+  --color-success: #74e0a0;
+  --color-success-bg: rgba(116, 224, 160, 0.10);
+  --color-warning: #ffc471;
+  --color-warning-bg: rgba(255, 196, 113, 0.10);
+  --color-danger: #ff7474;
+  --color-danger-bg: rgba(255, 116, 116, 0.10);
+  --color-important: #c084ff;
+  --color-important-bg: rgba(192, 132, 255, 0.10);
+  --icon-markdown: #ffb24d;
+  --icon-data: #74e0a0;
+  --icon-config: #ffc471;
+  --icon-image: #ff7474;
+  --icon-video: #c084ff;
+  --icon-default: #908a72;
+}
+
 /* Paper — aged book / kraft paper feel */
 [data-theme='paper'] body,
 [data-theme='paper'] .markdown-body {
@@ -1160,6 +1575,858 @@
 [data-theme='ascii'] select,
 [data-theme='ascii'] textarea {
   border-radius: 0 !important;
+}
+
+/* ===========================================================================
+   Origami — washi paper with vermillion seal accent
+   =========================================================================== */
+[data-theme='origami'] body,
+[data-theme='origami'] .markdown-body {
+  font-family: 'Klee One', 'Lora', 'Noto Serif JP', 'Hiragino Mincho ProN', Georgia, serif;
+  line-height: 1.85;
+}
+[data-theme='origami'] .markdown-body h1,
+[data-theme='origami'] .markdown-body h2,
+[data-theme='origami'] .markdown-body h3 {
+  font-family: 'Klee One', 'Noto Serif JP', serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+[data-theme='origami'] .markdown-body h1 {
+  position: relative;
+  padding-left: 1.4em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+/* Vermillion seal mark before h1 — a tiny brushed square */
+[data-theme='origami'] .markdown-body h1::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.25em;
+  width: 0.85em;
+  height: 0.85em;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+  transform: rotate(-3deg);
+}
+[data-theme='origami'] .markdown-body h2 {
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 0.25em;
+}
+[data-theme='origami'] .markdown-body blockquote {
+  border-left: 4px solid var(--accent);
+  background: var(--blockquote-bg);
+  padding: 0.6em 1em;
+}
+[data-theme='origami'] .markdown-body hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent);
+}
+/* Soft fold-line shadow under the viewer pane for a paper-fold feel */
+[data-theme='origami'] #viewer-pane {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0, transparent 12px),
+    var(--bg-primary);
+}
+[data-theme='origami'] .markdown-body img {
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+/* ===========================================================================
+   Brutalist — raw concrete, oversized type, hard offset shadows
+   =========================================================================== */
+[data-theme='brutalist'] body,
+[data-theme='brutalist'] .markdown-body {
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 500;
+  line-height: 1.45;
+}
+[data-theme='brutalist'] .markdown-body h1,
+[data-theme='brutalist'] .markdown-body h2,
+[data-theme='brutalist'] .markdown-body h3,
+[data-theme='brutalist'] .markdown-body h4 {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+[data-theme='brutalist'] .markdown-body h1 {
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  border: none;
+  border-bottom: 6px solid var(--text-primary);
+  padding-bottom: 0.1em;
+  margin-top: 1.4em;
+}
+[data-theme='brutalist'] .markdown-body h2 {
+  font-size: clamp(1.6rem, 4.5vw, 3rem);
+  border: none;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  padding: 0.15em 0.4em;
+  display: inline-block;
+}
+[data-theme='brutalist'] .markdown-body h3 {
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  text-decoration: underline;
+  text-decoration-thickness: 4px;
+  text-underline-offset: 0.15em;
+}
+[data-theme='brutalist'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+  font-weight: 700;
+}
+[data-theme='brutalist'] .markdown-body a:hover {
+  background: var(--mark-bg);
+  color: var(--text-primary);
+}
+[data-theme='brutalist'] .markdown-body mark {
+  background: var(--mark-bg);
+  color: var(--text-primary);
+  padding: 0 4px;
+  font-weight: 700;
+}
+[data-theme='brutalist'] .markdown-body blockquote {
+  border: 3px solid var(--text-primary);
+  border-left-width: 12px;
+  background: var(--accent-bg);
+  padding: 1em 1.2em;
+  font-weight: 600;
+  font-size: 1.1em;
+}
+[data-theme='brutalist'] .markdown-body code {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  padding: 0.05em 0.3em;
+  border: none;
+}
+[data-theme='brutalist'] .markdown-body pre.hljs {
+  border: 3px solid var(--text-primary);
+  box-shadow: var(--shadow-md);
+}
+[data-theme='brutalist'] .markdown-body table {
+  border: 3px solid var(--text-primary);
+}
+[data-theme='brutalist'] .markdown-body th {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+[data-theme='brutalist'] .markdown-body hr {
+  border: none;
+  height: 8px;
+  background: var(--text-primary);
+  margin: 2em 0;
+}
+[data-theme='brutalist'] button,
+[data-theme='brutalist'] input,
+[data-theme='brutalist'] select,
+[data-theme='brutalist'] textarea {
+  border-radius: 0 !important;
+  border-width: 2px;
+  font-weight: 600;
+}
+
+/* ===========================================================================
+   Newspaper — broadsheet typography, two-column flow, dropcap
+   =========================================================================== */
+[data-theme='newspaper'] body,
+[data-theme='newspaper'] .markdown-body {
+  font-family: 'Lora', 'EB Garamond', 'Georgia', 'Noto Serif JP', serif;
+  line-height: 1.7;
+  font-feature-settings: 'kern', 'liga', 'onum';
+}
+[data-theme='newspaper'] .markdown-body h1,
+[data-theme='newspaper'] .markdown-body h2,
+[data-theme='newspaper'] .markdown-body h3 {
+  font-family: 'Playfair Display', 'Lora', 'Georgia', serif;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+[data-theme='newspaper'] .markdown-body h1 {
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  text-align: center;
+  border-top: 4px double var(--text-primary);
+  border-bottom: 4px double var(--text-primary);
+  padding: 0.4em 0 0.2em;
+  margin-bottom: 1em;
+}
+[data-theme='newspaper'] .markdown-body h2 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--text-primary);
+  padding-bottom: 0.2em;
+}
+[data-theme='newspaper'] .markdown-body h3 {
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+  font-size: 1.4em;
+}
+/* Drop cap on the first paragraph after h1 */
+[data-theme='newspaper'] .markdown-body > h1 + p::first-letter,
+[data-theme='newspaper'] .markdown-body > h2 + p::first-letter {
+  font-family: 'Playfair Display', 'Lora', serif;
+  font-weight: 900;
+  font-size: 3.6em;
+  line-height: 0.85;
+  float: left;
+  margin: 0.05em 0.12em 0 0;
+  color: var(--accent);
+}
+[data-theme='newspaper'] .markdown-body blockquote {
+  border-left: 4px solid var(--accent);
+  font-style: italic;
+  font-size: 1.05em;
+  padding-left: 1em;
+}
+[data-theme='newspaper'] .markdown-body blockquote::before {
+  content: '\201C';
+  font-family: 'Playfair Display', serif;
+  font-size: 3em;
+  line-height: 0;
+  vertical-align: -0.3em;
+  color: var(--accent);
+  margin-right: 0.1em;
+}
+[data-theme='newspaper'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+[data-theme='newspaper'] .markdown-body table {
+  border-top: 3px double var(--text-primary);
+  border-bottom: 3px double var(--text-primary);
+  border-collapse: collapse;
+}
+[data-theme='newspaper'] .markdown-body th {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--text-primary);
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+[data-theme='newspaper'] .markdown-body td {
+  border: none;
+}
+[data-theme='newspaper'] .markdown-body hr {
+  border: none;
+  border-top: 3px double var(--text-primary);
+  height: 0;
+  margin: 2em auto;
+  max-width: 80%;
+}
+
+/* ===========================================================================
+   Sumi — 水墨画 ink wash, five ink gradations, vermillion seal (落款)
+   Inspired by 山水画 and 書道. Layered ink, generous whitespace ("間"),
+   subtle washi paper texture, and a real ink-stroke feel on every flourish.
+   =========================================================================== */
+[data-theme='sumi'] body,
+[data-theme='sumi'] .markdown-body {
+  font-family: 'Klee One', 'Yuji Syuku', 'Noto Serif JP', 'Hiragino Mincho ProN',
+    'YuMincho', 'Lora', serif;
+  line-height: 2.05;
+  letter-spacing: 0.02em;
+  /* Honor Japanese typography conventions */
+  font-feature-settings: 'palt' 1, 'pkna' 1, 'kern' 1;
+  text-rendering: optimizeLegibility;
+}
+/* Washi paper texture — subtle layered noise from gradients (no SVG asset
+   needed). Fibres + slight warm cast give the surface organic warmth. */
+[data-theme='sumi'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      transparent 0,
+      transparent 38px,
+      rgba(26, 23, 20, 0.012) 38px,
+      rgba(26, 23, 20, 0.012) 40px
+    ),
+    repeating-linear-gradient(
+      176deg,
+      transparent 0,
+      transparent 60px,
+      rgba(168, 51, 43, 0.008) 60px,
+      rgba(168, 51, 43, 0.008) 62px
+    ),
+    radial-gradient(ellipse at 18% 22%, rgba(60, 50, 30, 0.025), transparent 40%),
+    radial-gradient(ellipse at 82% 70%, rgba(60, 50, 30, 0.018), transparent 45%);
+  background-size: auto, auto, 100% 100%, 100% 100%;
+  z-index: 0;
+  mix-blend-mode: multiply;
+}
+[data-theme='sumi'] #app {
+  position: relative;
+  z-index: 1;
+}
+
+/* Headings — calligraphic weight with multi-layer ink shadow */
+[data-theme='sumi'] .markdown-body h1,
+[data-theme='sumi'] .markdown-body h2,
+[data-theme='sumi'] .markdown-body h3,
+[data-theme='sumi'] .markdown-body h4 {
+  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
+  font-weight: 700;
+  color: var(--sumi-sho);
+  /* Layered ink bleed: 3 stacked shadows simulate brush wetness on paper. */
+  text-shadow:
+    0 0 0.4px rgba(26, 23, 20, 0.65),
+    0.5px 0.5px 0.6px rgba(43, 39, 35, 0.25),
+    -0.4px 0.6px 1.2px rgba(74, 69, 62, 0.18);
+}
+
+/* H1 — 巻頭の題 (chapter title), large, with vermillion seal at lower-right */
+[data-theme='sumi'] .markdown-body h1 {
+  position: relative;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  line-height: 1.3;
+  padding: 0.4em 2.2em 0.4em 0;
+  margin-top: 1.6em;
+  margin-bottom: 1em;
+  border: none;
+}
+/* Double under-stroke that fades like a brush lift */
+[data-theme='sumi'] .markdown-body h1::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 1.6em;
+  bottom: 0.05em;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--sumi-sho) 0%,
+    var(--sumi-no) 60%,
+    var(--sumi-tan) 88%,
+    transparent 100%
+  );
+}
+/* 落款 — square red seal with a sumi character (印) inside.
+   Positioned at the lower-right with a slight tilt, the way calligraphers stamp.*/
+[data-theme='sumi'] .markdown-body h1::after {
+  content: '印';
+  position: absolute;
+  right: 0.15em;
+  bottom: 0.1em;
+  width: 1.4em;
+  height: 1.4em;
+  background: var(--accent);
+  color: #fbeae5;
+  font-family: 'Klee One', 'Noto Serif JP', serif;
+  font-size: 0.45em;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-4deg);
+  box-shadow:
+    inset 0 0 0 2px rgba(251, 234, 229, 0.9),
+    0 1px 2px rgba(168, 51, 43, 0.35);
+  letter-spacing: 0;
+}
+
+/* H2 — section heading with brushed under-line */
+[data-theme='sumi'] .markdown-body h2 {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  position: relative;
+  padding-bottom: 0.3em;
+  margin-top: 2.2em;
+  margin-bottom: 0.8em;
+  border: none;
+}
+[data-theme='sumi'] .markdown-body h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 3em;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sumi-sho), var(--sumi-tan) 80%, transparent);
+}
+[data-theme='sumi'] .markdown-body h3 {
+  font-size: 1.35em;
+  color: var(--sumi-no);
+  margin-top: 1.8em;
+}
+[data-theme='sumi'] .markdown-body h3::before {
+  content: '○ ';
+  color: var(--accent);
+  font-weight: 400;
+}
+[data-theme='sumi'] .markdown-body h4 {
+  color: var(--sumi-ju);
+}
+[data-theme='sumi'] .markdown-body h4::before {
+  content: '◇ ';
+  color: var(--sumi-tan);
+}
+
+/* Body paragraphs — generous "ma" (間 — meaningful empty space). */
+[data-theme='sumi'] .markdown-body p {
+  margin-bottom: 1.4em;
+}
+/* Japanese first-line indent — soft, but only when paragraphs follow body text */
+[data-theme='sumi'] .markdown-body p + p {
+  text-indent: 1em;
+}
+
+/* Links — under-stroked with vermillion, hover bleeds the ink */
+[data-theme='sumi'] .markdown-body a {
+  color: var(--sumi-sho);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  transition: color var(--mo-base) ease, text-shadow var(--mo-base) ease;
+}
+[data-theme='sumi'] .markdown-body a:hover {
+  color: var(--accent);
+  text-shadow: 0 0 4px rgba(168, 51, 43, 0.4);
+  text-decoration-thickness: 2px;
+}
+
+/* Blockquote — 古典書 style with full-width brackets「」 and gray ink */
+[data-theme='sumi'] .markdown-body blockquote {
+  border: none;
+  background: transparent;
+  font-style: normal;
+  color: var(--sumi-ju);
+  padding: 0.4em 2em 0.4em 2em;
+  margin: 1.6em 0;
+  position: relative;
+  font-size: 1.05em;
+}
+[data-theme='sumi'] .markdown-body blockquote::before {
+  content: '「';
+  position: absolute;
+  left: 0;
+  top: -0.2em;
+  font-size: 2.8em;
+  line-height: 1;
+  color: var(--sumi-no);
+  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
+}
+[data-theme='sumi'] .markdown-body blockquote::after {
+  content: '」';
+  position: absolute;
+  right: 0;
+  bottom: -0.5em;
+  font-size: 2.8em;
+  line-height: 1;
+  color: var(--sumi-no);
+  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
+}
+
+/* HR — frayed brush stroke that fades on both ends */
+[data-theme='sumi'] .markdown-body hr {
+  border: none;
+  height: 8px;
+  background: transparent;
+  margin: 3em auto;
+  max-width: 70%;
+  position: relative;
+}
+[data-theme='sumi'] .markdown-body hr::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--sumi-tan) 6%,
+      var(--sumi-no) 18%,
+      var(--sumi-sho) 35%,
+      var(--sumi-sho) 65%,
+      var(--sumi-no) 82%,
+      var(--sumi-tan) 94%,
+      transparent 100%
+    );
+  /* Wavy mask gives the "frayed" feel of a real brush stroke */
+  mask-image: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 1) 0,
+    rgba(0, 0, 0, 1) 3px,
+    rgba(0, 0, 0, 0.85) 3px,
+    rgba(0, 0, 0, 0.85) 5px
+  );
+  -webkit-mask-image: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 1) 0,
+    rgba(0, 0, 0, 1) 3px,
+    rgba(0, 0, 0, 0.85) 3px,
+    rgba(0, 0, 0, 0.85) 5px
+  );
+  height: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+[data-theme='sumi'] .markdown-body hr::after {
+  /* A pale outer wash — the second drier sweep of the brush */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(26, 23, 20, 0.08) 30%,
+    rgba(26, 23, 20, 0.12) 50%,
+    rgba(26, 23, 20, 0.08) 70%,
+    transparent
+  );
+  filter: blur(2px);
+}
+
+/* Lists — Japanese hierarchical markers ・○■ */
+[data-theme='sumi'] .markdown-body ul > li::marker {
+  content: '・ ';
+  color: var(--sumi-sho);
+  font-weight: 700;
+}
+[data-theme='sumi'] .markdown-body ul ul > li::marker {
+  content: '○ ';
+  color: var(--sumi-no);
+}
+[data-theme='sumi'] .markdown-body ul ul ul > li::marker {
+  content: '■ ';
+  color: var(--sumi-ju);
+}
+
+/* Code — paper-tone background with muted ink-tone code */
+[data-theme='sumi'] .markdown-body code {
+  background: var(--code-bg);
+  color: var(--sumi-no);
+  border: 1px solid var(--border-subtle);
+  padding: 0 4px;
+}
+[data-theme='sumi'] .markdown-body pre.hljs {
+  background: var(--code-block-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(26, 23, 20, 0.04);
+}
+/* Five-ink syntax highlighting — code looks like brush strokes, not rainbow. */
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-keyword,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-built_in,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-tag,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-name,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-selector-tag {
+  color: var(--sumi-sho);
+  font-weight: 700;
+}
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-string,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-literal,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-number,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-regexp {
+  color: var(--accent);
+}
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-function,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-title,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-attr,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-variable {
+  color: var(--sumi-no);
+}
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-comment,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-meta {
+  color: var(--sumi-tan);
+  font-style: italic;
+}
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-type,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-params,
+[data-theme='sumi'] .markdown-body pre.hljs .hljs-symbol {
+  color: var(--sumi-ju);
+}
+
+/* Tables — 罫線 (ruled lines) old-book style: horizontal only, no verticals */
+[data-theme='sumi'] .markdown-body table {
+  border: none;
+  border-top: 2px solid var(--sumi-sho);
+  border-bottom: 2px solid var(--sumi-sho);
+  border-collapse: collapse;
+  background: transparent;
+}
+[data-theme='sumi'] .markdown-body th {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--sumi-no);
+  color: var(--sumi-sho);
+  font-weight: 700;
+  text-align: left;
+  padding: 0.5em 0.8em;
+  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
+}
+[data-theme='sumi'] .markdown-body td {
+  border: none;
+  padding: 0.4em 0.8em;
+}
+[data-theme='sumi'] .markdown-body tbody tr + tr td {
+  border-top: 1px dotted var(--border);
+}
+
+/* Mark — vermillion underline (傍線), not yellow highlighter */
+[data-theme='sumi'] .markdown-body mark {
+  background: transparent;
+  color: var(--sumi-sho);
+  border-bottom: 2px solid var(--accent);
+  padding: 0 1px;
+  border-radius: 0;
+}
+
+/* Images — render in pure grayscale with a brushed mat */
+[data-theme='sumi'] .markdown-body img {
+  filter: grayscale(1) contrast(1.15) brightness(1.02);
+  border: 1px solid var(--border);
+  padding: 0.4em;
+  background: var(--bg-secondary);
+  box-shadow: 0 2px 0 rgba(26, 23, 20, 0.08);
+}
+
+/* Selection — vermillion brush wash */
+[data-theme='sumi'] ::selection {
+  background: rgba(168, 51, 43, 0.18);
+  color: var(--sumi-sho);
+}
+
+/* Scrollbar — pale brushed ink */
+[data-theme='sumi'] ::-webkit-scrollbar-thumb {
+  background: var(--sumi-tan);
+}
+[data-theme='sumi'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--sumi-ju);
+}
+
+/* ===========================================================================
+   Galaxy — deep space, nebula gradients, twinkling stars
+   =========================================================================== */
+[data-theme='galaxy'] body {
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(106, 59, 140, 0.25), transparent 50%),
+    radial-gradient(ellipse at 80% 60%, rgba(255, 122, 155, 0.18), transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgba(110, 224, 255, 0.15), transparent 50%),
+    var(--bg-primary);
+}
+/* Star field — fixed-position dots layered on top of the gradient */
+[data-theme='galaxy'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #ffffff, transparent),
+    radial-gradient(1px 1px at 67% 24%, #d4cfff, transparent),
+    radial-gradient(1.5px 1.5px at 88% 12%, #fff6c0, transparent),
+    radial-gradient(1px 1px at 33% 47%, #ffffff, transparent),
+    radial-gradient(1px 1px at 78% 71%, #d4cfff, transparent),
+    radial-gradient(1.5px 1.5px at 22% 82%, #fff6c0, transparent),
+    radial-gradient(1px 1px at 55% 88%, #ffffff, transparent),
+    radial-gradient(1px 1px at 91% 44%, #d4cfff, transparent);
+  background-size: 100vw 100vh;
+  background-repeat: no-repeat;
+  z-index: 0;
+  opacity: 0.85;
+}
+[data-theme='galaxy'] #app {
+  position: relative;
+  z-index: 1;
+}
+[data-theme='galaxy'] body,
+[data-theme='galaxy'] .markdown-body {
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+  line-height: 1.75;
+}
+[data-theme='galaxy'] .markdown-body h1,
+[data-theme='galaxy'] .markdown-body h2,
+[data-theme='galaxy'] .markdown-body h3 {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  font-weight: 700;
+}
+[data-theme='galaxy'] .markdown-body h1 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25em;
+}
+[data-theme='galaxy'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: text-shadow var(--mo-base) ease;
+}
+[data-theme='galaxy'] .markdown-body a:hover {
+  text-shadow: 0 0 10px var(--link-color);
+}
+[data-theme='galaxy'] .markdown-body blockquote {
+  border-left: 3px solid;
+  border-image: var(--accent-gradient) 1;
+  background: var(--blockquote-bg);
+}
+[data-theme='galaxy'] .markdown-body code {
+  background: var(--code-bg);
+  text-shadow: 0 0 6px rgba(110, 224, 255, 0.4);
+}
+
+/* ===========================================================================
+   Codex — medieval manuscript, illuminated initials, parchment
+   =========================================================================== */
+[data-theme='codex'] body,
+[data-theme='codex'] .markdown-body {
+  font-family: 'EB Garamond', 'Lora', 'Georgia', 'Noto Serif JP', serif;
+  line-height: 1.8;
+  font-feature-settings: 'kern', 'liga', 'dlig', 'onum';
+}
+[data-theme='codex'] .markdown-body h1,
+[data-theme='codex'] .markdown-body h2,
+[data-theme='codex'] .markdown-body h3 {
+  font-family: 'UnifrakturCook', 'EB Garamond', 'Lora', serif;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+}
+[data-theme='codex'] .markdown-body h1 {
+  text-align: center;
+  font-size: clamp(2rem, 5vw, 3rem);
+  border-top: 3px double var(--accent);
+  border-bottom: 3px double var(--accent);
+  padding: 0.4em 0;
+  margin: 1em 0;
+}
+[data-theme='codex'] .markdown-body h2 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2em;
+}
+/* Illuminated dropcap on first paragraph */
+[data-theme='codex'] .markdown-body > h1 + p::first-letter,
+[data-theme='codex'] .markdown-body > h2 + p::first-letter {
+  font-family: 'UnifrakturCook', 'EB Garamond', serif;
+  font-weight: 700;
+  font-size: 4em;
+  line-height: 0.8;
+  float: left;
+  margin: 0.08em 0.12em 0 0;
+  padding: 0.1em 0.15em;
+  color: var(--accent);
+  background: var(--mark-bg);
+  border: 2px solid var(--accent);
+  box-shadow: 2px 2px 0 var(--border-strong);
+}
+[data-theme='codex'] .markdown-body blockquote {
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  background: var(--blockquote-bg);
+  padding: 0.6em 1em;
+  font-style: italic;
+}
+[data-theme='codex'] .markdown-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+[data-theme='codex'] .markdown-body a:hover {
+  color: var(--link-hover);
+  text-decoration-style: solid;
+}
+[data-theme='codex'] .markdown-body hr {
+  border: none;
+  height: 16px;
+  background: var(--hr-gradient);
+  margin: 2em 0;
+}
+
+/* ===========================================================================
+   Spotlight — focused reading with mouse-following pool of light
+   --mx / --my are updated from JS (see main.ts). Defaults centre the spotlight.
+   =========================================================================== */
+[data-theme='spotlight'] {
+  --mx: 50;
+  --my: 50;
+}
+[data-theme='spotlight'] body,
+[data-theme='spotlight'] .markdown-body {
+  font-family: 'Lora', 'EB Garamond', 'Georgia', 'Noto Serif JP', serif;
+  line-height: 1.85;
+}
+/* Dim ambient overlay with a warm pool of light following the cursor */
+[data-theme='spotlight'] #viewer-pane {
+  position: relative;
+}
+[data-theme='spotlight'] #viewer-pane::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle 320px at calc(var(--mx) * 1%) calc(var(--my) * 1%),
+    transparent 0,
+    transparent 35%,
+    rgba(14, 13, 18, 0.55) 80%,
+    rgba(14, 13, 18, 0.78) 100%
+  );
+  z-index: 10;
+  transition: opacity var(--mo-base) ease;
+  opacity: 0.9;
+}
+/* When the user is not interacting, fall back to a subtle uniform dim. */
+[data-theme='spotlight'] #viewer-pane:not(:hover)::before {
+  opacity: 0.5;
+}
+[data-theme='spotlight'] .markdown-body h1,
+[data-theme='spotlight'] .markdown-body h2,
+[data-theme='spotlight'] .markdown-body h3 {
+  color: var(--accent);
+  font-weight: 700;
+}
+[data-theme='spotlight'] .markdown-body h1 {
+  border-bottom: 1px solid var(--accent-border);
+  padding-bottom: 0.25em;
+}
+[data-theme='spotlight'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-border);
+  text-underline-offset: 3px;
+}
+[data-theme='spotlight'] .markdown-body a:hover {
+  text-decoration-color: var(--accent);
+  text-shadow: 0 0 8px var(--accent);
+}
+[data-theme='spotlight'] .markdown-body blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--blockquote-bg);
+}
+[data-theme='spotlight'] .markdown-body code {
+  background: var(--code-bg);
+  color: var(--code-text);
+}
+/* Honor reduced-motion: kill the dynamic dim, keep a static gentle vignette. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='spotlight'] #viewer-pane::before {
+    background: radial-gradient(
+      ellipse at center,
+      transparent 0,
+      transparent 50%,
+      rgba(14, 13, 18, 0.35) 100%
+    );
+    opacity: 1;
+  }
 }
 
 /* Matrix — code-rain backdrop, neon green text, sharp glow */
@@ -5502,6 +6769,13 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-cyberpunk { background: linear-gradient(135deg, #ff2d95 50%, #05d9e8 50%); }
 .theme-menu-item-swatch-hackerman { background: linear-gradient(135deg, #0a0805 50%, #ffb000 50%); }
 .theme-menu-item-swatch-ascii { background: linear-gradient(135deg, #fdfdf9 50%, #0e0e0e 50%); }
+.theme-menu-item-swatch-origami { background: linear-gradient(135deg, #faf6ee 50%, #c8503c 50%); }
+.theme-menu-item-swatch-brutalist { background: linear-gradient(135deg, #ffffff 50%, #fff200 50%); }
+.theme-menu-item-swatch-newspaper { background: linear-gradient(135deg, #f3ecdb 50%, #8a1419 50%); }
+.theme-menu-item-swatch-sumi { background: linear-gradient(135deg, #fbfaf6 50%, #a8332b 50%); }
+.theme-menu-item-swatch-galaxy { background: linear-gradient(135deg, #03020a 50%, #ffc14d 50%); }
+.theme-menu-item-swatch-codex { background: linear-gradient(135deg, #e8dab8 50%, #9b1c1c 50%); }
+.theme-menu-item-swatch-spotlight { background: linear-gradient(135deg, #0e0d12 50%, #ffb24d 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;

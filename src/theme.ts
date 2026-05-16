@@ -9,7 +9,14 @@ export type Theme =
   | 'matrix'
   | 'cyberpunk'
   | 'hackerman'
-  | 'ascii';
+  | 'ascii'
+  | 'origami'
+  | 'brutalist'
+  | 'newspaper'
+  | 'sumi'
+  | 'galaxy'
+  | 'codex'
+  | 'spotlight';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -23,6 +30,13 @@ export const THEMES: readonly Theme[] = [
   'cyberpunk',
   'hackerman',
   'ascii',
+  'origami',
+  'brutalist',
+  'newspaper',
+  'sumi',
+  'galaxy',
+  'codex',
+  'spotlight',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -37,6 +51,13 @@ export const THEME_LABELS: Record<Theme, string> = {
   cyberpunk: 'Cyberpunk',
   hackerman: 'Hackerman',
   ascii: 'ASCII',
+  origami: 'Origami',
+  brutalist: 'Brutalist',
+  newspaper: 'Newspaper',
+  sumi: 'Sumi',
+  galaxy: 'Galaxy',
+  codex: 'Codex',
+  spotlight: 'Spotlight',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';

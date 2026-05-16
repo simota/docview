@@ -2056,6 +2056,7 @@ let fileTree: FileTree | null = null;
 async function init() {
   const currentTheme = initTheme();
   updateMermaidTheme(currentTheme);
+  if (currentTheme === 'spotlight') setupSpotlight();
 
   const { server: hasServer, initialFile } = await detectServerMode();
 
@@ -2150,9 +2151,54 @@ function setThemeMenuOpen(open: boolean) {
   }
 }
 
+// Spotlight theme — drives --mx/--my CSS variables so the warm pool of light
+// follows the pointer. Attached only while the active theme is "spotlight".
+let spotlightCleanup: (() => void) | null = null;
+
+function setupSpotlight() {
+  if (spotlightCleanup) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const root = document.documentElement;
+  let rafId: number | null = null;
+  let pendingX = 50;
+  let pendingY = 50;
+
+  const onMove = (e: PointerEvent) => {
+    const pane = document.getElementById('viewer-pane');
+    if (!pane) return;
+    const rect = pane.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    pendingX = Math.max(0, Math.min(100, x));
+    pendingY = Math.max(0, Math.min(100, y));
+    if (rafId !== null) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      root.style.setProperty('--mx', String(pendingX));
+      root.style.setProperty('--my', String(pendingY));
+    });
+  };
+
+  window.addEventListener('pointermove', onMove, { passive: true });
+  spotlightCleanup = () => {
+    window.removeEventListener('pointermove', onMove);
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    root.style.removeProperty('--mx');
+    root.style.removeProperty('--my');
+  };
+}
+
+function teardownSpotlight() {
+  spotlightCleanup?.();
+  spotlightCleanup = null;
+}
+
 function applyTheme(theme: Theme) {
   setTheme(theme);
   updateMermaidTheme(theme);
+  if (theme === 'spotlight') setupSpotlight();
+  else teardownSpotlight();
   if (currentFilePath) void reloadCurrentFile();
   if (splitActive && splitFilePath) void loadIntoSplit(splitFilePath);
 }
