@@ -3,6 +3,46 @@ export interface FileNode {
   path: string;
   type: 'file' | 'dir';
   children?: FileNode[];
+  size?: number;
+  mtime?: string;
+}
+
+function formatRelativeDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = Date.now();
+  const diffMs = now - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return '今';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  // Compare calendar days for 今日 / 昨日
+  const startOfDay = (t: Date) => new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const todayStart = startOfDay(new Date(now));
+  const dStart = startOfDay(d);
+  const dayDiff = Math.round((todayStart - dStart) / 86_400_000);
+  if (dayDiff === 0) return '今日';
+  if (dayDiff === 1) return '昨日';
+  if (dayDiff < 7) return `${dayDiff}d`;
+  if (dayDiff < 30) return `${Math.floor(dayDiff / 7)}w`;
+  if (dayDiff < 365) return `${Math.floor(dayDiff / 30)}mo`;
+  return `${Math.floor(dayDiff / 365)}y`;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10 * 1024 ? 1 : 0)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(n < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function formatAbsolute(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 interface TreeResponse {
@@ -259,7 +299,15 @@ export class FileTree {
         parent.appendChild(item);
         parent.appendChild(childrenContainer);
       } else {
-        item.innerHTML = `<span class="filetree-chevron-spacer"></span>${fileIcon(node.name)}<span class="filetree-name">${esc(node.name)}</span>`;
+        let metaHtml = '';
+        if (node.mtime) {
+          const rel = formatRelativeDate(node.mtime);
+          const tooltipParts = [formatAbsolute(node.mtime)];
+          if (typeof node.size === 'number') tooltipParts.push(formatBytes(node.size));
+          const tooltip = tooltipParts.join(' · ');
+          metaHtml = `<span class="filetree-meta" title="${esc(tooltip)}">${esc(rel)}</span>`;
+        }
+        item.innerHTML = `<span class="filetree-chevron-spacer"></span>${fileIcon(node.name)}<span class="filetree-name">${esc(node.name)}</span>${metaHtml}`;
         if (this.activePath === node.path) {
           item.classList.add('active');
           item.setAttribute('aria-selected', 'true');

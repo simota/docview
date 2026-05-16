@@ -8,7 +8,8 @@ export type Theme =
   | 'sakura'
   | 'matrix'
   | 'cyberpunk'
-  | 'hackerman';
+  | 'hackerman'
+  | 'ascii';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -21,6 +22,7 @@ export const THEMES: readonly Theme[] = [
   'matrix',
   'cyberpunk',
   'hackerman',
+  'ascii',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -34,6 +36,7 @@ export const THEME_LABELS: Record<Theme, string> = {
   matrix: 'Matrix',
   cyberpunk: 'Cyberpunk',
   hackerman: 'Hackerman',
+  ascii: 'ASCII',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';

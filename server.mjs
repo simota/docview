@@ -650,7 +650,16 @@ async function buildTree(dir, base = dir) {
         items.push({ name: entry.name, path: relPath, type: 'dir', children });
       }
     } else if (SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
-      items.push({ name: entry.name, path: relPath, type: 'file' });
+      let size;
+      let mtime;
+      try {
+        const st = await stat(fullPath);
+        size = st.size;
+        mtime = st.mtime.toISOString();
+      } catch {
+        // File disappeared between readdir and stat — skip metadata
+      }
+      items.push({ name: entry.name, path: relPath, type: 'file', size, mtime });
     }
   }
 

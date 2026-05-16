@@ -407,6 +407,63 @@
   --icon-default: #2a8a44;
 }
 
+/* ASCII — monochrome plain-text, man page / RFC aesthetic */
+[data-theme='ascii'] {
+  --bg-primary: #fdfdf9;
+  --bg-secondary: #f5f5f0;
+  --bg-tertiary: #ecece6;
+  --bg-editor: #fdfdf9;
+  --text-primary: #0e0e0e;
+  --text-secondary: #3a3a3a;
+  --text-muted: #757575;
+  --border: #1a1a1a;
+  --border-subtle: #c7c7c0;
+  --accent: #0e0e0e;
+  --accent-light: #3a3a3a;
+  --accent-lighter: #757575;
+  --accent-bg: rgba(14, 14, 14, 0.06);
+  --accent-border: rgba(14, 14, 14, 0.25);
+  --accent-gradient: linear-gradient(135deg, #0e0e0e, #3a3a3a);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(14, 14, 14, 0.08), rgba(58, 58, 58, 0.04));
+  --gutter-bg: #ecece6;
+  --gutter-hover: #d8d8d0;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --code-bg: #ecece6;
+  --code-text: #0e0e0e;
+  --code-block-bg: #f5f5f0;
+  --blockquote-border: var(--border);
+  --blockquote-bg: transparent;
+  --table-stripe: #f5f5f0;
+  --table-border: #1a1a1a;
+  --table-header-bg: #ecece6;
+  --link-color: #0e0e0e;
+  --link-hover: #3a3a3a;
+  --hr-gradient: none;
+  --mark-bg: #fff59d;
+  --scrollbar-thumb: #c7c7c0;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(253, 253, 249, 0.95);
+  --glass-border: rgba(14, 14, 14, 0.12);
+  --color-info: #0e0e0e;
+  --color-info-bg: rgba(14, 14, 14, 0.05);
+  --color-success: #0e0e0e;
+  --color-success-bg: rgba(14, 14, 14, 0.05);
+  --color-warning: #0e0e0e;
+  --color-warning-bg: rgba(14, 14, 14, 0.05);
+  --color-danger: #0e0e0e;
+  --color-danger-bg: rgba(14, 14, 14, 0.05);
+  --color-important: #0e0e0e;
+  --color-important-bg: rgba(14, 14, 14, 0.05);
+  --icon-markdown: #0e0e0e;
+  --icon-data: #0e0e0e;
+  --icon-config: #0e0e0e;
+  --icon-image: #0e0e0e;
+  --icon-video: #0e0e0e;
+  --icon-default: #757575;
+}
+
 /* Matrix — jet black with cool neon green code-rain */
 [data-theme='matrix'] {
   --bg-primary: #000000;
@@ -820,6 +877,106 @@
 [data-theme='handwritten'] .markdown-body code,
 [data-theme='handwritten'] .markdown-body pre {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ASCII — pure monochrome, monospace everywhere, box-drawing decoration */
+[data-theme='ascii'] body,
+[data-theme='ascii'] .markdown-body {
+  font-family: 'JetBrains Mono', 'Courier Prime', 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0;
+  line-height: 1.6;
+  text-shadow: none;
+}
+[data-theme='ascii'] .markdown-body h1,
+[data-theme='ascii'] .markdown-body h2,
+[data-theme='ascii'] .markdown-body h3,
+[data-theme='ascii'] .markdown-body h4,
+[data-theme='ascii'] .markdown-body h5,
+[data-theme='ascii'] .markdown-body h6 {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+[data-theme='ascii'] .markdown-body h1 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+[data-theme='ascii'] .markdown-body h2 {
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 0.25em;
+}
+[data-theme='ascii'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+[data-theme='ascii'] .markdown-body a:hover {
+  background: var(--accent-bg);
+}
+[data-theme='ascii'] .markdown-body blockquote {
+  border-left: 2px solid var(--border);
+  background: transparent;
+  font-style: normal;
+  padding-left: 1em;
+}
+[data-theme='ascii'] .markdown-body blockquote::before {
+  content: '> ';
+  color: var(--text-muted);
+  margin-right: 0.2em;
+}
+[data-theme='ascii'] .markdown-body code {
+  background: var(--code-bg);
+  padding: 0 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+[data-theme='ascii'] .markdown-body pre.hljs {
+  background: var(--code-block-bg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+}
+[data-theme='ascii'] .markdown-body hr {
+  border: none;
+  background: none;
+  height: auto;
+  margin: 1.8em 0;
+  text-align: left;
+  color: var(--text-secondary);
+  letter-spacing: 0;
+  font-family: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+}
+[data-theme='ascii'] .markdown-body hr::before {
+  content: '\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500';
+}
+[data-theme='ascii'] .markdown-body table {
+  border: 1px solid var(--border);
+  border-collapse: collapse;
+}
+[data-theme='ascii'] .markdown-body th {
+  background: var(--table-header-bg);
+  border: 1px solid var(--border);
+  font-weight: 700;
+}
+[data-theme='ascii'] .markdown-body td {
+  border: 1px solid var(--border-subtle);
+}
+[data-theme='ascii'] .markdown-body img {
+  border: 1px solid var(--border);
+  border-radius: 0;
+}
+[data-theme='ascii'] ::selection {
+  background: #0e0e0e;
+  color: #fdfdf9;
+}
+[data-theme='ascii'] ::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 0;
+}
+[data-theme='ascii'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 /* Matrix — code-rain backdrop, neon green text, sharp glow */
@@ -1398,6 +1555,28 @@ body.dragging::after {
 .filetree-name {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.filetree-meta {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  opacity: 0.55;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  font-weight: 400;
+}
+
+.filetree-item:hover .filetree-meta {
+  opacity: 0.85;
+}
+
+.filetree-item.active .filetree-meta {
+  color: var(--accent);
+  opacity: 0.7;
 }
 
 .file-icon {
@@ -5139,6 +5318,7 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-matrix { background: linear-gradient(135deg, #000000 50%, #00ff41 50%); }
 .theme-menu-item-swatch-cyberpunk { background: linear-gradient(135deg, #ff2d95 50%, #05d9e8 50%); }
 .theme-menu-item-swatch-hackerman { background: linear-gradient(135deg, #0a0805 50%, #ffb000 50%); }
+.theme-menu-item-swatch-ascii { background: linear-gradient(135deg, #fdfdf9 50%, #0e0e0e 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;
