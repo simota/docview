@@ -9,6 +9,7 @@ Welcome to the DocView sample documents. This collection demonstrates all featur
 | [README.md](README.md) | This file — overview and basic Markdown |
 | [markdown-showcase.md](markdown-showcase.md) | GFM, footnotes, alerts, containers |
 | [diagrams.md](diagrams.md) | Mermaid diagrams (flowchart, sequence, ER, etc.) |
+| [external-diagrams.md](external-diagrams.md) | PlantUML / D2 / Graphviz / Ditaa / nomnoml / WaveDrom / Pikchr / Svgbob / BPMN / Excalidraw |
 | [math.md](math.md) | KaTeX math expressions |
 | [api-spec.yaml](api-spec.yaml) | OpenAPI-style YAML |
 | [package-info.json](package-info.json) | Nested JSON data |
