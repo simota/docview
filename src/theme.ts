@@ -16,7 +16,13 @@ export type Theme =
   | 'sumi'
   | 'galaxy'
   | 'codex'
-  | 'spotlight';
+  | 'spotlight'
+  | 'blueprint'
+  | 'solarized'
+  | 'tokyo'
+  | 'aurora'
+  | 'glass'
+  | 'holo';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -37,6 +43,12 @@ export const THEMES: readonly Theme[] = [
   'galaxy',
   'codex',
   'spotlight',
+  'blueprint',
+  'solarized',
+  'tokyo',
+  'aurora',
+  'glass',
+  'holo',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -58,6 +70,12 @@ export const THEME_LABELS: Record<Theme, string> = {
   galaxy: 'Galaxy',
   codex: 'Codex',
   spotlight: 'Spotlight',
+  blueprint: 'Blueprint',
+  solarized: 'Solarized',
+  tokyo: 'Tokyo Night',
+  aurora: 'Aurora',
+  glass: 'Liquid Glass',
+  holo: 'Holographic',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';
