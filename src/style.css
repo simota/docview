@@ -293,6 +293,291 @@
   --icon-default: #6b7fa8;
 }
 
+/* Sakura — soft pink palette with plum ink, no floral decoration */
+[data-theme='sakura'] {
+  --bg-primary: #fff5f7;
+  --bg-secondary: #ffe8ee;
+  --bg-tertiary: #fcd7e0;
+  --bg-editor: #fff9fb;
+  --text-primary: #5b1a3e;
+  --text-secondary: #823560;
+  --text-muted: #b07896;
+  --border: #f5b8c8;
+  --border-subtle: #fbd6df;
+  --accent: #e91e63;
+  --accent-light: #ec407a;
+  --accent-lighter: #f48fb1;
+  --accent-bg: rgba(233, 30, 99, 0.07);
+  --accent-border: rgba(233, 30, 99, 0.22);
+  --accent-gradient: linear-gradient(135deg, #e91e63, #ec407a, #f48fb1);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(233, 30, 99, 0.1), rgba(244, 143, 177, 0.06));
+  --gutter-bg: #fcd7e0;
+  --gutter-hover: #f5b8c8;
+  --shadow-sm: 0 1px 3px rgba(233, 30, 99, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(233, 30, 99, 0.09), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(233, 30, 99, 0.12), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --code-bg: #fce4ec;
+  --code-text: #ad1457;
+  --code-block-bg: #fff0f5;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(233, 30, 99, 0.04);
+  --table-stripe: #fff0f5;
+  --table-border: #f5b8c8;
+  --table-header-bg: linear-gradient(180deg, #fcd7e0, #f5b8c8);
+  --link-color: #c2185b;
+  --link-hover: #e91e63;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
+  --mark-bg: #fff59d;
+  --scrollbar-thumb: #f5b8c8;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(255, 245, 247, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --color-info: #1976d2;
+  --color-info-bg: rgba(25, 118, 210, 0.07);
+  --color-success: #2e7d32;
+  --color-success-bg: rgba(46, 125, 50, 0.07);
+  --color-warning: #c2410c;
+  --color-warning-bg: rgba(194, 65, 12, 0.07);
+  --color-danger: #b71c1c;
+  --color-danger-bg: rgba(183, 28, 28, 0.07);
+  --color-important: #6a1b9a;
+  --color-important-bg: rgba(106, 27, 154, 0.07);
+  --icon-markdown: #c2185b;
+  --icon-data: #2e7d32;
+  --icon-config: #c2410c;
+  --icon-image: #e91e63;
+  --icon-video: #6a1b9a;
+  --icon-default: #b07896;
+}
+
+/* Terminal — retro CRT phosphor green-on-black */
+[data-theme='terminal'] {
+  --bg-primary: #0a0e0a;
+  --bg-secondary: #0d130d;
+  --bg-tertiary: #121a12;
+  --bg-editor: #050905;
+  --text-primary: #4dff7a;
+  --text-secondary: #3ad466;
+  --text-muted: #2a8a44;
+  --border: #1f3a23;
+  --border-subtle: #16291a;
+  --accent: #00ff66;
+  --accent-light: #44ff88;
+  --accent-lighter: #88ffaa;
+  --accent-bg: rgba(0, 255, 102, 0.08);
+  --accent-border: rgba(0, 255, 102, 0.3);
+  --accent-gradient: linear-gradient(135deg, #00ff66, #44ff88, #88ffaa);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 255, 102, 0.12), rgba(68, 255, 136, 0.08));
+  --gutter-bg: #0d130d;
+  --gutter-hover: #162816;
+  --shadow-sm: 0 0 4px rgba(0, 255, 102, 0.15);
+  --shadow-md: 0 0 12px rgba(0, 255, 102, 0.2);
+  --shadow-lg: 0 0 24px rgba(0, 255, 102, 0.28);
+  --code-bg: #0d130d;
+  --code-text: #ffcc00;
+  --code-block-bg: #050905;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(0, 255, 102, 0.04);
+  --table-stripe: #0d130d;
+  --table-border: #1f3a23;
+  --table-header-bg: linear-gradient(180deg, #121a12, #162816);
+  --link-color: #44ff88;
+  --link-hover: #88ffaa;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: #4d4d00;
+  --scrollbar-thumb: #1f3a23;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(10, 14, 10, 0.92);
+  --glass-border: rgba(0, 255, 102, 0.12);
+  --color-info: #44aaff;
+  --color-info-bg: rgba(68, 170, 255, 0.10);
+  --color-success: #44ff88;
+  --color-success-bg: rgba(68, 255, 136, 0.10);
+  --color-warning: #ffcc00;
+  --color-warning-bg: rgba(255, 204, 0, 0.10);
+  --color-danger: #ff4466;
+  --color-danger-bg: rgba(255, 68, 102, 0.10);
+  --color-important: #cc88ff;
+  --color-important-bg: rgba(204, 136, 255, 0.10);
+  --icon-markdown: #44ff88;
+  --icon-data: #88ffaa;
+  --icon-config: #ffcc00;
+  --icon-image: #ff4466;
+  --icon-video: #cc88ff;
+  --icon-default: #2a8a44;
+}
+
+/* Matrix — jet black with cool neon green code-rain */
+[data-theme='matrix'] {
+  --bg-primary: #000000;
+  --bg-secondary: #03060a;
+  --bg-tertiary: #050b12;
+  --bg-editor: #000000;
+  --text-primary: #00ff41;
+  --text-secondary: #00cc33;
+  --text-muted: #007722;
+  --border: #0a3818;
+  --border-subtle: #051f10;
+  --accent: #00ff41;
+  --accent-light: #39ff70;
+  --accent-lighter: #6aff9a;
+  --accent-bg: rgba(0, 255, 65, 0.08);
+  --accent-border: rgba(0, 255, 65, 0.35);
+  --accent-gradient: linear-gradient(135deg, #00ff41, #00d9ff);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 255, 65, 0.12), rgba(0, 217, 255, 0.06));
+  --gutter-bg: #03060a;
+  --gutter-hover: #0a3818;
+  --shadow-sm: 0 0 4px rgba(0, 255, 65, 0.2);
+  --shadow-md: 0 0 14px rgba(0, 255, 65, 0.28);
+  --shadow-lg: 0 0 28px rgba(0, 255, 65, 0.35);
+  --code-bg: #03060a;
+  --code-text: #39ff14;
+  --code-block-bg: #000000;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(0, 255, 65, 0.04);
+  --table-stripe: #03060a;
+  --table-border: #0a3818;
+  --table-header-bg: linear-gradient(180deg, #050b12, #0a1a14);
+  --link-color: #00d9ff;
+  --link-hover: #6aff9a;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: #195000;
+  --scrollbar-thumb: #0a3818;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(0, 0, 0, 0.94);
+  --glass-border: rgba(0, 255, 65, 0.18);
+  --color-info: #00d9ff;
+  --color-info-bg: rgba(0, 217, 255, 0.1);
+  --color-success: #39ff70;
+  --color-success-bg: rgba(57, 255, 112, 0.1);
+  --color-warning: #ffcc00;
+  --color-warning-bg: rgba(255, 204, 0, 0.1);
+  --color-danger: #ff0844;
+  --color-danger-bg: rgba(255, 8, 68, 0.1);
+  --color-important: #c724ff;
+  --color-important-bg: rgba(199, 36, 255, 0.1);
+  --icon-markdown: #00ff41;
+  --icon-data: #39ff70;
+  --icon-config: #ffcc00;
+  --icon-image: #ff0844;
+  --icon-video: #c724ff;
+  --icon-default: #007722;
+}
+
+/* Cyberpunk — deep navy with hot pink + cyan dual neon */
+[data-theme='cyberpunk'] {
+  --bg-primary: #0a0a18;
+  --bg-secondary: #0f0f24;
+  --bg-tertiary: #161634;
+  --bg-editor: #05050f;
+  --text-primary: #e8e8ff;
+  --text-secondary: #b8b8d8;
+  --text-muted: #6a6a90;
+  --border: #2a2a55;
+  --border-subtle: #1a1a3a;
+  --accent: #ff2d95;
+  --accent-light: #ff5cb0;
+  --accent-lighter: #ff8fc8;
+  --accent-bg: rgba(255, 45, 149, 0.1);
+  --accent-border: rgba(255, 45, 149, 0.35);
+  --accent-gradient: linear-gradient(135deg, #ff2d95, #c724ff, #05d9e8);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 45, 149, 0.12), rgba(5, 217, 232, 0.08));
+  --gutter-bg: #0f0f24;
+  --gutter-hover: #1a1a3a;
+  --shadow-sm: 0 0 6px rgba(255, 45, 149, 0.25);
+  --shadow-md: 0 0 16px rgba(255, 45, 149, 0.3), 0 0 8px rgba(5, 217, 232, 0.2);
+  --shadow-lg: 0 0 30px rgba(255, 45, 149, 0.4), 0 0 18px rgba(5, 217, 232, 0.25);
+  --code-bg: #161634;
+  --code-text: #05d9e8;
+  --code-block-bg: #0a0a18;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(255, 45, 149, 0.05);
+  --table-stripe: #0f0f24;
+  --table-border: #2a2a55;
+  --table-header-bg: linear-gradient(180deg, #161634, #1f1f44);
+  --link-color: #05d9e8;
+  --link-hover: #66e8ff;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), #ff2d95, #05d9e8, var(--border), transparent);
+  --mark-bg: #5c3a00;
+  --scrollbar-thumb: #2a2a55;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(10, 10, 24, 0.92);
+  --glass-border: rgba(255, 45, 149, 0.2);
+  --color-info: #05d9e8;
+  --color-info-bg: rgba(5, 217, 232, 0.1);
+  --color-success: #00ff9c;
+  --color-success-bg: rgba(0, 255, 156, 0.1);
+  --color-warning: #f9f871;
+  --color-warning-bg: rgba(249, 248, 113, 0.1);
+  --color-danger: #ff2d95;
+  --color-danger-bg: rgba(255, 45, 149, 0.1);
+  --color-important: #c724ff;
+  --color-important-bg: rgba(199, 36, 255, 0.1);
+  --icon-markdown: #ff2d95;
+  --icon-data: #00ff9c;
+  --icon-config: #f9f871;
+  --icon-image: #05d9e8;
+  --icon-video: #c724ff;
+  --icon-default: #6a6a90;
+}
+
+/* Hackerman — warm black with amber phosphor (VT220 / 90s movies) */
+[data-theme='hackerman'] {
+  --bg-primary: #0a0805;
+  --bg-secondary: #100c06;
+  --bg-tertiary: #161009;
+  --bg-editor: #050402;
+  --text-primary: #ffb000;
+  --text-secondary: #d49000;
+  --text-muted: #7a5500;
+  --border: #3a2a08;
+  --border-subtle: #251a05;
+  --accent: #ff8800;
+  --accent-light: #ffaa44;
+  --accent-lighter: #ffd700;
+  --accent-bg: rgba(255, 136, 0, 0.09);
+  --accent-border: rgba(255, 136, 0, 0.32);
+  --accent-gradient: linear-gradient(135deg, #ff8800, #ffb000, #ffd700);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 136, 0, 0.12), rgba(255, 215, 0, 0.08));
+  --gutter-bg: #100c06;
+  --gutter-hover: #251a05;
+  --shadow-sm: 0 0 4px rgba(255, 176, 0, 0.15);
+  --shadow-md: 0 0 12px rgba(255, 176, 0, 0.22);
+  --shadow-lg: 0 0 24px rgba(255, 176, 0, 0.3);
+  --code-bg: #100c06;
+  --code-text: #00ff88;
+  --code-block-bg: #050402;
+  --blockquote-border: var(--accent-gradient);
+  --blockquote-bg: rgba(255, 176, 0, 0.04);
+  --table-stripe: #100c06;
+  --table-border: #3a2a08;
+  --table-header-bg: linear-gradient(180deg, #161009, #1f1608);
+  --link-color: #ffd700;
+  --link-hover: #fff58a;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: #3d2e00;
+  --scrollbar-thumb: #3a2a08;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(10, 8, 5, 0.93);
+  --glass-border: rgba(255, 176, 0, 0.15);
+  --color-info: #4dc4ff;
+  --color-info-bg: rgba(77, 196, 255, 0.1);
+  --color-success: #00ff88;
+  --color-success-bg: rgba(0, 255, 136, 0.1);
+  --color-warning: #ffd700;
+  --color-warning-bg: rgba(255, 215, 0, 0.1);
+  --color-danger: #ff4422;
+  --color-danger-bg: rgba(255, 68, 34, 0.1);
+  --color-important: #cc88ff;
+  --color-important-bg: rgba(204, 136, 255, 0.1);
+  --icon-markdown: #ffd700;
+  --icon-data: #00ff88;
+  --icon-config: #ff8800;
+  --icon-image: #ff4422;
+  --icon-video: #cc88ff;
+  --icon-default: #7a5500;
+}
+
 /* Paper — aged book / kraft paper feel */
 [data-theme='paper'] body,
 [data-theme='paper'] .markdown-body {
@@ -535,6 +820,333 @@
 [data-theme='handwritten'] .markdown-body code,
 [data-theme='handwritten'] .markdown-body pre {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* Matrix — code-rain backdrop, neon green text, sharp glow */
+[data-theme='matrix'] body,
+[data-theme='matrix'] .markdown-body {
+  font-family: 'JetBrains Mono', 'Courier Prime', 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 2px rgba(0, 255, 65, 0.5);
+}
+[data-theme='matrix'] #viewer-pane {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 255, 65, 0.04) 0px,
+      rgba(0, 255, 65, 0.04) 1px,
+      transparent 1px,
+      transparent 22px
+    );
+  background-attachment: local;
+}
+[data-theme='matrix'] .markdown-body h1,
+[data-theme='matrix'] .markdown-body h2,
+[data-theme='matrix'] .markdown-body h3,
+[data-theme='matrix'] .markdown-body h4,
+[data-theme='matrix'] .markdown-body h5,
+[data-theme='matrix'] .markdown-body h6 {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 2px rgba(0, 217, 255, 0.4);
+  font-weight: 600;
+}
+[data-theme='matrix'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-shadow: 0 0 6px rgba(0, 217, 255, 0.55);
+}
+[data-theme='matrix'] .markdown-body blockquote {
+  border-left: 2px solid var(--accent);
+  background: rgba(0, 255, 65, 0.05);
+  font-style: normal;
+}
+[data-theme='matrix'] .markdown-body pre.hljs {
+  background: var(--code-block-bg);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.05);
+}
+[data-theme='matrix'] .markdown-body hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+}
+[data-theme='matrix'] ::selection {
+  background: rgba(0, 255, 65, 0.4);
+  color: #000000;
+}
+[data-theme='matrix'] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 65, 0.3);
+  border-radius: 4px;
+}
+[data-theme='matrix'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 65, 0.5);
+}
+
+/* Cyberpunk — dual neon glow, hot pink + cyan */
+[data-theme='cyberpunk'] body,
+[data-theme='cyberpunk'] .markdown-body {
+  font-family: 'JetBrains Mono', 'Inter', 'Noto Sans JP', sans-serif;
+  letter-spacing: 0.01em;
+}
+[data-theme='cyberpunk'] .markdown-body h1,
+[data-theme='cyberpunk'] .markdown-body h2,
+[data-theme='cyberpunk'] .markdown-body h3 {
+  font-family: 'JetBrains Mono', 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+[data-theme='cyberpunk'] .markdown-body h1 {
+  color: #05d9e8;
+  text-shadow: 0 0 12px rgba(5, 217, 232, 0.55), 2px 0 0 rgba(255, 45, 149, 0.4);
+  border-bottom: 1px solid #ff2d95;
+  padding-bottom: 0.4em;
+}
+[data-theme='cyberpunk'] .markdown-body h2 {
+  color: #ff2d95;
+  text-shadow: 0 0 10px rgba(255, 45, 149, 0.5), -1px 0 0 rgba(5, 217, 232, 0.4);
+}
+[data-theme='cyberpunk'] .markdown-body h3 {
+  color: #c724ff;
+  text-shadow: 0 0 8px rgba(199, 36, 255, 0.45);
+}
+[data-theme='cyberpunk'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-shadow: 0 0 6px rgba(5, 217, 232, 0.5);
+}
+[data-theme='cyberpunk'] .markdown-body a:hover {
+  color: #ff2d95;
+  text-shadow: 0 0 8px rgba(255, 45, 149, 0.6);
+}
+[data-theme='cyberpunk'] .markdown-body blockquote {
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, #ff2d95, #05d9e8) 1;
+  background: rgba(255, 45, 149, 0.04);
+  font-style: normal;
+}
+[data-theme='cyberpunk'] .markdown-body code {
+  color: var(--code-text);
+  text-shadow: 0 0 4px rgba(5, 217, 232, 0.3);
+}
+[data-theme='cyberpunk'] .markdown-body pre.hljs {
+  background: var(--code-block-bg);
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 0 24px rgba(255, 45, 149, 0.04),
+    0 0 12px rgba(5, 217, 232, 0.08);
+}
+[data-theme='cyberpunk'] .markdown-body hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ff2d95, #c724ff, #05d9e8, transparent);
+  box-shadow: 0 0 8px rgba(255, 45, 149, 0.5);
+}
+[data-theme='cyberpunk'] ::selection {
+  background: rgba(255, 45, 149, 0.5);
+  color: #ffffff;
+}
+[data-theme='cyberpunk'] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff2d95, #05d9e8);
+  border-radius: 4px;
+}
+
+/* Hackerman — warm amber CRT, 90s movie hacker aesthetic */
+[data-theme='hackerman'] body,
+[data-theme='hackerman'] .markdown-body {
+  font-family: 'Courier Prime', 'JetBrains Mono', 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0.015em;
+  text-shadow: 0 0 1px rgba(255, 176, 0, 0.4);
+}
+[data-theme='hackerman'] #viewer-pane {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 176, 0, 0.025) 0px,
+    rgba(255, 176, 0, 0.025) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  background-attachment: local;
+}
+[data-theme='hackerman'] .markdown-body h1,
+[data-theme='hackerman'] .markdown-body h2,
+[data-theme='hackerman'] .markdown-body h3,
+[data-theme='hackerman'] .markdown-body h4,
+[data-theme='hackerman'] .markdown-body h5,
+[data-theme='hackerman'] .markdown-body h6 {
+  font-family: 'Courier Prime', 'JetBrains Mono', monospace;
+  color: var(--accent-lighter);
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+[data-theme='hackerman'] .markdown-body h1 {
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 0.3em;
+}
+[data-theme='hackerman'] .markdown-body h1::before { content: '[ '; opacity: 0.6; }
+[data-theme='hackerman'] .markdown-body h1::after { content: ' ]'; opacity: 0.6; }
+[data-theme='hackerman'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+[data-theme='hackerman'] .markdown-body blockquote {
+  border-left: 2px solid var(--accent);
+  background: rgba(255, 176, 0, 0.04);
+  font-style: normal;
+}
+[data-theme='hackerman'] .markdown-body code,
+[data-theme='hackerman'] .markdown-body pre {
+  font-family: 'Courier Prime', 'JetBrains Mono', monospace;
+}
+[data-theme='hackerman'] .markdown-body pre.hljs {
+  background: var(--code-block-bg);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 24px rgba(255, 176, 0, 0.04);
+}
+[data-theme='hackerman'] .markdown-body hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.55;
+  box-shadow: 0 0 6px rgba(255, 176, 0, 0.4);
+}
+[data-theme='hackerman'] ::selection {
+  background: rgba(255, 176, 0, 0.4);
+  color: #0a0805;
+}
+[data-theme='hackerman'] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 176, 0, 0.3);
+  border-radius: 4px;
+}
+[data-theme='hackerman'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 176, 0, 0.5);
+}
+
+/* Sakura — serif typography with pink palette, plain decoration */
+[data-theme='sakura'] body,
+[data-theme='sakura'] .markdown-body {
+  font-family: 'Lora', 'Noto Serif JP', 'Hiragino Mincho ProN', Georgia, serif;
+  line-height: 1.75;
+}
+[data-theme='sakura'] .markdown-body h1,
+[data-theme='sakura'] .markdown-body h2,
+[data-theme='sakura'] .markdown-body h3 {
+  font-family: 'Playfair Display', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+[data-theme='sakura'] .markdown-body h1 {
+  border-bottom: 2px solid var(--accent-lighter);
+  padding-bottom: 0.4em;
+  font-weight: 700;
+}
+[data-theme='sakura'] .markdown-body h2 {
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 0.3em;
+}
+[data-theme='sakura'] .markdown-body a {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--accent-light);
+}
+[data-theme='sakura'] .markdown-body mark {
+  background: linear-gradient(transparent 55%, rgba(244, 143, 177, 0.55) 55%);
+  padding: 0 2px;
+}
+[data-theme='sakura'] .markdown-body blockquote {
+  background: rgba(244, 143, 177, 0.1);
+}
+[data-theme='sakura'] ::selection {
+  background: rgba(244, 143, 177, 0.55);
+  color: var(--text-primary);
+}
+[data-theme='sakura'] ::-webkit-scrollbar-thumb {
+  background: rgba(233, 30, 99, 0.28);
+  border-radius: 4px;
+}
+[data-theme='sakura'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(233, 30, 99, 0.42);
+}
+
+/* Terminal — retro CRT, monospace everywhere, soft phosphor glow */
+[data-theme='terminal'] body,
+[data-theme='terminal'] .markdown-body {
+  font-family: 'JetBrains Mono', 'Courier Prime', 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 1px rgba(77, 255, 122, 0.35);
+}
+[data-theme='terminal'] #viewer-pane {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 255, 102, 0.03) 0px,
+    rgba(0, 255, 102, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  background-attachment: local;
+}
+[data-theme='terminal'] .markdown-body h1,
+[data-theme='terminal'] .markdown-body h2,
+[data-theme='terminal'] .markdown-body h3,
+[data-theme='terminal'] .markdown-body h4,
+[data-theme='terminal'] .markdown-body h5,
+[data-theme='terminal'] .markdown-body h6 {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.45);
+  font-weight: 600;
+}
+[data-theme='terminal'] .markdown-body h1::before { content: '# '; opacity: 0.6; }
+[data-theme='terminal'] .markdown-body h2::before { content: '## '; opacity: 0.55; }
+[data-theme='terminal'] .markdown-body h3::before { content: '### '; opacity: 0.5; }
+[data-theme='terminal'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+[data-theme='terminal'] .markdown-body a:hover {
+  color: var(--link-hover);
+  text-shadow: 0 0 6px rgba(136, 255, 170, 0.6);
+}
+[data-theme='terminal'] .markdown-body blockquote {
+  border-left: 2px solid var(--accent);
+  background: rgba(0, 255, 102, 0.04);
+  font-style: normal;
+}
+[data-theme='terminal'] .markdown-body blockquote::before {
+  content: '> ';
+  color: var(--accent);
+  opacity: 0.7;
+}
+[data-theme='terminal'] .markdown-body pre.hljs {
+  background: var(--code-block-bg);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 24px rgba(0, 255, 102, 0.04);
+}
+[data-theme='terminal'] .markdown-body hr {
+  border: none;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 14px);
+  opacity: 0.5;
+}
+[data-theme='terminal'] ::selection {
+  background: rgba(0, 255, 102, 0.35);
+  color: #050905;
+}
+[data-theme='terminal'] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 102, 0.25);
+  border-radius: 4px;
+}
+[data-theme='terminal'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 102, 0.4);
 }
 
 /* ===== Base ===== */
@@ -4458,6 +5070,11 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-paper { background: linear-gradient(135deg, #f4ecd8 50%, #8b5a2b 50%); }
 .theme-menu-item-swatch-whiteboard { background: linear-gradient(135deg, #ffffff 50%, #e63946 50%); }
 .theme-menu-item-swatch-handwritten { background: linear-gradient(135deg, #fdfcf7 50%, #dc2626 50%); }
+.theme-menu-item-swatch-terminal { background: linear-gradient(135deg, #0a0e0a 50%, #00ff66 50%); }
+.theme-menu-item-swatch-sakura { background: linear-gradient(135deg, #fff5f7 50%, #e91e63 50%); }
+.theme-menu-item-swatch-matrix { background: linear-gradient(135deg, #000000 50%, #00ff41 50%); }
+.theme-menu-item-swatch-cyberpunk { background: linear-gradient(135deg, #ff2d95 50%, #05d9e8 50%); }
+.theme-menu-item-swatch-hackerman { background: linear-gradient(135deg, #0a0805 50%, #ffb000 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;

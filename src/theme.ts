@@ -1,6 +1,27 @@
-export type Theme = 'light' | 'dark' | 'paper' | 'whiteboard' | 'handwritten';
+export type Theme =
+  | 'light'
+  | 'dark'
+  | 'paper'
+  | 'whiteboard'
+  | 'handwritten'
+  | 'terminal'
+  | 'sakura'
+  | 'matrix'
+  | 'cyberpunk'
+  | 'hackerman';
 
-export const THEMES: readonly Theme[] = ['light', 'dark', 'paper', 'whiteboard', 'handwritten'];
+export const THEMES: readonly Theme[] = [
+  'light',
+  'dark',
+  'paper',
+  'whiteboard',
+  'handwritten',
+  'terminal',
+  'sakura',
+  'matrix',
+  'cyberpunk',
+  'hackerman',
+];
 
 export const THEME_LABELS: Record<Theme, string> = {
   light: 'Light',
@@ -8,6 +29,11 @@ export const THEME_LABELS: Record<Theme, string> = {
   paper: 'Paper',
   whiteboard: 'Whiteboard',
   handwritten: 'Handwritten',
+  terminal: 'Terminal',
+  sakura: 'Sakura',
+  matrix: 'Matrix',
+  cyberpunk: 'Cyberpunk',
+  hackerman: 'Hackerman',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';
