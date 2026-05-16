@@ -112,7 +112,13 @@ function openDiagramFullscreen(source: SVGSVGElement, title: string) {
   document.body.classList.add('diagram-fullscreen-open');
 }
 
-function initFullscreenDiagramInteraction(svg: SVGSVGElement) {
+type ZoomController = {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  reset: () => void;
+};
+
+function attachZoomPan(svg: SVGSVGElement, opts: { wheelMode: 'always' | 'ctrl' }): ZoomController {
   let scale = 1;
   let translateX = 0;
   let translateY = 0;
@@ -125,66 +131,222 @@ function initFullscreenDiagramInteraction(svg: SVGSVGElement) {
     svg.style.cursor = isDragging ? 'grabbing' : scale > 1 ? 'grab' : 'zoom-in';
   }
 
-  svg.addEventListener('wheel', (e: WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.12 : 0.12;
-    scale = Math.max(1, Math.min(6, scale + delta));
-    if (scale === 1) {
+  function setScale(next: number) {
+    scale = Math.max(0.25, Math.min(6, next));
+    if (scale <= 1) {
+      scale = 1;
       translateX = 0;
       translateY = 0;
     }
     applyTransform();
+  }
+
+  svg.addEventListener('wheel', (e: WheelEvent) => {
+    if (opts.wheelMode === 'ctrl' && !e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.12 : 0.12;
+    setScale(scale + delta);
   }, { passive: false });
 
   svg.addEventListener('dblclick', () => {
-    scale = scale > 1 ? 1 : 2;
-    translateX = 0;
-    translateY = 0;
-    applyTransform();
+    setScale(scale > 1 ? 1 : 2);
   });
 
-  svg.addEventListener('mousedown', (e: MouseEvent) => {
+  svg.addEventListener('pointerdown', (e: PointerEvent) => {
     if (scale <= 1) return;
     isDragging = true;
     startX = e.clientX - translateX;
     startY = e.clientY - translateY;
+    try { svg.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     applyTransform();
     e.preventDefault();
   });
 
-  document.addEventListener('mousemove', (e: MouseEvent) => {
+  svg.addEventListener('pointermove', (e: PointerEvent) => {
     if (!isDragging) return;
     translateX = e.clientX - startX;
     translateY = e.clientY - startY;
     applyTransform();
   });
 
-  document.addEventListener('mouseup', () => {
+  const endDrag = (e: PointerEvent) => {
     if (!isDragging) return;
     isDragging = false;
+    try { svg.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     applyTransform();
-  });
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
 
   applyTransform();
+
+  return {
+    zoomIn: () => setScale(scale + 0.25),
+    zoomOut: () => setScale(scale - 0.25),
+    reset: () => setScale(1),
+  };
 }
 
-function attachDiagramFullscreen(surface: HTMLElement, title: string) {
-  const svg = surface.querySelector('svg');
-  if (!(svg instanceof SVGSVGElement) || surface.querySelector('.diagram-fullscreen-btn')) return;
+function initFullscreenDiagramInteraction(svg: SVGSVGElement) {
+  attachZoomPan(svg, { wheelMode: 'always' });
+}
 
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'diagram-fullscreen-btn';
-  button.textContent = 'Fullscreen';
-  button.setAttribute('aria-label', `Open ${title} in fullscreen`);
-  button.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+const TOOLBAR_ICONS = {
+  zoomIn:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
+  zoomOut:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
+  fit:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg>',
+  fullscreen:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+  copy:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  download:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  external:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+};
+
+interface DiagramToolbarOpts {
+  surface: HTMLElement;
+  title: string;
+  source: string;
+  kind: string;
+}
+
+function attachDiagramToolbar({ surface, title, source, kind }: DiagramToolbarOpts) {
+  if (surface.querySelector('.diagram-toolbar')) return;
+  const svg = surface.querySelector('svg');
+  if (!(svg instanceof SVGSVGElement)) return;
+
+  const zoom = attachZoomPan(svg, { wheelMode: 'ctrl' });
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'diagram-toolbar';
+  toolbar.setAttribute('role', 'toolbar');
+  toolbar.setAttribute('aria-label', `${title} controls`);
+
+  function addBtn(label: string, html: string, handler: () => void) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'diagram-toolbar-btn';
+    b.innerHTML = html;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handler();
+      flashBtn(b);
+    });
+    toolbar.appendChild(b);
+  }
+
+  addBtn('Zoom in (Ctrl+Wheel)', TOOLBAR_ICONS.zoomIn, () => zoom.zoomIn());
+  addBtn('Zoom out', TOOLBAR_ICONS.zoomOut, () => zoom.zoomOut());
+  addBtn('Fit', TOOLBAR_ICONS.fit, () => zoom.reset());
+  addBtn('Copy source', TOOLBAR_ICONS.copy, () => { void copySource(source); });
+  addBtn('Download SVG', TOOLBAR_ICONS.download, () => downloadSvg(svg, title));
+  addBtn('Download PNG', TOOLBAR_ICONS.download, () => { void downloadPng(svg, title); });
+  if (kind === 'mermaid') {
+    addBtn('Open in mermaid.live', TOOLBAR_ICONS.external, () => openInMermaidLive(source));
+  }
+  addBtn('Fullscreen', TOOLBAR_ICONS.fullscreen, () => {
     const currentSvg = surface.querySelector('svg');
     if (currentSvg instanceof SVGSVGElement) openDiagramFullscreen(currentSvg, title);
   });
 
-  surface.appendChild(button);
+  surface.appendChild(toolbar);
+}
+
+function flashBtn(btn: HTMLButtonElement) {
+  btn.classList.add('diagram-toolbar-btn-flash');
+  setTimeout(() => btn.classList.remove('diagram-toolbar-btn-flash'), 220);
+}
+
+async function copySource(source: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(source);
+  } catch {
+    // ignore
+  }
+}
+
+function serializeSvg(svg: SVGSVGElement): string {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.style.transform = '';
+  clone.style.cursor = '';
+  if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  if (!clone.getAttribute('xmlns:xlink')) clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  return new XMLSerializer().serializeToString(clone);
+}
+
+function downloadSvg(svg: SVGSVGElement, title: string): void {
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializeSvg(svg);
+  const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+  triggerDownload(blob, `${slugifyTitle(title)}.svg`);
+}
+
+async function downloadPng(svg: SVGSVGElement, title: string): Promise<void> {
+  const serialized = serializeSvg(svg);
+  const svgBlob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox?.baseVal;
+    const w = viewBox?.width || rect.width || 800;
+    const h = viewBox?.height || rect.height || 600;
+    const SCALE = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(w * SCALE));
+    canvas.height = Math.max(1, Math.floor(h * SCALE));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(SCALE, SCALE);
+    ctx.drawImage(img, 0, 0, w, h);
+    canvas.toBlob((blob) => {
+      if (blob) triggerDownload(blob, `${slugifyTitle(title)}.png`);
+    }, 'image/png');
+  } catch {
+    // ignore
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function slugifyTitle(s: string): string {
+  return (
+    s.toLowerCase().trim().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram'
+  );
+}
+
+function openInMermaidLive(source: string): void {
+  try {
+    const state = { code: source, mermaid: { theme: 'default' } };
+    const json = JSON.stringify(state);
+    const b64 = btoa(unescape(encodeURIComponent(json)));
+    window.open(`https://mermaid.live/edit#base64:${b64}`, '_blank', 'noopener,noreferrer');
+  } catch {
+    // ignore
+  }
 }
 
 function uniqueSuffix(): string {
@@ -639,11 +801,35 @@ const md = new MarkdownIt({
       const id = `mermaid-${mermaidCounter++}-${uniqueSuffix()}`;
       return `<div class="mermaid-container"><div class="mermaid-label">Diagram</div><pre class="mermaid" id="${id}">${md.utils.escapeHtml(str)}</pre></div>`;
     }
-    const DIAGRAM_TYPES = new Set(['d2', 'plantuml', 'ditaa']);
-    if (DIAGRAM_TYPES.has(lang)) {
+    const DIAGRAM_ALIASES: Record<string, string> = { dot: 'graphviz' };
+    const DIAGRAM_TYPES = new Set([
+      'd2',
+      'plantuml',
+      'ditaa',
+      'graphviz',
+      'bpmn',
+      'wavedrom',
+      'nomnoml',
+      'excalidraw',
+      'pikchr',
+      'svgbob',
+    ]);
+    const normalizedLang = DIAGRAM_ALIASES[lang] || lang;
+    if (DIAGRAM_TYPES.has(normalizedLang)) {
       const id = `diagram-${diagramCounter++}-${uniqueSuffix()}`;
-      const labelMap: Record<string, string> = { d2: 'D2', plantuml: 'PlantUML', ditaa: 'Ditaa' };
-      return `<div class="diagram-container" data-diagram-type="${lang}" data-diagram-id="${id}"><div class="diagram-label">${labelMap[lang] || lang}</div><pre class="diagram-source" id="${id}">${md.utils.escapeHtml(str)}</pre><div class="diagram-rendered" id="${id}-rendered"></div></div>`;
+      const labelMap: Record<string, string> = {
+        d2: 'D2',
+        plantuml: 'PlantUML',
+        ditaa: 'Ditaa',
+        graphviz: 'Graphviz',
+        bpmn: 'BPMN',
+        wavedrom: 'WaveDrom',
+        nomnoml: 'nomnoml',
+        excalidraw: 'Excalidraw',
+        pikchr: 'Pikchr',
+        svgbob: 'Svgbob',
+      };
+      return `<div class="diagram-container" data-diagram-type="${normalizedLang}" data-diagram-id="${id}"><div class="diagram-label">${labelMap[normalizedLang] || normalizedLang}</div><pre class="diagram-source" id="${id}">${md.utils.escapeHtml(str)}</pre><div class="diagram-rendered" id="${id}-rendered"></div></div>`;
     }
     const langLabel = lang ? `<span class="code-lang">${md.utils.escapeHtml(lang)}</span>` : '';
     if (lang && hljs.getLanguage(lang)) {
@@ -807,7 +993,7 @@ export async function renderExternalDiagrams(container: HTMLElement): Promise<vo
         pre.style.display = 'none';
         block.classList.add('diagram-rendered-ok');
         const label = block.querySelector<HTMLElement>('.diagram-label')?.textContent?.trim() || 'Diagram';
-        attachDiagramFullscreen(target, label);
+        attachDiagramToolbar({ surface: target, title: label, source, kind: type });
       }
     } catch { /* show source as fallback */ }
   }
@@ -846,7 +1032,14 @@ export async function renderMermaidDiagrams(container?: ParentNode): Promise<voi
         const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
         wrapper.innerHTML = `<div class="mermaid-rendered">${cleanSvg}</div>`;
         const rendered = wrapper.querySelector<HTMLElement>('.mermaid-rendered');
-        if (rendered) attachDiagramFullscreen(rendered, 'Mermaid diagram');
+        if (rendered) {
+          attachDiagramToolbar({
+            surface: rendered,
+            title: 'Mermaid diagram',
+            source: code,
+            kind: 'mermaid',
+          });
+        }
       }
     } catch {
       el.classList.add('mermaid-error');

@@ -4141,7 +4141,7 @@ mark.find-current {
   .tab-bar, .reconnect-banner, .json-view-toggle,
   .find-bar, .slide-overlay, .header-anchor,
   .error-banner, .welcome, .progress-bar,
-  .diagram-fullscreen-btn, .diagram-fullscreen-overlay,
+  .diagram-fullscreen-btn, .diagram-fullscreen-overlay, .diagram-toolbar,
   .diagram-label, .viewer-pane-split,
   .backlinks-section, .filetree-filter {
     display: none !important;
@@ -4584,6 +4584,7 @@ mark.find-current {
 .export-mode .progress-bar,
 .export-mode .diagram-fullscreen-btn,
 .export-mode .diagram-fullscreen-overlay,
+.export-mode .diagram-toolbar,
 .export-mode .copy-btn,
 .export-mode .mermaid-label,
 .export-mode .code-lang,
@@ -4912,6 +4913,69 @@ a.wiki-link:hover {
   background: var(--accent-bg);
   color: var(--accent);
   border-color: var(--accent-lighter);
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.mermaid-rendered:hover .diagram-toolbar,
+.diagram-rendered:hover .diagram-toolbar,
+.mermaid-rendered:focus-within .diagram-toolbar,
+.diagram-rendered:focus-within .diagram-toolbar,
+.diagram-toolbar:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.diagram-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.diagram-toolbar-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.diagram-toolbar-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.diagram-toolbar-btn-flash {
+  background: var(--accent-bg);
+  color: var(--accent);
+  transform: scale(0.92);
+}
+
+.mermaid-rendered svg,
+.diagram-rendered svg {
+  touch-action: none;
+  transform-origin: 0 0;
 }
 
 .diagram-rendered-ok .diagram-source {

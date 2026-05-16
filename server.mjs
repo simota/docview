@@ -1521,8 +1521,20 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // Whitelist diagram types to prevent SSRF via URL path injection
-    const ALLOWED_DIAGRAM_TYPES = new Set(['d2', 'plantuml', 'ditaa']);
+    // Whitelist diagram types to prevent SSRF via URL path injection.
+    // Each entry maps to a Kroki path; the local CLI fallback handles a subset.
+    const ALLOWED_DIAGRAM_TYPES = new Set([
+      'd2',
+      'plantuml',
+      'ditaa',
+      'graphviz',
+      'bpmn',
+      'wavedrom',
+      'nomnoml',
+      'excalidraw',
+      'pikchr',
+      'svgbob',
+    ]);
     if (!ALLOWED_DIAGRAM_TYPES.has(type)) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: `Unsupported diagram type: ${type}` }));
@@ -1570,6 +1582,7 @@ function tryLocalDiagramCLI(type, source) {
   const commands = {
     d2: ['d2', ['-', '-']],
     plantuml: ['plantuml', ['-tsvg', '-pipe']],
+    graphviz: ['dot', ['-Tsvg']],
   };
   const cmd = commands[type];
   if (!cmd) return Promise.resolve(null);
