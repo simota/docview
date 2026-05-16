@@ -10,6 +10,7 @@
   --text-muted: #8e91ab;
   --border: #dfe1ee;
   --border-subtle: #eceef5;
+  --border-strong: #888888;
   --accent: #6366f1;
   --accent-light: #818cf8;
   --accent-lighter: #a5b4fc;
@@ -38,17 +39,17 @@
   --scrollbar-track: transparent;
   --glass-bg: rgba(247, 248, 252, 0.85);
   --glass-border: rgba(255, 255, 255, 0.6);
-  /* Semantic colors */
-  --color-info: #3b82f6;
-  --color-info-bg: rgba(59, 130, 246, 0.06);
-  --color-success: #22c55e;
-  --color-success-bg: rgba(34, 197, 94, 0.06);
-  --color-warning: #f59e0b;
-  --color-warning-bg: rgba(245, 158, 11, 0.06);
-  --color-danger: #ef4444;
-  --color-danger-bg: rgba(239, 68, 68, 0.06);
-  --color-important: #a855f7;
-  --color-important-bg: rgba(168, 85, 247, 0.06);
+  /* Semantic colors — tuned for WCAG AA on #ffffff */
+  --color-info: #1d4ed8;
+  --color-info-bg: rgba(29, 78, 216, 0.06);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.06);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.06);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.06);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.06);
   /* Border radius */
   --radius-xs: 3px;
   --radius-sm: 6px;
@@ -72,9 +73,10 @@
   --bg-editor: #0f1019;
   --text-primary: #e8eaf4;
   --text-secondary: #9295b0;
-  --text-muted: #585b76;
+  --text-muted: #7a7d96;
   --border: #232640;
   --border-subtle: #1c1f33;
+  --border-strong: #666b8a;
   --accent: #818cf8;
   --accent-light: #a5b4fc;
   --accent-lighter: #c7d2fe;
@@ -133,6 +135,7 @@
   --text-muted: #8b7a5c;
   --border: #cbb994;
   --border-subtle: #dccca5;
+  --border-strong: #8b7a5c;
   --accent: #8b5a2b;
   --accent-light: #a0724d;
   --accent-lighter: #c49770;
@@ -190,6 +193,7 @@
   --text-muted: #808080;
   --border: #d4d4d4;
   --border-subtle: #e8e8e8;
+  --border-strong: #949494;
   --accent: #e63946;
   --accent-light: #ef5a66;
   --accent-lighter: #f48891;
@@ -247,6 +251,7 @@
   --text-muted: #6b7fa8;
   --border: #c9d6e8;
   --border-subtle: #dde5f0;
+  --border-strong: #6a85b5;
   --accent: #dc2626;
   --accent-light: #ef4444;
   --accent-lighter: #fca5a5;
@@ -304,6 +309,7 @@
   --text-muted: #b07896;
   --border: #f5b8c8;
   --border-subtle: #fbd6df;
+  --border-strong: #b07088;
   --accent: #e91e63;
   --accent-light: #ec407a;
   --accent-lighter: #f48fb1;
@@ -350,7 +356,7 @@
   --icon-default: #b07896;
 }
 
-/* Terminal — retro CRT phosphor green-on-black */
+/* Terminal — retro CRT phosphor green-on-black with amber accent */
 [data-theme='terminal'] {
   --bg-primary: #0a0e0a;
   --bg-secondary: #0d130d;
@@ -361,13 +367,14 @@
   --text-muted: #2a8a44;
   --border: #1f3a23;
   --border-subtle: #16291a;
-  --accent: #00ff66;
-  --accent-light: #44ff88;
-  --accent-lighter: #88ffaa;
-  --accent-bg: rgba(0, 255, 102, 0.08);
-  --accent-border: rgba(0, 255, 102, 0.3);
-  --accent-gradient: linear-gradient(135deg, #00ff66, #44ff88, #88ffaa);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 255, 102, 0.12), rgba(68, 255, 136, 0.08));
+  --border-strong: #3a7a4a;
+  --accent: #ffcc00;
+  --accent-light: #ffd84d;
+  --accent-lighter: #ffe680;
+  --accent-bg: rgba(255, 204, 0, 0.08);
+  --accent-border: rgba(255, 204, 0, 0.3);
+  --accent-gradient: linear-gradient(135deg, #ffcc00, #ffd84d, #ffe680);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 204, 0, 0.12), rgba(255, 230, 128, 0.08));
   --gutter-bg: #0d130d;
   --gutter-hover: #162816;
   --shadow-sm: 0 0 4px rgba(0, 255, 102, 0.15);
@@ -418,6 +425,7 @@
   --text-muted: #757575;
   --border: #1a1a1a;
   --border-subtle: #c7c7c0;
+  --border-strong: #1a1a1a;
   --accent: #0e0e0e;
   --accent-light: #3a3a3a;
   --accent-lighter: #757575;
@@ -464,7 +472,7 @@
   --icon-default: #757575;
 }
 
-/* Matrix — jet black with cool neon green code-rain */
+/* Matrix — jet black with neon green code-rain and cyan accent */
 [data-theme='matrix'] {
   --bg-primary: #000000;
   --bg-secondary: #03060a;
@@ -472,16 +480,17 @@
   --bg-editor: #000000;
   --text-primary: #00ff41;
   --text-secondary: #00cc33;
-  --text-muted: #007722;
+  --text-muted: #00aa2a;
   --border: #0a3818;
   --border-subtle: #051f10;
-  --accent: #00ff41;
-  --accent-light: #39ff70;
-  --accent-lighter: #6aff9a;
-  --accent-bg: rgba(0, 255, 65, 0.08);
-  --accent-border: rgba(0, 255, 65, 0.35);
-  --accent-gradient: linear-gradient(135deg, #00ff41, #00d9ff);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 255, 65, 0.12), rgba(0, 217, 255, 0.06));
+  --border-strong: #2b8a44;
+  --accent: #00d9ff;
+  --accent-light: #4ee4ff;
+  --accent-lighter: #99efff;
+  --accent-bg: rgba(0, 217, 255, 0.08);
+  --accent-border: rgba(0, 217, 255, 0.35);
+  --accent-gradient: linear-gradient(135deg, #00d9ff, #00ff41);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 217, 255, 0.12), rgba(0, 255, 65, 0.06));
   --gutter-bg: #03060a;
   --gutter-hover: #0a3818;
   --shadow-sm: 0 0 4px rgba(0, 255, 65, 0.2);
@@ -532,6 +541,7 @@
   --text-muted: #6a6a90;
   --border: #2a2a55;
   --border-subtle: #1a1a3a;
+  --border-strong: #62629c;
   --accent: #ff2d95;
   --accent-light: #ff5cb0;
   --accent-lighter: #ff8fc8;
@@ -578,7 +588,7 @@
   --icon-default: #6a6a90;
 }
 
-/* Hackerman — warm black with amber phosphor (VT220 / 90s movies) */
+/* Hackerman — warm black amber phosphor with green code accent (VT220 / 90s movies) */
 [data-theme='hackerman'] {
   --bg-primary: #0a0805;
   --bg-secondary: #100c06;
@@ -586,16 +596,17 @@
   --bg-editor: #050402;
   --text-primary: #ffb000;
   --text-secondary: #d49000;
-  --text-muted: #7a5500;
+  --text-muted: #a07000;
   --border: #3a2a08;
   --border-subtle: #251a05;
-  --accent: #ff8800;
-  --accent-light: #ffaa44;
-  --accent-lighter: #ffd700;
-  --accent-bg: rgba(255, 136, 0, 0.09);
-  --accent-border: rgba(255, 136, 0, 0.32);
-  --accent-gradient: linear-gradient(135deg, #ff8800, #ffb000, #ffd700);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 136, 0, 0.12), rgba(255, 215, 0, 0.08));
+  --border-strong: #856316;
+  --accent: #00ff88;
+  --accent-light: #4dffaa;
+  --accent-lighter: #88ffcc;
+  --accent-bg: rgba(0, 255, 136, 0.08);
+  --accent-border: rgba(0, 255, 136, 0.3);
+  --accent-gradient: linear-gradient(135deg, #00ff88, #4dffaa, #88ffcc);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(136, 255, 204, 0.08));
   --gutter-bg: #100c06;
   --gutter-hover: #251a05;
   --shadow-sm: 0 0 4px rgba(255, 176, 0, 0.15);
@@ -3001,7 +3012,7 @@ body.dragging::after {
   font-family: 'JetBrains Mono', monospace;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   outline: none;
   min-width: 0;
@@ -3775,7 +3786,7 @@ body.diagram-fullscreen-open {
   font-family: inherit;
   background: var(--bg-primary);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   outline: none;
   transition: border-color 0.15s ease;
@@ -6752,4 +6763,102 @@ body.lightbox-open {
   outline: 3px solid rgba(255, 255, 255, 0.8);
   outline-offset: 4px;
   border-radius: 50%;
+}
+
+/* ===== Mermaid ER diagram — attribute row override =====
+   Mermaid v11 derives row-rect-odd/even fills from primaryColor by inverting
+   lightness, which collapses contrast on dark themes (white-ish rows on a
+   dark background with light textColor). Force the fills to the active
+   theme's surface colors so attribute rows stay readable on every theme. */
+pre.mermaid svg g.row-rect-odd > path:first-child,
+.mermaid-rendered svg g.row-rect-odd > path:first-child {
+  fill: var(--bg-primary) !important;
+}
+pre.mermaid svg g.row-rect-even > path:first-child,
+.mermaid-rendered svg g.row-rect-even > path:first-child {
+  fill: var(--bg-secondary) !important;
+}
+/* Attribute cell text is rendered as HTML inside <foreignObject>; target the
+   wrapped span/p so the active theme's text color wins over Mermaid defaults. */
+pre.mermaid svg g.label.attribute-type p,
+pre.mermaid svg g.label.attribute-name p,
+pre.mermaid svg g.label.attribute-keys p,
+pre.mermaid svg g.label.attribute-comment p,
+.mermaid-rendered svg g.label.attribute-type p,
+.mermaid-rendered svg g.label.attribute-name p,
+.mermaid-rendered svg g.label.attribute-keys p,
+.mermaid-rendered svg g.label.attribute-comment p {
+  color: var(--text-primary) !important;
+}
+
+/* ===== High Contrast Mode (prefers-contrast: more) =====
+   OS-level high-contrast preference promotes decorative --border to --border-strong
+   so table cells, callout edges, and other UI dividers meet WCAG 1.4.11. */
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme] {
+    --border: var(--border-strong);
+    --border-subtle: var(--border-strong);
+    --table-border: var(--border-strong);
+  }
+}
+
+/* ===== Reduced Motion — extend to neon glow themes =====
+   The base reduced-motion block already cancels animations; here we additionally
+   strip the heavy phosphor/neon glow shadows on themes that rely on them, so users
+   with motion or visual sensitivity get a calmer surface. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='terminal'],
+  [data-theme='matrix'],
+  [data-theme='cyberpunk'],
+  [data-theme='hackerman'] {
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 6px 18px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ===== Print — force a paper-friendly monochrome surface =====
+   Regardless of the active theme, printing uses high-contrast black-on-white,
+   removes background tints and shadows, and ensures URLs are visible. */
+@media print {
+  :root,
+  [data-theme] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #ffffff;
+    --bg-editor: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #1a1a1a;
+    --text-muted: #4a4a4a;
+    --border: #4a4a4a;
+    --border-subtle: #888888;
+    --border-strong: #000000;
+    --accent: #000000;
+    --link-color: #000000;
+    --code-bg: #f4f4f4;
+    --code-text: #000000;
+    --code-block-bg: #f4f4f4;
+    --table-stripe: #f4f4f4;
+    --table-border: #000000;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --glass-bg: #ffffff;
+  }
+  .sidebar,
+  .toolbar,
+  .tabs,
+  .url-bar,
+  .find-bar,
+  .theme-picker,
+  .search-modal,
+  .help-modal {
+    display: none !important;
+  }
+  .markdown-body a[href]::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    color: #4a4a4a;
+  }
 }

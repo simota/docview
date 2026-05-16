@@ -29,7 +29,8 @@
     "serve": "npm run build && node server.mjs",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "npx playwright test",
+    "check:contrast": "node scripts/check-contrast.mjs"
   },
   "keywords": [
     "markdown",
