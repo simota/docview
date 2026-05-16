@@ -414,62 +414,70 @@
   --icon-default: #2a8a44;
 }
 
-/* ASCII — monochrome plain-text, man page / RFC aesthetic */
+/* ASCII — pure monochrome plain-text, RFC / man page aesthetic.
+   No rounded corners, no shadows, no color — only black ink on white paper. */
 [data-theme='ascii'] {
-  --bg-primary: #fdfdf9;
-  --bg-secondary: #f5f5f0;
-  --bg-tertiary: #ecece6;
-  --bg-editor: #fdfdf9;
-  --text-primary: #0e0e0e;
-  --text-secondary: #3a3a3a;
-  --text-muted: #757575;
-  --border: #1a1a1a;
-  --border-subtle: #c7c7c0;
-  --border-strong: #1a1a1a;
-  --accent: #0e0e0e;
-  --accent-light: #3a3a3a;
-  --accent-lighter: #757575;
-  --accent-bg: rgba(14, 14, 14, 0.06);
-  --accent-border: rgba(14, 14, 14, 0.25);
-  --accent-gradient: linear-gradient(135deg, #0e0e0e, #3a3a3a);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(14, 14, 14, 0.08), rgba(58, 58, 58, 0.04));
-  --gutter-bg: #ecece6;
-  --gutter-hover: #d8d8d0;
+  --bg-primary: #ffffff;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f0f0f0;
+  --bg-editor: #ffffff;
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --text-muted: #6e6e6e;
+  --border: #000000;
+  --border-subtle: #c0c0c0;
+  --border-strong: #000000;
+  --accent: #000000;
+  --accent-light: #333333;
+  --accent-lighter: #6e6e6e;
+  --accent-bg: rgba(0, 0, 0, 0.06);
+  --accent-border: rgba(0, 0, 0, 0.25);
+  --accent-gradient: linear-gradient(135deg, #000000, #333333);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(51, 51, 51, 0.04));
+  --gutter-bg: #f0f0f0;
+  --gutter-hover: #d8d8d8;
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: none;
-  --code-bg: #ecece6;
-  --code-text: #0e0e0e;
-  --code-block-bg: #f5f5f0;
+  --code-bg: #f0f0f0;
+  --code-text: #000000;
+  --code-block-bg: #fafafa;
   --blockquote-border: var(--border);
   --blockquote-bg: transparent;
-  --table-stripe: #f5f5f0;
-  --table-border: #1a1a1a;
-  --table-header-bg: #ecece6;
-  --link-color: #0e0e0e;
-  --link-hover: #3a3a3a;
+  --table-stripe: #fafafa;
+  --table-border: #000000;
+  --table-header-bg: transparent;
+  --link-color: #000000;
+  --link-hover: #ffffff;
   --hr-gradient: none;
-  --mark-bg: #fff59d;
-  --scrollbar-thumb: #c7c7c0;
+  --mark-bg: #000000;
+  --scrollbar-thumb: #c0c0c0;
   --scrollbar-track: transparent;
-  --glass-bg: rgba(253, 253, 249, 0.95);
-  --glass-border: rgba(14, 14, 14, 0.12);
-  --color-info: #0e0e0e;
-  --color-info-bg: rgba(14, 14, 14, 0.05);
-  --color-success: #0e0e0e;
-  --color-success-bg: rgba(14, 14, 14, 0.05);
-  --color-warning: #0e0e0e;
-  --color-warning-bg: rgba(14, 14, 14, 0.05);
-  --color-danger: #0e0e0e;
-  --color-danger-bg: rgba(14, 14, 14, 0.05);
-  --color-important: #0e0e0e;
-  --color-important-bg: rgba(14, 14, 14, 0.05);
-  --icon-markdown: #0e0e0e;
-  --icon-data: #0e0e0e;
-  --icon-config: #0e0e0e;
-  --icon-image: #0e0e0e;
-  --icon-video: #0e0e0e;
-  --icon-default: #757575;
+  --glass-bg: rgba(255, 255, 255, 0.96);
+  --glass-border: rgba(0, 0, 0, 0.15);
+  --color-info: #000000;
+  --color-info-bg: rgba(0, 0, 0, 0.05);
+  --color-success: #000000;
+  --color-success-bg: rgba(0, 0, 0, 0.05);
+  --color-warning: #000000;
+  --color-warning-bg: rgba(0, 0, 0, 0.05);
+  --color-danger: #000000;
+  --color-danger-bg: rgba(0, 0, 0, 0.05);
+  --color-important: #000000;
+  --color-important-bg: rgba(0, 0, 0, 0.05);
+  --icon-markdown: #000000;
+  --icon-data: #000000;
+  --icon-config: #000000;
+  --icon-image: #000000;
+  --icon-video: #000000;
+  --icon-default: #6e6e6e;
+  /* Kill all rounded corners — ASCII frames are square. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
 }
 
 /* Matrix — jet black with neon green code-rain and cyan accent */
@@ -890,7 +898,8 @@
   font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 
-/* ASCII — pure monochrome, monospace everywhere, box-drawing decoration */
+/* ASCII — pure monochrome, monospace everywhere, ASCII-art decoration.
+   Goal: read like a man page or RFC. No color, no shadow, no rounding. */
 [data-theme='ascii'] body,
 [data-theme='ascii'] .markdown-body {
   font-family: 'JetBrains Mono', 'Courier Prime', 'Courier New', ui-monospace, monospace;
@@ -907,33 +916,69 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   color: var(--text-primary);
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 [data-theme='ascii'] .markdown-body h1 {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px double var(--border);
   padding-bottom: 0.3em;
 }
 [data-theme='ascii'] .markdown-body h2 {
   border-bottom: 1px dashed var(--border);
   padding-bottom: 0.25em;
 }
+[data-theme='ascii'] .markdown-body h3 {
+  text-transform: none;
+}
+[data-theme='ascii'] .markdown-body h3::before {
+  content: '# ';
+  color: var(--text-muted);
+}
+[data-theme='ascii'] .markdown-body h4::before {
+  content: '## ';
+  color: var(--text-muted);
+}
+[data-theme='ascii'] .markdown-body h4,
+[data-theme='ascii'] .markdown-body h5,
+[data-theme='ascii'] .markdown-body h6 {
+  text-transform: none;
+}
 [data-theme='ascii'] .markdown-body a {
-  color: var(--link-color);
+  color: var(--text-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+  text-decoration-style: solid;
 }
 [data-theme='ascii'] .markdown-body a:hover {
-  background: var(--accent-bg);
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  text-decoration: none;
 }
 [data-theme='ascii'] .markdown-body blockquote {
-  border-left: 2px solid var(--border);
+  border-left: none;
   background: transparent;
   font-style: normal;
-  padding-left: 1em;
+  padding-left: 0;
+  position: relative;
 }
 [data-theme='ascii'] .markdown-body blockquote::before {
+  content: none;
+}
+[data-theme='ascii'] .markdown-body blockquote > p {
+  position: relative;
+  padding-left: 2ch;
+}
+[data-theme='ascii'] .markdown-body blockquote > p::before {
   content: '> ';
-  color: var(--text-muted);
-  margin-right: 0.2em;
+  color: var(--text-secondary);
+  position: absolute;
+  left: 0;
+}
+[data-theme='ascii'] .markdown-body blockquote blockquote > p {
+  padding-left: 4ch;
+}
+[data-theme='ascii'] .markdown-body blockquote blockquote > p::before {
+  content: '> > ';
 }
 [data-theme='ascii'] .markdown-body code {
   background: var(--code-bg);
@@ -947,47 +992,156 @@
   border-radius: 0;
   box-shadow: none;
 }
+/* Disable syntax highlighting colors — code is plain monochrome. */
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-keyword,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-string,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-number,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-comment,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-function,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-built_in,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-literal,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-symbol,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-title,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-attr,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-name,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-tag,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-variable,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-type,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-params,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-meta,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-selector-tag,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-selector-class,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-selector-id,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-regexp,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-section {
+  color: var(--text-primary);
+  font-style: normal;
+  font-weight: inherit;
+}
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-comment,
+[data-theme='ascii'] .markdown-body pre.hljs .hljs-meta {
+  color: var(--text-muted);
+}
 [data-theme='ascii'] .markdown-body hr {
   border: none;
   background: none;
   height: auto;
   margin: 1.8em 0;
   text-align: left;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   letter-spacing: 0;
   font-family: inherit;
   overflow: hidden;
   white-space: nowrap;
 }
+/* Pure ASCII hr: 80 hyphens, like a terminal divider. */
 [data-theme='ascii'] .markdown-body hr::before {
-  content: '\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500\2500';
+  content: '--------------------------------------------------------------------------------';
 }
+/* Strong (===) variant for hr inside h1/section breaks if used as ***. */
 [data-theme='ascii'] .markdown-body table {
-  border: 1px solid var(--border);
+  border: none;
+  border-top: 3px double var(--border);
+  border-bottom: 3px double var(--border);
   border-collapse: collapse;
+  background: transparent;
 }
 [data-theme='ascii'] .markdown-body th {
-  background: var(--table-header-bg);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-align: left;
 }
 [data-theme='ascii'] .markdown-body td {
-  border: 1px solid var(--border-subtle);
+  border: none;
+  background: transparent;
+}
+[data-theme='ascii'] .markdown-body tbody tr:hover {
+  background: var(--bg-secondary);
+}
+/* Lists: ASCII bullets that change per nesting level (* -> + -> -). */
+[data-theme='ascii'] .markdown-body ul > li::marker {
+  content: '* ';
+  font-family: inherit;
+  color: var(--text-primary);
+}
+[data-theme='ascii'] .markdown-body ul ul > li::marker {
+  content: '+ ';
+}
+[data-theme='ascii'] .markdown-body ul ul ul > li::marker {
+  content: '- ';
+}
+[data-theme='ascii'] .markdown-body ol > li::marker {
+  font-family: inherit;
+  color: var(--text-primary);
+}
+/* GitHub-style task list: render as [ ] / [x]. */
+[data-theme='ascii'] .markdown-body li input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  margin: 0 0.4em 0 -0.4em;
+  font-family: inherit;
+  font-size: inherit;
+  vertical-align: baseline;
+}
+[data-theme='ascii'] .markdown-body li input[type='checkbox']::before {
+  content: '[ ]';
+  font-family: inherit;
+  color: var(--text-primary);
+}
+[data-theme='ascii'] .markdown-body li input[type='checkbox']:checked::before {
+  content: '[x]';
 }
 [data-theme='ascii'] .markdown-body img {
   border: 1px solid var(--border);
   border-radius: 0;
+  filter: grayscale(100%) contrast(1.05);
+}
+/* Highlighted text: reverse video instead of yellow marker. */
+[data-theme='ascii'] .markdown-body mark {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  padding: 0 2px;
+  border-radius: 0;
+}
+/* Keyboard shortcuts: classic ASCII box [KEY]. */
+[data-theme='ascii'] .markdown-body kbd {
+  display: inline-block;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 0;
+  padding: 0 6px;
+  font-family: inherit;
+  font-weight: 700;
+  box-shadow: none;
+  text-transform: uppercase;
 }
 [data-theme='ascii'] ::selection {
-  background: #0e0e0e;
-  color: #fdfdf9;
+  background: #000000;
+  color: #ffffff;
 }
 [data-theme='ascii'] ::-webkit-scrollbar-thumb {
   background: var(--text-muted);
   border-radius: 0;
 }
 [data-theme='ascii'] ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: var(--text-primary);
+}
+/* Strip rounding from any control inside the ASCII theme. */
+[data-theme='ascii'] button,
+[data-theme='ascii'] input,
+[data-theme='ascii'] select,
+[data-theme='ascii'] textarea {
+  border-radius: 0 !important;
 }
 
 /* Matrix — code-rain backdrop, neon green text, sharp glow */
