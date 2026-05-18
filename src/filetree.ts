@@ -70,6 +70,8 @@ const EXT_MAP: Record<string, { category: string; svg: string }> = {
   md:         { category: 'markdown', svg: SVG_MARKDOWN },
   markdown:   { category: 'markdown', svg: SVG_MARKDOWN },
   mdx:        { category: 'markdown', svg: SVG_MARKDOWN },
+  mmd:        { category: 'data',     svg: SVG_MARKUP },
+  mermaid:    { category: 'data',     svg: SVG_MARKUP },
   txt:        { category: 'default',  svg: SVG_TEXT },
   json:       { category: 'data',     svg: SVG_JSON },
   yaml:       { category: 'config',   svg: SVG_YAML },

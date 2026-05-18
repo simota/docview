@@ -240,6 +240,20 @@ test.describe('UX improvements', () => {
     await expect(dialog.locator('kbd').first()).toBeVisible();
   });
 
+  test('Standalone .mmd file renders as a Mermaid diagram', async ({ page }) => {
+    await page.goto('/#file=flow.mmd');
+    await page.waitForSelector('.mermaid-rendered svg');
+
+    const svg = page.locator('.mermaid-rendered svg').first();
+    await expect(svg).toBeVisible();
+
+    // Source toggle switches to raw view and back.
+    await page.locator('.json-toggle-btn[data-view="source"]').click();
+    await expect(page.locator('.json-view-source .data-lang')).toHaveText('MERMAID');
+    await page.locator('.json-toggle-btn[data-view="tree"]').click();
+    await expect(svg).toBeVisible();
+  });
+
   test('Mermaid diagrams can open in a fullscreen overlay', async ({ page }) => {
     await page.goto('/#file=diagrams.md');
     await page.waitForSelector('.mermaid-rendered svg');

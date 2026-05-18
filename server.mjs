@@ -266,6 +266,8 @@ for (let i = 0; i < args.length; i++) {
 const SUPPORTED_EXTENSIONS = new Set([
   // Markdown
   '.md', '.markdown', '.mdx', '.txt',
+  // Diagrams
+  '.mmd', '.mermaid',
   // Data
   '.json', '.jsonl', '.ndjson', '.yaml', '.yml', '.csv', '.tsv',
   // Config

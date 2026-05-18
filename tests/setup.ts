@@ -84,6 +84,9 @@ flowchart TD
 \`\`\`
 `);
 
+  // Standalone Mermaid source file — should render the diagram directly.
+  write('flow.mmd', 'flowchart LR\n  A[Start] --> B{Decision}\n  B -->|Yes| C[OK]\n  B -->|No| D[NG]\n');
+
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');

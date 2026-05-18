@@ -154,6 +154,7 @@ let splitTabBar: TabBar | null = null;
 
 // --- File type detection ---
 const MARKDOWN_EXT = new Set(['.md', '.markdown', '.mdx', '.txt']);
+const MERMAID_EXT = new Set(['.mmd', '.mermaid']);
 const DATA_EXT = new Set(['.json', '.yaml', '.yml']);
 const CSV_EXT = new Set(['.csv', '.tsv']);
 const JSONL_EXT = new Set(['.jsonl', '.ndjson']);
@@ -162,7 +163,7 @@ const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.b
 const VIDEO_EXT = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const LOG_EXT = new Set(['.log']);
 
-type FileType = 'markdown' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'image' | 'video' | 'unknown';
+type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'image' | 'video' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
@@ -171,6 +172,7 @@ function getExt(path: string): string {
 function detectFileType(path: string): FileType {
   const ext = getExt(path);
   if (MARKDOWN_EXT.has(ext)) return 'markdown';
+  if (MERMAID_EXT.has(ext)) return 'mermaid';
   if (DATA_EXT.has(ext)) return 'data';
   if (CSV_EXT.has(ext)) return 'csv';
   if (JSONL_EXT.has(ext)) return 'jsonl';
@@ -700,6 +702,22 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       }
       interceptRelativeLinks(path, target, pane);
       break;
+
+    case 'mermaid': {
+      const id = `mmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const escapedSource = escapeHtml(content);
+      target.innerHTML = `
+        <div class="json-view-toggle">
+          <button class="json-toggle-btn active" data-view="tree">Diagram</button>
+          <button class="json-toggle-btn" data-view="source">Source</button>
+        </div>
+        <div class="json-view-tree"><div class="mermaid-container"><div class="mermaid-label">Diagram</div><pre class="mermaid" id="${id}">${escapedSource}</pre></div></div>
+        <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">MERMAID</span><pre class="hljs"><code>${escapedSource}</code></pre></div></div>`;
+      initToggleButtons(target);
+      renderMermaidDiagrams(target);
+      if (target === viewer) toc.clear();
+      break;
+    }
 
     case 'data': {
       if (path.endsWith('.json')) {
