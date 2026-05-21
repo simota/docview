@@ -253,7 +253,11 @@ export class ChunkedTable {
     if (this.meta.kind === 'log') {
       const sampleText = await this.fetchLines(0, 5);
       this.logFormat = detectLogFormat(sampleText);
-      if (this.logFormat === 'unknown') {
+      // Chunked rendering only supports the line-oriented Apache/nginx formats.
+      // Laravel entries can span multiple lines (stack traces, var_dump output),
+      // which the page-based fetcher cannot safely split — fall back to the
+      // non-chunked viewer in main.ts by clearing the container.
+      if (this.logFormat === 'unknown' || this.logFormat === 'laravel') {
         this.container.innerHTML = '';
         return;
       }
@@ -273,7 +277,10 @@ export class ChunkedTable {
   }
 
   isLogUnknown(): boolean {
-    return this.meta.kind === 'log' && this.logFormat === 'unknown';
+    // Returns true when ChunkedTable cannot render the log itself and the caller
+    // should fall back to the full-file viewer. Includes Laravel logs, which
+    // require multi-line entry parsing that doesn't fit the page-based fetcher.
+    return this.meta.kind === 'log' && (this.logFormat === 'unknown' || this.logFormat === 'laravel');
   }
 
   private async fetchLines(offset: number, limit: number): Promise<string> {

@@ -8,7 +8,7 @@ import { renderYamlTree } from './yaml-tree';
 import { TabBar, addRecent, getRecent } from './tabs';
 import { renderCsvTable, initCsvSort, initCsvColumnCopy } from './csv-viewer';
 import { renderJsonlTable } from './jsonl-viewer';
-import { renderLogTable } from './log-viewer';
+import { renderLogTable, initLaravelSort } from './log-viewer';
 import { ChunkedTable } from './chunked-table';
 import { FindBar } from './find-bar';
 import { HelpModal } from './help-modal';
@@ -657,9 +657,39 @@ function handleLineNumKey(e: KeyboardEvent, pane: PaneId) {
   handleLineNumClick(e, pane);
 }
 
+function handleLaravelExpand(e: Event): boolean {
+  const t = e.target as HTMLElement;
+  const btn = t.closest('.laravel-expand') as HTMLElement | null;
+  if (!btn) return false;
+  const row = btn.closest('.laravel-row') as HTMLElement | null;
+  if (!row) return false;
+  e.preventDefault();
+  e.stopPropagation();
+  const rowIdx = row.dataset.row;
+  const tbody = row.parentElement;
+  if (!tbody || rowIdx == null) return true;
+  const detail = tbody.querySelector(
+    `.laravel-row-detail[data-row="${rowIdx}"]`
+  ) as HTMLElement | null;
+  if (!detail) return true;
+  const expanded = row.classList.toggle('expanded');
+  detail.hidden = !expanded;
+  btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  return true;
+}
+
 function bindLineInteractions(target: HTMLElement, pane: PaneId) {
-  target.addEventListener('click', (e) => handleLineNumClick(e, pane));
-  target.addEventListener('keydown', (e) => handleLineNumKey(e, pane));
+  target.addEventListener('click', (e) => {
+    if (handleLaravelExpand(e)) return;
+    handleLineNumClick(e, pane);
+  });
+  target.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && (e.target as HTMLElement).classList?.contains('laravel-expand')) {
+      handleLaravelExpand(e);
+      return;
+    }
+    handleLineNumKey(e, pane);
+  });
 }
 
 // Delegated line-number click handler on the viewer.
@@ -2117,6 +2147,7 @@ async function init() {
     initSidebarResize(sidebar);
     initCsvSort();
     initCsvColumnCopy();
+    initLaravelSort();
 
     // URL hash takes priority, then CLI initial file, then first file in tree
     const parsed = parseHash();

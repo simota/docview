@@ -86,6 +86,65 @@ test.describe('Line jump (URL hash &line=)', () => {
     await expect(page.locator('#breadcrumb')).toContainText('100%.ini');
   });
 
+  test('Laravel log renders rows with time/level and groups multi-line entries', async ({ page }) => {
+    await page.goto('/#file=laravel.log');
+    const rows = page.locator('.laravel-log-view .laravel-row');
+    // 4 entries: INFO json, DEBUG plain, INFO multi-line var_dump, ERROR
+    await expect(rows).toHaveCount(4);
+    // First row: INFO JSON entry, line 1
+    await expect(rows.nth(0)).toHaveAttribute('data-line', '1');
+    await expect(rows.nth(0).locator('.log-level')).toHaveText('INFO');
+    await expect(rows.nth(0).locator('.laravel-msg-text')).toContainText('GET /');
+    // Second row: DEBUG line 2
+    await expect(rows.nth(1)).toHaveAttribute('data-line', '2');
+    await expect(rows.nth(1).locator('.log-level')).toHaveText('DEBUG');
+    // Third row: multi-line INFO entry starts at line 3
+    await expect(rows.nth(2)).toHaveAttribute('data-line', '3');
+    // Fourth row: ERROR starts at line 7 (after 3 var_dump lines following line 3)
+    await expect(rows.nth(3)).toHaveAttribute('data-line', '7');
+    await expect(rows.nth(3).locator('.log-level')).toHaveText('ERROR');
+  });
+
+  test('Laravel log Time column header toggles ascending/descending sort', async ({ page }) => {
+    await page.goto('/#file=laravel.log');
+    const timeHeader = page.locator('.laravel-table th[data-sort-key="time"]');
+    const tsCells = page.locator('.laravel-table tbody tr.laravel-row .log-ts');
+
+    // Initial natural order (file order, ascending by time).
+    const initial = await tsCells.allTextContents();
+    expect(initial).toEqual([
+      '2026-05-21 11:36:17',
+      '2026-05-21 11:36:22',
+      '2026-05-21 11:36:30',
+      '2026-05-21 11:36:45',
+    ]);
+
+    // Click → ascending (no change to text but state should be set).
+    await timeHeader.click();
+    await expect(timeHeader).toHaveAttribute('aria-sort', 'ascending');
+    await expect(timeHeader).toHaveClass(/sort-asc/);
+
+    // Click → descending: rows must reverse.
+    await timeHeader.click();
+    await expect(timeHeader).toHaveAttribute('aria-sort', 'descending');
+    const desc = await tsCells.allTextContents();
+    expect(desc).toEqual([
+      '2026-05-21 11:36:45',
+      '2026-05-21 11:36:30',
+      '2026-05-21 11:36:22',
+      '2026-05-21 11:36:17',
+    ]);
+  });
+
+  test('Laravel log expand button toggles a detail row', async ({ page }) => {
+    await page.goto('/#file=laravel.log');
+    const row = page.locator('.laravel-log-view .laravel-row').first();
+    const detail = page.locator('.laravel-log-view .laravel-row-detail[data-row="0"]');
+    await expect(detail).toBeHidden();
+    await row.locator('.laravel-expand').click();
+    await expect(detail).toBeVisible();
+  });
+
   test('log table row numbers reflect original file line, not entry index', async ({ page }) => {
     // access.log has an unparseable line at file-line 3. The 3rd table row
     // must therefore be labeled `4`, and its data-line must be 4 — otherwise

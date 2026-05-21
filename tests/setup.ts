@@ -147,6 +147,20 @@ flowchart TD
   ];
   write('access.log', apacheLines.join('\n') + '\n');
 
+  // Laravel application log fixture: mix of single-line JSON entries, plain
+  // text DEBUG, and a multi-line var_dump-style INFO that the parser must
+  // group into a single entry.
+  const laravelLines = [
+    `[2026-05-21 11:36:17] local.INFO: {"user_id":null,"url":"/","method":"GET","status":302,"request_id":"abc"}`,
+    `[2026-05-21 11:36:22] local.DEBUG: SHA256Hasher::make hello -> 0123abcd`,
+    `[2026-05-21 11:36:30] local.INFO: `,
+    `-> Entering step init, name 'idempotency_auto_fill'`,
+    `---------------------------------------------------`,
+    `  command was set to array(1) { ["name"]=> string(7) "GetItem" }`,
+    `[2026-05-21 11:36:45] local.ERROR: Error executing GetItem {"userId":42,"exception":"Stub"}`,
+  ];
+  write('laravel.log', laravelLines.join('\n') + '\n');
+
   // ---- Video support Phase 1 fixtures ----
 
   // videos/ — video-only directory: 2 mp4 files + 1 mkv (excluded from gallery).
