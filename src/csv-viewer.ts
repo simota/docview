@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
+import type { SecretMasker } from './secret-mask';
 
-export function renderCsvTable(content: string, path: string): string {
+export function renderCsvTable(content: string, path: string, maskValue?: SecretMasker): string {
   const result = Papa.parse(content, {
     header: true,
     skipEmptyLines: true,
@@ -20,7 +21,8 @@ export function renderCsvTable(content: string, path: string): string {
   const trs = rows.map((row, i) => {
     const tds = fields.map((f) => {
       const val = String(row[f] ?? '');
-      return `<td title="${esc(val)}">${esc(val)}</td>`;
+      const rendered = maskValue ? maskValue(val, f) : val;
+      return `<td title="${esc(rendered)}">${esc(rendered)}</td>`;
     }).join('');
     return `<tr data-row-index="${i}"><td class="csv-row-num">${i + 1}</td>${tds}</tr>`;
   }).join('');

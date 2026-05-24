@@ -1,4 +1,6 @@
-export function renderJsonlTable(content: string, path: string): string {
+import type { SecretMasker } from './secret-mask';
+
+export function renderJsonlTable(content: string, path: string, maskValue?: SecretMasker): string {
   const lines = content.split('\n').filter((l) => l.trim() !== '');
 
   if (!lines.length) {
@@ -55,8 +57,8 @@ export function renderJsonlTable(content: string, path: string): string {
             val === undefined || val === null
               ? ''
               : typeof val === 'object'
-                ? esc(JSON.stringify(val))
-                : esc(String(val));
+                ? esc(maskValue ? maskValue(JSON.stringify(val), f) : JSON.stringify(val))
+                : esc(maskValue ? maskValue(String(val), f) : String(val));
           return `<td>${cell}</td>`;
         })
         .join('');

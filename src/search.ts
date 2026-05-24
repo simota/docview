@@ -1,3 +1,5 @@
+import { isSecretSafeModeEnabled, maskSecrets, withSecretSafeParam } from './secret-mask';
+
 interface SearchSelection {
   path: string;
   line?: number | null;
@@ -218,7 +220,7 @@ export class SearchModal {
   private async searchFullText(query: string) {
     try {
       const regexParam = this.useRegex ? '&regex=1' : '';
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}${regexParam}`);
+      const res = await fetch(withSecretSafeParam(`/api/search?q=${encodeURIComponent(query)}${regexParam}`));
       if (!res.ok) return;
       const results: SearchResult[] = await res.json();
 
@@ -237,9 +239,10 @@ export class SearchModal {
       .map((text, offset) => {
         const lineNumber = contextStartLine + offset;
         const isHit = lineNumber === result.line;
+        const safeText = isSecretSafeModeEnabled() ? maskSecrets(text) : text;
         return `<div class="search-context-line ${isHit ? 'search-context-line--hit' : ''}">
           <span class="search-context-num">${lineNumber}</span>
-          <span class="search-context-text">${this.highlightSearchText(text, query)}</span>
+          <span class="search-context-text">${this.highlightSearchText(safeText, query)}</span>
         </div>`;
       })
       .join('');
