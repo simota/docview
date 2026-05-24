@@ -283,6 +283,26 @@ const SUPPORTED_EXTENSIONS = new Set([
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const SEARCH_CONTEXT_LINES = 20;
+const REDACTED = '[REDACTED]';
+const SECRET_KEY_VALUE_RE =
+  /(["']?)(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|authorization|auth[_-]?token|cookie|session)(\1\s*[:=]\s*)(["']?)([^"',\s}\]]{3,}|[^"',\n}\]]{8,})(\4)/gi;
+const BEARER_SECRET_RE = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi;
+const JWT_SECRET_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
+const HEX_SECRET_RE = /\b[a-f0-9]{32,}\b/gi;
+const TOKENISH_SECRET_RE = /\b(?=[A-Za-z0-9._~+/=-]{28,}\b)(?=[A-Za-z0-9._~+/=-]*[A-Za-z])(?=[A-Za-z0-9._~+/=-]*\d)[A-Za-z0-9._~+/=-]+\b/g;
+
+function maskSecrets(text) {
+  if (!text) return text;
+  return text
+    .replace(SECRET_KEY_VALUE_RE, (_match, keyQuote, key, sep, valueQuote, _value, closeQuote) => `${keyQuote}${key}${sep}${valueQuote}${REDACTED}${closeQuote}`)
+    .replace(BEARER_SECRET_RE, (_match, prefix) => `${prefix}${REDACTED}`)
+    .replace(JWT_SECRET_RE, REDACTED)
+    .replace(HEX_SECRET_RE, REDACTED)
+    .replace(TOKENISH_SECRET_RE, (match) => {
+      if (!/[A-Z]/.test(match) && !/[+/=_-]/.test(match)) return match;
+      return REDACTED;
+    });
+}
 
 // --- Remote URL fetching (Phase 3) ---
 // Primary gate: URL path extension must be in SUPPORTED_EXTENSIONS.
@@ -1123,6 +1143,7 @@ const server = createServer(async (req, res) => {
 
     const results = [];
     const useRegex = url.searchParams.get('regex') === '1';
+    const secretSafe = url.searchParams.get('secretSafe') === '1';
     const contextParam = Number.parseInt(url.searchParams.get('context') || '', 10);
     const contextLines = Number.isFinite(contextParam)
       ? Math.max(0, Math.min(contextParam, 50))
@@ -1171,9 +1192,9 @@ const server = createServer(async (req, res) => {
                   results.push({
                     path: relative(targetDir, fullPath),
                     line: i + 1,
-                    text: lines[i],
+                    text: secretSafe ? maskSecrets(lines[i]) : lines[i],
                     contextStartLine: start + 1,
-                    contextLines: lines.slice(start, end),
+                    contextLines: secretSafe ? lines.slice(start, end).map(maskSecrets) : lines.slice(start, end),
                   });
                 }
               }

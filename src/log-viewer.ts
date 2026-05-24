@@ -39,6 +39,7 @@ export interface LogEntry {
 }
 
 export type LogFormat = 'combined' | 'common' | 'laravel' | 'unknown';
+type SecretMasker = (value: string, key?: string) => string;
 
 function parseRequest(req: string): { method: string; path: string; protocol: string } {
   const parts = req.split(' ');
@@ -282,7 +283,7 @@ function summarizeJson(json: unknown, before: string): string {
   return pairs.join(', ');
 }
 
-function renderLaravelTable(content: string): string {
+function renderLaravelTable(content: string, maskValue?: SecretMasker): string {
   const entries = parseLaravel(content);
   if (!entries.length) {
     return `<p class="error-banner">No Laravel log entries found.</p>`;
@@ -305,9 +306,10 @@ function renderLaravelTable(content: string): string {
     const preview = buildPreview(entry);
     const expandable = !!(preview.jsonText || preview.detailText);
 
+    const summary = maskValue ? maskValue(preview.summary, 'message') : preview.summary;
     const summaryHtml = expandable
-      ? `<button class="laravel-expand" type="button" aria-expanded="false" aria-label="Toggle details" tabindex="0">▶</button><span class="laravel-msg-text">${esc(preview.summary)}</span>`
-      : `<span class="laravel-msg-text">${esc(preview.summary)}</span>`;
+      ? `<button class="laravel-expand" type="button" aria-expanded="false" aria-label="Toggle details" tabindex="0">▶</button><span class="laravel-msg-text">${esc(summary)}</span>`
+      : `<span class="laravel-msg-text">${esc(summary)}</span>`;
 
     const mainRow = `<tr class="laravel-row" data-row="${i}" data-line="${lineNum}">
       <td class="log-line-num" data-line="${lineNum}" role="button" tabindex="0" title="Click to copy link to line ${lineNum}">${lineNum}</td>
@@ -321,14 +323,14 @@ function renderLaravelTable(content: string): string {
     if (expandable) {
       const parts: string[] = [];
       if (preview.parsedJson != null && preview.jsonText) {
-        const tree = renderJsonTree(preview.jsonText);
+        const tree = renderJsonTree(preview.jsonText, maskValue);
         if (tree) parts.push(`<div class="laravel-detail-json">${tree}</div>`);
-        else parts.push(`<pre class="laravel-detail-pre">${esc(preview.jsonText)}</pre>`);
+        else parts.push(`<pre class="laravel-detail-pre">${esc(maskValue ? maskValue(preview.jsonText, 'json') : preview.jsonText)}</pre>`);
       } else if (preview.jsonText) {
-        parts.push(`<pre class="laravel-detail-pre">${esc(preview.jsonText)}</pre>`);
+        parts.push(`<pre class="laravel-detail-pre">${esc(maskValue ? maskValue(preview.jsonText, 'json') : preview.jsonText)}</pre>`);
       }
       if (preview.detailText) {
-        parts.push(`<pre class="laravel-detail-pre">${esc(preview.detailText)}</pre>`);
+        parts.push(`<pre class="laravel-detail-pre">${esc(maskValue ? maskValue(preview.detailText, 'detail') : preview.detailText)}</pre>`);
       }
       detailRow = `<tr class="laravel-row-detail" data-row="${i}" hidden>
         <td colspan="5">${parts.join('')}</td>
@@ -358,9 +360,12 @@ function renderLaravelTable(content: string): string {
   </div>`;
 }
 
-// ---------- Apache / nginx (unchanged) ----------
+// ---------- Apache / nginx ----------
 
-function renderAccessLogTable(content: string, format: 'combined' | 'common'): string {
+function renderAccessLogTable(content: string, format: 'combined' | 'common', maskValue?: SecretMasker): string {
+  // Preserve the original file-line index alongside the content so URL #line=
+  // references the real line, even when blank rows or unparsable rows sit in
+  // between.
   const rawLines = content.split('\n');
   const indexed: Array<{ line: string; origLine: number }> = [];
   rawLines.forEach((l, i) => { if (l.trim() !== '') indexed.push({ line: l, origLine: i + 1 }); });
@@ -409,18 +414,18 @@ function renderAccessLogTable(content: string, format: 'combined' | 'common'): s
       const lineNum = entryLineNums[i];
       const lineTd = `<td class="log-line-num" data-line="${lineNum}" role="button" tabindex="0" title="Click to copy link to line ${lineNum}">${lineNum}</td>`;
       const baseTds = [
-        `<td>${esc(e.ip)}</td>`,
-        `<td>${esc(e.user)}</td>`,
+        `<td>${esc(maskValue ? maskValue(e.ip, 'ip') : e.ip)}</td>`,
+        `<td>${esc(maskValue ? maskValue(e.user, 'user') : e.user)}</td>`,
         `<td class="log-ts">${esc(e.timestamp)}</td>`,
         `<td><span class="log-method log-method-${esc(e.method.toLowerCase())}">${esc(e.method)}</span></td>`,
-        `<td class="log-path" title="${esc(e.path)}">${esc(e.path)}</td>`,
+        `<td class="log-path" title="${esc(maskValue ? maskValue(e.path, 'path') : e.path)}">${esc(maskValue ? maskValue(e.path, 'path') : e.path)}</td>`,
         `<td><span class="log-status ${sc}">${esc(e.status)}</span></td>`,
         `<td class="log-num">${esc(e.size)}</td>`,
       ];
       const extraTds = isCombined
         ? [
-            `<td class="log-referer" title="${esc(e.referer)}">${esc(e.referer)}</td>`,
-            `<td class="log-ua" title="${esc(e.userAgent)}">${esc(e.userAgent)}</td>`,
+            `<td class="log-referer" title="${esc(maskValue ? maskValue(e.referer, 'referer') : e.referer)}">${esc(maskValue ? maskValue(e.referer, 'referer') : e.referer)}</td>`,
+            `<td class="log-ua" title="${esc(maskValue ? maskValue(e.userAgent, 'userAgent') : e.userAgent)}">${esc(maskValue ? maskValue(e.userAgent, 'userAgent') : e.userAgent)}</td>`,
           ]
         : [];
       return `<tr data-row-index="${i}" data-line="${lineNum}">${[lineTd, ...baseTds, ...extraTds].join('')}</tr>`;
@@ -452,11 +457,11 @@ function renderAccessLogTable(content: string, format: 'combined' | 'common'): s
   </div>`;
 }
 
-export function renderLogTable(content: string, _path: string): string {
+export function renderLogTable(content: string, _path: string, maskValue?: SecretMasker): string {
   const format = detectLogFormat(content);
   if (format === 'unknown') return '';
-  if (format === 'laravel') return renderLaravelTable(content);
-  return renderAccessLogTable(content, format);
+  if (format === 'laravel') return renderLaravelTable(content, maskValue);
+  return renderAccessLogTable(content, format, maskValue);
 }
 
 // ---------- Laravel table sorting ----------

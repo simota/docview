@@ -52,6 +52,21 @@ export default async function globalSetup() {
 
   write('data.json', JSON.stringify({ name: 'docview', keywords: ['markdown', 'yaml'] }, null, 2) + '\n');
 
+  write('secrets.json', JSON.stringify({
+    service: 'docview',
+    apiKey: 'dv_live_ABC1234567890SECRETKEY',
+    nested: { client_secret: 'client-secret-value-1234567890' },
+    digest: '0123456789abcdef0123456789abcdef',
+  }, null, 2) + '\n');
+
+  write('secrets.yaml', 'name: docview\npassword: super-secret-password\ntoken: tok_ABC1234567890SECRET\n');
+
+  write('secrets.env', 'PUBLIC_NAME=docview\nAPI_KEY=dv_live_ABC1234567890SECRETKEY\nAUTHORIZATION=Bearer abcdef1234567890TOKEN\n');
+
+  write('secrets.csv', 'name,api_key,notes\nAlice,dv_live_ABC1234567890SECRETKEY,public note\n');
+
+  write('secrets.md', '# Secret Notes\n\nAPI_KEY=dv_live_ABC1234567890SECRETKEY\n\nAuthorization: Bearer abcdef1234567890TOKEN\n');
+
   // Plain-text .ini for line-jump tests (renderHighlighted path).
   const iniLines: string[] = [];
   for (let i = 1; i <= 80; i++) iniLines.push(`entry${i}=value_${i}`);

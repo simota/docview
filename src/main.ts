@@ -13,6 +13,7 @@ import { ChunkedTable } from './chunked-table';
 import { FindBar } from './find-bar';
 import { HelpModal } from './help-modal';
 import { UrlBar } from './url-bar';
+import { isSecretSafeModeEnabled, maskSecretValue, maskSecrets } from './secret-mask';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import './style.css';
@@ -719,10 +720,13 @@ function interceptRelativeLinks(currentPath: string, target: HTMLElement = viewe
 function renderContent(content: string, path: string, target: HTMLElement = viewer) {
   const pane = getPaneIdForTarget(target) ?? 'left';
   const type = detectFileType(path);
+  const secretSafe = isSecretSafeModeEnabled();
+  const displayContent = secretSafe ? maskSecrets(content) : content;
+  document.documentElement.classList.toggle('secret-safe-mode', secretSafe);
 
   switch (type) {
     case 'markdown':
-      target.innerHTML = renderMarkdown(content);
+      target.innerHTML = renderMarkdown(displayContent);
       renderMermaidDiagrams(target);
       renderExternalDiagrams(target);
       fixRelativeImages(path, target);
@@ -735,7 +739,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
 
     case 'mermaid': {
       const id = `mmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const escapedSource = escapeHtml(content);
+      const escapedSource = escapeHtml(displayContent);
       target.innerHTML = `
         <div class="json-view-toggle">
           <button class="json-toggle-btn active" data-view="tree">Diagram</button>
@@ -751,12 +755,13 @@ function renderContent(content: string, path: string, target: HTMLElement = view
 
     case 'data': {
       if (path.endsWith('.json')) {
-        const treeHtml = renderJsonTree(content);
+        const treeHtml = renderJsonTree(content, secretSafe ? maskSecretValue : undefined);
         if (treeHtml) {
           let prettyJson: string;
           try { prettyJson = JSON.stringify(JSON.parse(content), null, 2); } catch { prettyJson = content; }
           const lang = 'json';
-          const highlighted = hljs.highlight(prettyJson, { language: lang }).value;
+          const sourceJson = secretSafe ? maskSecrets(prettyJson) : prettyJson;
+          const highlighted = hljs.highlight(sourceJson, { language: lang }).value;
           target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
@@ -769,9 +774,9 @@ function renderContent(content: string, path: string, target: HTMLElement = view
           renderHighlighted(content, path, target);
         }
       } else if (path.endsWith('.yaml') || path.endsWith('.yml')) {
-        const treeHtml = renderYamlTree(content);
+        const treeHtml = renderYamlTree(content, secretSafe ? maskSecretValue : undefined);
         if (treeHtml) {
-          const highlighted = hljs.highlight(content, { language: 'yaml' }).value;
+          const highlighted = hljs.highlight(displayContent, { language: 'yaml' }).value;
           target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
@@ -791,9 +796,9 @@ function renderContent(content: string, path: string, target: HTMLElement = view
     }
 
     case 'csv': {
-      const tableHtml = renderCsvTable(content, path);
+      const tableHtml = renderCsvTable(content, path, secretSafe ? maskSecretValue : undefined);
       const ext = path.split('.').pop()?.toUpperCase() || 'CSV';
-      const escaped = escapeHtml(content);
+      const escaped = escapeHtml(displayContent);
       target.innerHTML = `
         <div class="json-view-toggle">
           <button class="json-toggle-btn active" data-view="tree">Table</button>
@@ -807,8 +812,8 @@ function renderContent(content: string, path: string, target: HTMLElement = view
     }
 
     case 'jsonl': {
-      const tableHtml = renderJsonlTable(content, path);
-      const escaped = escapeHtml(content);
+      const tableHtml = renderJsonlTable(content, path, secretSafe ? maskSecretValue : undefined);
+      const escaped = escapeHtml(displayContent);
       target.innerHTML = `
         <div class="json-view-toggle">
           <button class="json-toggle-btn active" data-view="tree">Table</button>
@@ -822,9 +827,9 @@ function renderContent(content: string, path: string, target: HTMLElement = view
     }
 
     case 'log': {
-      const tableHtml = renderLogTable(content, path);
+      const tableHtml = renderLogTable(content, path, secretSafe ? maskSecretValue : undefined);
       if (tableHtml) {
-        const escaped = escapeHtml(content);
+        const escaped = escapeHtml(displayContent);
         target.innerHTML = `
           <div class="json-view-toggle">
             <button class="json-toggle-btn active" data-view="tree">Table</button>
@@ -865,13 +870,14 @@ function renderContent(content: string, path: string, target: HTMLElement = view
 }
 
 function renderHighlighted(content: string, path: string, target: HTMLElement = viewer) {
+  const source = isSecretSafeModeEnabled() ? maskSecrets(content) : content;
   const lang = langFromExt(path);
   const ext = path.split('.').pop()?.toUpperCase() || '';
   let highlighted: string;
   if (hljs.getLanguage(lang)) {
-    highlighted = hljs.highlight(content, { language: lang }).value;
+    highlighted = hljs.highlight(source, { language: lang }).value;
   } else {
-    highlighted = hljs.highlightAuto(content).value;
+    highlighted = hljs.highlightAuto(source).value;
   }
   const lines = highlighted.split('\n');
   const numbered = lines.map((line, i) => {
