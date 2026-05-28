@@ -1651,8 +1651,10 @@ export async function renderMermaidDiagrams(container?: ParentNode): Promise<voi
       const { svg } = await mermaidLib.render(id + '-svg', code);
       const wrapper = el.closest('.mermaid-container');
       if (wrapper) {
-        const cleanSvg = DOMPurify.sanitize(svg, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
-        wrapper.innerHTML = `<div class="mermaid-rendered">${cleanSvg}</div>`;
+        // Mermaid v11 + securityLevel:'strict' は出力 SVG を内部で DOMPurify
+        // 済み。さらに外側で DOMPurify を通すと foreignObject の HTML 子要素や
+        // SVG text のレイアウト属性が剥がれ、ノードラベルが空になる。
+        wrapper.innerHTML = `<div class="mermaid-rendered">${svg}</div>`;
         const rendered = wrapper.querySelector<HTMLElement>('.mermaid-rendered');
         if (rendered) {
           attachDiagramToolbar({
