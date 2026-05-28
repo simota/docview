@@ -289,35 +289,22 @@ function downloadSvg(svg: SVGSVGElement, title: string): void {
 }
 
 async function downloadPng(svg: SVGSVGElement, title: string): Promise<void> {
-  const serialized = serializeSvg(svg);
-  const svgBlob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(svgBlob);
+  // SVG → Image → Canvas 方式は Mermaid の foreignObject (HTML ラベル) を
+  // ブラウザがレンダリングしないため空 PNG になる。modern-screenshot は
+  // foreignObject を含む SVG も正しく PNG 化できる。
   try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = reject;
-      i.src = url;
-    });
+    const { domToBlob } = await import('modern-screenshot');
     const rect = svg.getBoundingClientRect();
     const viewBox = svg.viewBox?.baseVal;
-    const w = viewBox?.width || rect.width || 800;
-    const h = viewBox?.height || rect.height || 600;
-    const SCALE = 2;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.floor(w * SCALE));
-    canvas.height = Math.max(1, Math.floor(h * SCALE));
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.scale(SCALE, SCALE);
-    ctx.drawImage(img, 0, 0, w, h);
-    canvas.toBlob((blob) => {
-      if (blob) triggerDownload(blob, `${slugifyTitle(title)}.png`);
-    }, 'image/png');
-  } catch {
-    // ignore
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const blob = await domToBlob(svg, {
+      scale: 2,
+      width: viewBox?.width || rect.width || 800,
+      height: viewBox?.height || rect.height || 600,
+      backgroundColor: getComputedStyle(document.body).getPropertyValue('background-color') || '#ffffff',
+    });
+    if (blob) triggerDownload(blob, `${slugifyTitle(title)}.png`);
+  } catch (err) {
+    console.error('PNG export failed:', err);
   }
 }
 
