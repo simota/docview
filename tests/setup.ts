@@ -176,6 +176,50 @@ flowchart TD
   ];
   write('laravel.log', laravelLines.join('\n') + '\n');
 
+  // ---- Crontab viewer fixtures ----
+  // .crontab file exercising: comments, env vars, standard 5-field jobs,
+  // an @alias, an @reboot job, and an invalid schedule.
+  const crontabLines = [
+    '# DocView E2E crontab fixture',
+    'SHELL=/bin/bash',
+    'MAILTO=ops@example.com',
+    '',
+    '# daily backup at 03:00',
+    '0 3 * * * /usr/local/bin/backup.sh',
+    '',
+    '# weekday health check every 15 minutes',
+    '*/15 9-17 * * 1-5 /opt/healthcheck.sh',
+    '',
+    '# weekly log rotation',
+    '@weekly /usr/sbin/logrotate /etc/logrotate.conf',
+    '',
+    '# run on system reboot',
+    '@reboot /opt/startup.sh',
+    '',
+    '# invalid schedule (should be flagged)',
+    '99 99 * * * /bin/false',
+  ];
+  write('tasks.crontab', crontabLines.join('\n') + '\n');
+
+  // Extension-less `crontab` file — detected by filename, not extension.
+  write('crontab', 'MAILTO=root\n0 0 1 * * /usr/local/bin/monthly.sh\n');
+
+  // Heatmap density fixture: overlapping schedules so Monday 9h accumulates
+  // 3 jobs (max) while Tue–Fri 9h have 1 — exercises graduated shading levels.
+  // Also has distinct minutes (:00 / :30 / :45) so no same-minute collisions.
+  write('dense.crontab', [
+    '0 9 * * 1-5 /opt/a.sh',
+    '30 9 * * 1 /opt/b.sh',
+    '45 9 * * 1 /opt/c.sh',
+  ].join('\n') + '\n');
+
+  // Collision fixture: three jobs all fire at 12:00 (weekdays → 3-way collision).
+  write('collide.crontab', [
+    '0 12 * * * /opt/daily-noon.sh',
+    '0 12 * * 1-5 /opt/weekday-noon.sh',
+    '*/30 * * * * /opt/every-30min.sh',
+  ].join('\n') + '\n');
+
   // ---- Video support Phase 1 fixtures ----
 
   // videos/ — video-only directory: 2 mp4 files + 1 mkv (excluded from gallery).

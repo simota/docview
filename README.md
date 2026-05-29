@@ -43,6 +43,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **KaTeX math** — inline and block LaTeX math expressions
 - **GitHub Alerts** — `[!NOTE]`, `[!WARNING]`, `[!TIP]`, `[!IMPORTANT]`, `[!CAUTION]` callout blocks
 - **YAML / JSON tree views** — structured, collapsible tree rendering for data files
+- **Crontab preview** — parses crontab files into a table with human-readable schedule descriptions (Japanese / English toggle), a 24-hour timeline visualizing each job's daily run hours, a file-wide day-of-week × hour heatmap, an execution-frequency ranking, same-minute collision warnings, and the next execution times for each job (JST / UTC toggle)
 - **Config file highlighting** — syntax highlighting for TOML, INI, `.env`, `.conf`, and similar formats
 - **Image display** — renders PNG, JPEG, GIF, SVG, WebP, BMP, and ICO files directly in the browser
 - **File tree with auto-reload** — sidebar listing of all files in the served directory; changes are detected and reloaded automatically via file watching
@@ -58,6 +59,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 | Markdown  | `.md` `.markdown` `.mdx` `.txt`              |
 | Data      | `.json` `.yaml` `.yml`                       |
 | Config    | `.toml` `.ini` `.conf` `.env` `.cfg` `.properties` |
+| Crontab   | `.cron` `.crontab` (and files named `crontab`)     |
 | Images    | `.png` `.jpg` `.jpeg` `.gif` `.svg` `.webp` `.bmp` `.ico` |
 
 ## Installation (optional)

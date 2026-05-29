@@ -52,6 +52,8 @@
   },
   "dependencies": {
     "chokidar": "^5.0.0",
+    "cron-parser": "^5.5.0",
+    "cronstrue": "^3.14.0",
     "dompurify": "^3.3.3",
     "highlight.js": "^11.11.1",
     "jschardet": "^3.1.4",

@@ -9,6 +9,7 @@ import { TabBar, addRecent, getRecent } from './tabs';
 import { renderCsvTable, initCsvSort, initCsvColumnCopy } from './csv-viewer';
 import { renderJsonlTable } from './jsonl-viewer';
 import { renderLogTable, initLaravelSort } from './log-viewer';
+import { renderCronTable, initCronToggles } from './cron-viewer';
 import { ChunkedTable } from './chunked-table';
 import { FindBar } from './find-bar';
 import { HelpModal } from './help-modal';
@@ -163,11 +164,20 @@ const CONFIG_EXT = new Set(['.toml', '.ini', '.conf', '.env', '.cfg', '.properti
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXT = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const LOG_EXT = new Set(['.log']);
+const CRON_EXT = new Set(['.cron', '.crontab']);
 
-type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'image' | 'video' | 'unknown';
+type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
+}
+
+// crontab ファイルは拡張子を持たないことが多い (例: crontab, /etc/crontab, cron.d/*)
+function isCrontabFile(path: string): boolean {
+  const base = (path.split('/').pop() || '').toLowerCase();
+  if (base === 'crontab') return true;
+  if (/(^|\/)cron\.d\//.test(path)) return true;
+  return false;
 }
 
 function detectFileType(path: string): FileType {
@@ -179,6 +189,7 @@ function detectFileType(path: string): FileType {
   if (JSONL_EXT.has(ext)) return 'jsonl';
   if (CONFIG_EXT.has(ext)) return 'config';
   if (LOG_EXT.has(ext)) return 'log';
+  if (CRON_EXT.has(ext) || isCrontabFile(path)) return 'cron';
   if (IMAGE_EXT.has(ext)) return 'image';
   if (VIDEO_EXT.has(ext)) return 'video';
   return 'unknown';
@@ -854,6 +865,21 @@ function renderContent(content: string, path: string, target: HTMLElement = view
         // Not a recognized access log format — render as plain text
         renderHighlighted(content, path, target);
       }
+      if (target === viewer) toc.clear();
+      break;
+    }
+
+    case 'cron': {
+      const tableHtml = renderCronTable(content, path, secretSafe ? maskSecretValue : undefined);
+      const escaped = escapeHtml(displayContent);
+      target.innerHTML = `
+        <div class="json-view-toggle">
+          <button class="json-toggle-btn active" data-view="tree">Preview</button>
+          <button class="json-toggle-btn" data-view="source">Source</button>
+        </div>
+        <div class="json-view-tree">${tableHtml}</div>
+        <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">CRONTAB</span><pre class="hljs"><code>${escaped}</code></pre></div></div>`;
+      initToggleButtons(target);
       if (target === viewer) toc.clear();
       break;
     }
@@ -2166,6 +2192,7 @@ async function init() {
     initCsvSort();
     initCsvColumnCopy();
     initLaravelSort();
+    initCronToggles();
 
     // URL hash takes priority, then CLI initial file, then first file in tree
     const parsed = parseHash();

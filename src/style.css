@@ -5936,6 +5936,607 @@ mark.find-current {
   overflow: hidden;
 }
 
+/* --- Crontab viewer --- */
+.cron-view {
+  overflow: hidden;
+}
+
+.cron-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cron-toggles {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.cron-lang-toggle,
+.cron-tz-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+}
+
+.cron-lang-btn,
+.cron-tz-btn {
+  padding: 3px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: background var(--mo-fast), color var(--mo-fast);
+}
+
+.cron-lang-btn:not(:last-child),
+.cron-tz-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.cron-lang-btn:hover,
+.cron-tz-btn:hover {
+  color: var(--text-primary);
+}
+
+.cron-lang-btn.active,
+.cron-tz-btn.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* 説明文の言語切替 (data-lang でどちらか一方のみ表示) */
+.cron-view[data-lang='ja'] .cron-desc-en,
+.cron-view[data-lang='en'] .cron-desc-ja {
+  display: none;
+}
+
+/* 次回実行のタイムゾーン切替 (data-tz でどちらか一方のみ表示) */
+.cron-view[data-tz='jst'] .cron-next-utc,
+.cron-view[data-tz='utc'] .cron-next-jst {
+  display: none;
+}
+
+.cron-tz-label {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.cron-view[data-tz='jst'] .cron-tz-label::after {
+  content: '(JST)';
+}
+
+.cron-view[data-tz='utc'] .cron-tz-label::after {
+  content: '(UTC)';
+}
+
+.cron-env {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--code-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.cron-env-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.cron-env-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.cron-env-list li {
+  padding: 2px 0;
+}
+
+.cron-env-name {
+  color: var(--accent);
+}
+
+.cron-env-eq {
+  color: var(--text-muted);
+  margin: 0 4px;
+}
+
+.cron-env-val {
+  color: var(--text-primary);
+}
+
+.cron-table-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 160px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cron-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.cron-table th {
+  position: sticky;
+  top: 0;
+  background: var(--table-header-bg);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.cron-line-num,
+.cron-line-num-header {
+  min-width: 3em;
+  width: 3em;
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  padding-right: 8px;
+}
+
+.cron-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+
+.cron-table tr:hover td {
+  background: var(--accent-bg);
+}
+
+.cron-sched code,
+.cron-cmd code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.cron-sched code {
+  white-space: pre;
+}
+
+/* コマンドは省略せず折り返して全文表示する */
+.cron-cmd code {
+  display: inline-block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cron-desc {
+  color: var(--text-primary);
+  min-width: 12em;
+}
+
+.cron-next {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cron-next-item {
+  padding: 1px 0;
+}
+
+.cron-next-na,
+.cron-empty,
+.cron-tl-na {
+  color: var(--text-muted);
+}
+
+/* --- 24時間タイムライン --- */
+.cron-tl-cell {
+  width: 180px;
+}
+
+.cron-tl-axis-note {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.cron-tl {
+  width: 168px;
+}
+
+.cron-tl-bar {
+  display: flex;
+  gap: 1px;
+  height: 14px;
+}
+
+.cron-tl-seg {
+  flex: 1;
+  background: var(--border-subtle);
+  border-radius: 1px;
+}
+
+.cron-tl-seg.active {
+  background: var(--accent);
+}
+
+.cron-tl-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 9px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- ファイル全体ヒートマップ (曜日 × 時刻) --- */
+.cron-heatmap {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  overflow-x: auto;
+}
+
+.cron-hm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.cron-hm-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.cron-hm-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.cron-hm-sw {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--accent);
+  margin: 0 1px;
+}
+
+.cron-hm-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cron-hm-row + .cron-hm-row {
+  margin-top: 2px;
+}
+
+.cron-hm-day {
+  width: 1.5em;
+  flex: none;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cron-hm-cells {
+  display: flex;
+  gap: 1px;
+  flex: 1;
+  min-width: 360px;
+}
+
+.cron-hm-cell {
+  flex: 1;
+  height: 13px;
+  background: var(--border-subtle);
+  border-radius: 1px;
+}
+
+.cron-hm-cell.active {
+  background: var(--accent);
+}
+
+/* ジョブ数を 5 段階の濃淡で表現(セル・凡例スウォッチ共通) */
+.cron-hm-l1 {
+  opacity: 0.2;
+}
+
+.cron-hm-l2 {
+  opacity: 0.4;
+}
+
+.cron-hm-l3 {
+  opacity: 0.6;
+}
+
+.cron-hm-l4 {
+  opacity: 0.8;
+}
+
+.cron-hm-l5 {
+  opacity: 1;
+}
+
+.cron-hm-axis {
+  margin-top: 4px;
+}
+
+.cron-hm-ticks {
+  display: flex;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 360px;
+  font-size: 9px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 可視化ブロックの折りたたみ (デフォルト閉) --- */
+.cron-viz {
+  margin-bottom: 12px;
+}
+
+.cron-viz-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  font-size: 12px;
+  color: var(--text-secondary);
+  user-select: none;
+  transition: background var(--mo-fast), color var(--mo-fast);
+}
+
+.cron-viz-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cron-viz-summary:hover {
+  color: var(--text-primary);
+}
+
+.cron-viz-caret {
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform var(--mo-fast);
+}
+
+.cron-viz[open] .cron-viz-caret {
+  transform: rotate(90deg);
+}
+
+.cron-viz-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cron-viz-sub {
+  color: var(--text-muted);
+}
+
+.cron-viz-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.cron-viz-body {
+  padding-top: 12px;
+}
+
+/* --- 同時実行コリジョン警告 --- */
+.cron-collide {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+}
+
+.cron-collide--ok {
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  background: var(--code-bg);
+}
+
+.cron-collide--warn {
+  color: var(--text-primary);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.cron-collide-head {
+  font-weight: 600;
+  color: #d97706;
+  margin-bottom: 6px;
+}
+
+.cron-collide-sub {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.cron-col-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cron-col-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.cron-col-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.cron-col-count {
+  flex: none;
+  font-size: 11px;
+  color: #d97706;
+  white-space: nowrap;
+}
+
+.cron-col-jobs {
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cron-col-more {
+  color: var(--text-muted);
+  font-size: 11px;
+  padding-top: 2px;
+}
+
+/* --- 実行頻度ランキング --- */
+.cron-freq {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+}
+
+.cron-freq-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.cron-freq-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.cron-freq-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.cron-freq-sched {
+  flex: none;
+  width: 14em;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cron-freq-bar-wrap {
+  flex: 1;
+  min-width: 80px;
+  height: 10px;
+  background: var(--border-subtle);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.cron-freq-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 5px;
+}
+
+.cron-freq-val {
+  flex: none;
+  width: 7em;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cron-cmd {
+  max-width: 520px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.cron-table tr.cron-invalid td {
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.cron-table tr.cron-invalid .cron-desc {
+  color: #d97706;
+}
+
 .csv-info {
   font-size: 12px;
   color: var(--text-muted);
