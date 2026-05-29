@@ -369,8 +369,7 @@ function renderFrequency(jr: JobRuns[]): string {
   </div>`;
 }
 
-function renderCollisions(jr: JobRuns[], maskValue?: SecretMasker): string {
-  const cols = findCollisions(jr);
+function renderCollisions(cols: Collision[], jr: JobRuns[], maskValue?: SecretMasker): string {
   if (!cols.length) {
     return `<div class="cron-collide cron-collide--ok">同時刻に重なるジョブはありません（今後 ${FREQ_HORIZON_DAYS} 日間）</div>`;
   }
@@ -454,6 +453,17 @@ export function renderCronTable(content: string, path: string, maskValue?: Secre
       </div>`
     : '';
 
+  // 可視化ブロック(ヒートマップ・コリジョン・頻度)は折りたたみ。デフォルトは閉。
+  const collisions = findCollisions(runs);
+  const vizInner = `${renderHeatmap(jobs)}${renderCollisions(collisions, runs, maskValue)}${renderFrequency(runs)}`;
+  const vizBadge = collisions.length ? `<span class="cron-viz-badge">⚠ ${collisions.length} 件の重複</span>` : '';
+  const vizHtml = jobs.length
+    ? `<details class="cron-viz">
+        <summary class="cron-viz-summary"><span class="cron-viz-caret" aria-hidden="true"></span><span class="cron-viz-title">可視化</span><span class="cron-viz-sub">ヒートマップ・実行頻度・コリジョン</span>${vizBadge}</summary>
+        <div class="cron-viz-body">${vizInner}</div>
+      </details>`
+    : '';
+
   return `<div class="cron-view" data-lang="ja" data-tz="jst">
     <div class="cron-info">
       <span>${jobs.length} ジョブ${envs.length ? ` &middot; ${envs.length} 環境変数` : ''}</span>
@@ -469,9 +479,7 @@ export function renderCronTable(content: string, path: string, maskValue?: Secre
       </span>
     </div>
     ${envHtml}
-    ${renderHeatmap(jobs)}
-    ${renderCollisions(runs, maskValue)}
-    ${renderFrequency(runs)}
+    ${vizHtml}
     ${tableHtml}
   </div>`;
 }

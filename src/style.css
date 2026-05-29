@@ -6318,6 +6318,72 @@ mark.find-current {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- 可視化ブロックの折りたたみ (デフォルト閉) --- */
+.cron-viz {
+  margin-bottom: 12px;
+}
+
+.cron-viz-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  font-size: 12px;
+  color: var(--text-secondary);
+  user-select: none;
+  transition: background var(--mo-fast), color var(--mo-fast);
+}
+
+.cron-viz-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cron-viz-summary:hover {
+  color: var(--text-primary);
+}
+
+.cron-viz-caret {
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform var(--mo-fast);
+}
+
+.cron-viz[open] .cron-viz-caret {
+  transform: rotate(90deg);
+}
+
+.cron-viz-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cron-viz-sub {
+  color: var(--text-muted);
+}
+
+.cron-viz-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.cron-viz-body {
+  padding-top: 12px;
+}
+
 /* --- 同時実行コリジョン警告 --- */
 .cron-collide {
   margin-bottom: 16px;

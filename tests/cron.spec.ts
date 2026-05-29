@@ -104,11 +104,28 @@ test.describe('Crontab viewer', () => {
     await expect(rows.nth(3).locator('.cron-tl-na')).toBeVisible();
   });
 
+  test('keeps the visualization views collapsed by default and expands on toggle', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item[data-type="file"]');
+    await page.locator('.filetree-name', { hasText: /^tasks\.crontab$/ }).click();
+    await page.waitForSelector('#viewer .cron-view');
+
+    // The collapsible exists but its content is hidden by default.
+    await expect(page.locator('#viewer .cron-viz')).toBeVisible();
+    await expect(page.locator('#viewer .cron-heatmap')).toBeHidden();
+
+    // Expanding the summary reveals the visualizations.
+    await page.locator('#viewer .cron-viz > summary').click();
+    await expect(page.locator('#viewer .cron-heatmap')).toBeVisible();
+    await expect(page.locator('#viewer .cron-freq')).toBeVisible();
+  });
+
   test('renders a file-wide day-of-week × hour heatmap', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.filetree-item[data-type="file"]');
     await page.locator('.filetree-name', { hasText: /^tasks\.crontab$/ }).click();
     await page.waitForSelector('#viewer .cron-view');
+    await page.locator('#viewer .cron-viz > summary').click(); // expand the collapsed visualizations
 
     const hm = page.locator('#viewer .cron-heatmap');
     await expect(hm).toBeVisible();
@@ -129,7 +146,8 @@ test.describe('Crontab viewer', () => {
     await page.goto('/');
     await page.waitForSelector('.filetree-item[data-type="file"]');
     await page.locator('.filetree-name', { hasText: /^dense\.crontab$/ }).click();
-    await page.waitForSelector('#viewer .cron-heatmap');
+    await page.waitForSelector('#viewer .cron-view');
+    await page.locator('#viewer .cron-viz > summary').click(); // expand the collapsed visualizations
 
     const hm = page.locator('#viewer .cron-heatmap');
 
@@ -148,6 +166,7 @@ test.describe('Crontab viewer', () => {
     await page.waitForSelector('.filetree-item[data-type="file"]');
     await page.locator('.filetree-name', { hasText: /^dense\.crontab$/ }).click();
     await page.waitForSelector('#viewer .cron-view');
+    await page.locator('#viewer .cron-viz > summary').click(); // expand the collapsed visualizations
 
     const freq = page.locator('#viewer .cron-freq');
     await expect(freq).toBeVisible();
@@ -162,6 +181,7 @@ test.describe('Crontab viewer', () => {
     await page.waitForSelector('.filetree-item[data-type="file"]');
     await page.locator('.filetree-name', { hasText: /^collide\.crontab$/ }).click();
     await page.waitForSelector('#viewer .cron-view');
+    await page.locator('#viewer .cron-viz > summary').click(); // expand the collapsed visualizations
 
     const collide = page.locator('#viewer .cron-collide--warn');
     await expect(collide).toBeVisible();
@@ -174,6 +194,7 @@ test.describe('Crontab viewer', () => {
     await page.waitForSelector('.filetree-item[data-type="file"]');
     await page.locator('.filetree-name', { hasText: /^dense\.crontab$/ }).click();
     await page.waitForSelector('#viewer .cron-view');
+    await page.locator('#viewer .cron-viz > summary').click(); // expand the collapsed visualizations
 
     // dense.crontab fires at :00 / :30 / :45 — no two jobs share a minute.
     await expect(page.locator('#viewer .cron-collide--ok')).toBeVisible();
