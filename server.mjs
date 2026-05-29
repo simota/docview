@@ -274,11 +274,20 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.toml', '.ini', '.conf', '.env', '.cfg', '.properties',
   // Logs
   '.log',
+  // Crontab
+  '.cron', '.crontab',
   // Images
   '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico',
   // Videos (Phase 1 — see docs/design/video-support.md)
   '.mp4', '.m4v', '.webm', '.ogv', '.mov',
 ]);
+
+// crontab ファイルは拡張子を持たないことが多い (例: crontab, /etc/crontab)
+const CRON_FILENAMES = new Set(['crontab']);
+function isSupportedFilename(name) {
+  const lower = name.toLowerCase();
+  return SUPPORTED_EXTENSIONS.has(extname(lower)) || CRON_FILENAMES.has(lower);
+}
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
@@ -671,7 +680,7 @@ async function buildTree(dir, base = dir) {
       if (children.length > 0) {
         items.push({ name: entry.name, path: relPath, type: 'dir', children });
       }
-    } else if (SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+    } else if (isSupportedFilename(entry.name)) {
       let size;
       let mtime;
       try {
@@ -1181,7 +1190,7 @@ const server = createServer(async (req, res) => {
           await searchDir(fullPath);
         } else {
           const ext = extname(entry.name).toLowerCase();
-          if (SUPPORTED_EXTENSIONS.has(ext) && !IMAGE_EXTENSIONS.has(ext)) {
+          if (isSupportedFilename(entry.name) && !IMAGE_EXTENSIONS.has(ext)) {
             try {
               const content = await readFileText(fullPath);
               const lines = content.split('\n');
@@ -1632,7 +1641,7 @@ function tryLocalDiagramCLI(type, source) {
 }
 
 // File watcher
-const mdGlobs = [...SUPPORTED_EXTENSIONS].map((ext) => `**/*${ext}`);
+const mdGlobs = [...SUPPORTED_EXTENSIONS].map((ext) => `**/*${ext}`).concat([...CRON_FILENAMES].map((n) => `**/${n}`));
 const watcher = chokidar.watch(mdGlobs, {
   cwd: targetDir,
   ignoreInitial: true,
