@@ -725,8 +725,19 @@ function renderContent(content: string, path: string, target: HTMLElement = view
   document.documentElement.classList.toggle('secret-safe-mode', secretSafe);
 
   switch (type) {
-    case 'markdown':
-      target.innerHTML = renderMarkdown(displayContent);
+    case 'markdown': {
+      const mdExt = (path.split('.').pop() || 'md').toUpperCase();
+      const mdSource = hljs.getLanguage('markdown')
+        ? hljs.highlight(displayContent, { language: 'markdown' }).value
+        : escapeHtml(displayContent);
+      target.innerHTML = `
+        <div class="json-view-toggle">
+          <button class="json-toggle-btn active" data-view="tree">Preview</button>
+          <button class="json-toggle-btn" data-view="source">Source</button>
+        </div>
+        <div class="json-view-tree markdown-body">${renderMarkdown(displayContent)}</div>
+        <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">${mdExt}</span><pre class="hljs"><code>${mdSource}</code></pre></div></div>`;
+      initToggleButtons(target);
       renderMermaidDiagrams(target);
       renderExternalDiagrams(target);
       fixRelativeImages(path, target);
@@ -736,6 +747,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       }
       interceptRelativeLinks(path, target, pane);
       break;
+    }
 
     case 'mermaid': {
       const id = `mmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

@@ -6971,6 +6971,7 @@ mark.find-current {
 .export-mode .header-anchor,
 .export-mode .backlinks-section,
 .export-mode .diagram-label,
+.export-mode .json-view-toggle,
 .export-mode .viewer-pane-split {
   display: none !important;
 }
