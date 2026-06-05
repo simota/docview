@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { readFile, readdir, stat, realpath } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
-import { join, resolve, relative, extname, basename, dirname } from 'node:path';
+import { join, resolve, relative, extname, basename, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { Readable } from 'node:stream';
@@ -673,7 +673,7 @@ async function buildTree(dir, base = dir) {
     if (entry.isDirectory() && entry.name.startsWith('.')) continue;
 
     const fullPath = join(dir, entry.name);
-    const relPath = relative(base, fullPath);
+    const relPath = relative(base, fullPath).replace(/\\/g, '/');
 
     if (entry.isDirectory()) {
       const children = await buildTree(fullPath, base);
@@ -707,13 +707,13 @@ async function buildTree(dir, base = dir) {
 async function safePath(reqPath) {
   const resolved = resolve(targetDir, reqPath);
   // Check string prefix with trailing separator to prevent /docs-secret bypass
-  const safePrefix = targetDir.endsWith('/') ? targetDir : targetDir + '/';
+  const safePrefix = targetDir.endsWith(sep) ? targetDir : targetDir + sep;
   if (resolved !== targetDir && !resolved.startsWith(safePrefix)) return null;
   try {
     // Resolve symlinks to real path and re-check
     const real = await realpath(resolved);
     const realBase = await realpath(targetDir);
-    const realPrefix = realBase.endsWith('/') ? realBase : realBase + '/';
+    const realPrefix = realBase.endsWith(sep) ? realBase : realBase + sep;
     if (real !== realBase && !real.startsWith(realPrefix)) return null;
     return real;
   } catch {
@@ -1199,7 +1199,7 @@ const server = createServer(async (req, res) => {
                   const start = Math.max(0, i - contextLines);
                   const end = Math.min(lines.length, i + contextLines + 1);
                   results.push({
-                    path: relative(targetDir, fullPath),
+                    path: relative(targetDir, fullPath).replace(/\\/g, '/'),
                     line: i + 1,
                     text: secretSafe ? maskSecrets(lines[i]) : lines[i],
                     contextStartLine: start + 1,
@@ -1303,7 +1303,7 @@ const server = createServer(async (req, res) => {
           const isImage = IMAGE_EXTENSIONS.has(ext);
           const isVideo = VIDEO_EXTENSIONS.has(ext);
           if ((wantImage && isImage) || (wantVideo && isVideo)) {
-            const relPath = relative(targetDir, fullPath);
+            const relPath = relative(targetDir, fullPath).replace(/\\/g, '/');
             try {
               const s = await stat(fullPath);
               items.push({
@@ -1324,7 +1324,7 @@ const server = createServer(async (req, res) => {
     try {
       const items = [];
       const truncated = await collectMedia(resolved, items);
-      const relDir = relative(targetDir, resolved) || '.';
+      const relDir = relative(targetDir, resolved).replace(/\\/g, '/') || '.';
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       if (isGallery) {
         res.end(JSON.stringify({ root: relDir, dir: relDir, total: items.length, truncated, items }));
@@ -1400,7 +1400,7 @@ const server = createServer(async (req, res) => {
         } else {
           const ext = extname(entry.name).toLowerCase();
           if (!MARKDOWN_LIKE.has(ext)) continue;
-          const relPath = relative(targetDir, fullPath);
+          const relPath = relative(targetDir, fullPath).replace(/\\/g, '/');
           if (relPath === targetPath) continue;
           try {
             const content = await readFileText(fullPath);
@@ -1655,9 +1655,9 @@ function broadcast(event, filePath) {
   }
 }
 
-watcher.on('change', (path) => broadcast('change', path));
-watcher.on('add', (path) => broadcast('add', path));
-watcher.on('unlink', (path) => broadcast('unlink', path));
+watcher.on('change', (path) => broadcast('change', path.replace(/\\/g, '/')));
+watcher.on('add', (path) => broadcast('add', path.replace(/\\/g, '/')));
+watcher.on('unlink', (path) => broadcast('unlink', path.replace(/\\/g, '/')));
 watcher.on('error', (err) => {
   // Non-fatal: continue running but inform the user
   process.stderr.write(formatFriendlyError(err));
