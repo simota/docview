@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { createReadStream } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { readFile, readdir, stat, realpath } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { join, resolve, relative, extname, basename, dirname, sep } from 'node:path';
@@ -263,6 +263,95 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
+// --- Directory ignore rules -------------------------------------------------
+// Built-in directory names that are almost always build artifacts, vendored
+// dependencies, caches, or VCS metadata. They are excluded everywhere the tree
+// is walked (file tree, search, backlinks, media scan) and from the watcher so
+// real repos do not flood the UI with generated noise.
+//
+// NOTE: hidden *files* (e.g. `.env`, `.docview.css`) are intentionally NOT
+// excluded — only hidden *directories* are. We therefore do not honor
+// `.gitignore` automatically, because `.env` is commonly git-ignored yet users
+// expect to view it here. Project-specific exclusions go in `.docviewignore`.
+const DEFAULT_IGNORED_DIRS = new Set([
+  'node_modules', '.git', '.hg', '.svn',
+  'dist', 'build', 'out', 'target', 'vendor', 'coverage',
+  '.next', '.nuxt', '.svelte-kit', '.cache', '.turbo',
+  '.docview-cache', '__pycache__', '.pytest_cache', '.mypy_cache',
+]);
+
+/**
+ * Compile one `.docviewignore` line (gitignore-style, no negation) into a
+ * matcher. Patterns containing `/` are anchored to the directory-relative
+ * path; bare names match any entry's basename. `*` matches within a path
+ * segment, `**` matches across segments.
+ */
+function compileIgnorePattern(pattern) {
+  const hasSlash = pattern.includes('/');
+  const body = pattern.replace(/^\/+|\/+$/g, '');
+  const rx = body
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*+/g, (m) => (m.length >= 2 ? '.*' : '[^/]*'));
+  return { hasSlash, re: new RegExp('^' + rx + '$') };
+}
+
+function loadDocviewIgnore(dir) {
+  let raw;
+  try {
+    raw = readFileSync(join(dir, '.docviewignore'), 'utf8');
+  } catch {
+    return [];
+  }
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+}
+
+let docviewIgnoreLines = loadDocviewIgnore(targetDir);
+let docviewIgnorePatterns = docviewIgnoreLines.map(compileIgnorePattern);
+
+// Re-read `.docviewignore` so edits take effect without a server restart.
+// Called at the start of each directory-walking handler (tree/search/etc).
+function refreshDocviewIgnore() {
+  docviewIgnoreLines = loadDocviewIgnore(targetDir);
+  docviewIgnorePatterns = docviewIgnoreLines.map(compileIgnorePattern);
+}
+
+/** Convert `.docviewignore` lines to chokidar-compatible ignore globs. */
+function docviewIgnoreToGlobs(lines) {
+  return lines.flatMap((line) => {
+    const body = line.replace(/^\/+|\/+$/g, '');
+    return [`**/${body}`, `**/${body}/**`];
+  });
+}
+
+/** Test a user `.docviewignore` pattern set against an entry. */
+function matchesIgnorePattern(name, relPath) {
+  const rel = relPath.replace(/\\/g, '/');
+  for (const { hasSlash, re } of docviewIgnorePatterns) {
+    if (hasSlash ? re.test(rel) : re.test(name)) return true;
+  }
+  return false;
+}
+
+/**
+ * Should this directory entry be skipped while walking the tree? Skips the
+ * built-in ignored dirs, all hidden directories, and any `.docviewignore`
+ * match. `relPath` is the directory's path relative to the served root.
+ */
+function shouldSkipDir(name, relPath) {
+  if (DEFAULT_IGNORED_DIRS.has(name)) return true;
+  if (name.startsWith('.')) return true;
+  return matchesIgnorePattern(name, relPath);
+}
+
+/** Should this file entry be skipped? Only `.docviewignore` matches apply —
+ *  hidden files (e.g. `.env`) remain visible. */
+function shouldSkipFile(name, relPath) {
+  return matchesIgnorePattern(name, relPath);
+}
+
 const SUPPORTED_EXTENSIONS = new Set([
   // Markdown
   '.md', '.markdown', '.mdx', '.txt',
@@ -286,7 +375,13 @@ const SUPPORTED_EXTENSIONS = new Set([
 const CRON_FILENAMES = new Set(['crontab']);
 function isSupportedFilename(name) {
   const lower = name.toLowerCase();
-  return SUPPORTED_EXTENSIONS.has(extname(lower)) || CRON_FILENAMES.has(lower);
+  // `extname('.env')` is '' in Node, so bare dotfiles whose whole name matches a
+  // supported extension (e.g. `.env`) are matched against the full name too.
+  return (
+    SUPPORTED_EXTENSIONS.has(extname(lower)) ||
+    SUPPORTED_EXTENSIONS.has(lower) ||
+    CRON_FILENAMES.has(lower)
+  );
 }
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
@@ -668,19 +763,18 @@ async function buildTree(dir, base = dir) {
   const items = [];
 
   for (const entry of entries) {
-    if (entry.name === 'node_modules' || entry.name === '.git') continue;
-    // Skip hidden dirs but allow hidden files with supported extensions (e.g. .env)
-    if (entry.isDirectory() && entry.name.startsWith('.')) continue;
-
     const fullPath = join(dir, entry.name);
     const relPath = relative(base, fullPath).replace(/\\/g, '/');
 
     if (entry.isDirectory()) {
+      // Skip built-in/ignored/hidden dirs but allow hidden files (e.g. .env).
+      if (shouldSkipDir(entry.name, relPath)) continue;
       const children = await buildTree(fullPath, base);
       if (children.length > 0) {
         items.push({ name: entry.name, path: relPath, type: 'dir', children });
       }
     } else if (isSupportedFilename(entry.name)) {
+      if (shouldSkipFile(entry.name, relPath)) continue;
       let size;
       let mtime;
       try {
@@ -885,6 +979,7 @@ const server = createServer(async (req, res) => {
   // API routes
   if (url.pathname === '/api/tree') {
     try {
+      refreshDocviewIgnore();
       const tree = await buildTree(targetDir);
       const rootName = basename(targetDir);
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1150,6 +1245,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    refreshDocviewIgnore();
     const results = [];
     const useRegex = url.searchParams.get('regex') === '1';
     const secretSafe = url.searchParams.get('secretSafe') === '1';
@@ -1182,13 +1278,13 @@ const server = createServer(async (req, res) => {
       const entries = await readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         if (results.length >= 100) return;
-        if (entry.name === 'node_modules' || entry.name === '.git') continue;
-        if (entry.isDirectory() && entry.name.startsWith('.')) continue;
-
         const fullPath = join(dir, entry.name);
+        const relPath = relative(targetDir, fullPath).replace(/\\/g, '/');
         if (entry.isDirectory()) {
+          if (shouldSkipDir(entry.name, relPath)) continue;
           await searchDir(fullPath);
         } else {
+          if (shouldSkipFile(entry.name, relPath)) continue;
           const ext = extname(entry.name).toLowerCase();
           if (isSupportedFilename(entry.name) && !IMAGE_EXTENSIONS.has(ext)) {
             try {
@@ -1233,6 +1329,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ error: 'Missing path parameter' }));
       return;
     }
+    refreshDocviewIgnore();
     const recursive = url.searchParams.get('recursive') === '1';
     const limitParam = url.searchParams.get('limit');
     const limitNum = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10) || 2000), 10000) : 2000;
@@ -1278,8 +1375,6 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '.docview-cache']);
-
     /** Collect media files (image and/or video) recursively or non-recursively. Returns true if the limit was hit. */
     async function collectMedia(dir, items) {
       if (items.length >= limitNum) return true;
@@ -1289,16 +1384,18 @@ const server = createServer(async (req, res) => {
 
       for (const entry of entries) {
         if (items.length >= limitNum) return true;
-        if (entry.name.startsWith('.')) continue;
-        if (EXCLUDED_DIRS.has(entry.name)) continue;
-
         const fullPath = join(dir, entry.name);
+        const mediaRel = relative(targetDir, fullPath).replace(/\\/g, '/');
         if (entry.isDirectory()) {
+          if (shouldSkipDir(entry.name, mediaRel)) continue;
           if (recursive) {
             const truncated = await collectMedia(fullPath, items);
             if (truncated) return true;
           }
         } else {
+          // Galleries never list hidden files (e.g. thumbnails, .DS_Store).
+          if (entry.name.startsWith('.')) continue;
+          if (shouldSkipFile(entry.name, mediaRel)) continue;
           const ext = extname(entry.name).toLowerCase();
           const isImage = IMAGE_EXTENSIONS.has(ext);
           const isVideo = VIDEO_EXTENSIONS.has(ext);
@@ -1370,6 +1467,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    refreshDocviewIgnore();
     const MARKDOWN_LIKE = new Set(['.md', '.markdown', '.mdx', '.txt']);
     const targetName = basename(targetPath).replace(/\.[^.]+$/, '');
     const backlinks = [];
@@ -1392,12 +1490,13 @@ const server = createServer(async (req, res) => {
       const entries = await readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         if (backlinks.length >= 50) return;
-        if (entry.name === 'node_modules' || entry.name === '.git') continue;
-        if (entry.isDirectory() && entry.name.startsWith('.')) continue;
         const fullPath = join(dir, entry.name);
+        const entryRel = relative(targetDir, fullPath).replace(/\\/g, '/');
         if (entry.isDirectory()) {
+          if (shouldSkipDir(entry.name, entryRel)) continue;
           await scanBacklinks(fullPath);
         } else {
+          if (shouldSkipFile(entry.name, entryRel)) continue;
           const ext = extname(entry.name).toLowerCase();
           if (!MARKDOWN_LIKE.has(ext)) continue;
           const relPath = relative(targetDir, fullPath).replace(/\\/g, '/');
@@ -1645,7 +1744,11 @@ const mdGlobs = [...SUPPORTED_EXTENSIONS].map((ext) => `**/*${ext}`).concat([...
 const watcher = chokidar.watch(mdGlobs, {
   cwd: targetDir,
   ignoreInitial: true,
-  ignored: ['**/node_modules/**', '**/.*'],
+  ignored: [
+    '**/.*',
+    ...[...DEFAULT_IGNORED_DIRS].map((d) => `**/${d}/**`),
+    ...docviewIgnoreToGlobs(docviewIgnoreLines),
+  ],
 });
 
 function broadcast(event, filePath) {
@@ -1700,6 +1803,7 @@ const TIPS = [
   'Share a specific line: append "&line=N" (or "&line=10-20") to the URL hash.',
   'Click any line number in code / log views to copy a link to that exact line.',
   'Drop a ".docview.css" in the served directory to inject custom styles.',
+  'Drop a ".docviewignore" (gitignore-style) to hide files; build dirs are skipped automatically.',
   'Large CSV / JSONL / log files stream in chunks — search still hits every row.',
   'Mermaid, KaTeX math, footnotes, and GitHub Alerts all render inline in Markdown.',
   'JSON / YAML files show as an interactive tree — toggle Source to see the raw text.',
