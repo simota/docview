@@ -137,14 +137,15 @@ function parseLogLine(line: string, format: LogFormat): LogEntry | null {
 
 // --- Render helpers with optional highlighting ---
 
-function renderCsvRows(fields: string[], rows: Record<string, unknown>[], query = ''): string {
+function renderCsvRows(fields: string[], rows: Record<string, unknown>[], rowNums: number[], query = ''): string {
   return rows.map((row, i) => {
     const tds = fields.map((f) => `<td>${escWithHighlight(String(row[f] ?? ''), query)}</td>`).join('');
-    return `<tr data-row-index="${i}">${tds}</tr>`;
+    const n = rowNums[i];
+    return `<tr data-row-index="${i}" data-line="${n}"><td class="csv-row-num">${n}</td>${tds}</tr>`;
   }).join('');
 }
 
-function renderJsonlRows(fields: string[], rows: Record<string, unknown>[], query = ''): string {
+function renderJsonlRows(fields: string[], rows: Record<string, unknown>[], rowNums: number[], query = ''): string {
   return rows.map((row, i) => {
     const tds = fields.map((f) => {
       const val = row[f];
@@ -153,7 +154,8 @@ function renderJsonlRows(fields: string[], rows: Record<string, unknown>[], quer
         : String(val);
       return `<td>${escWithHighlight(cell, query)}</td>`;
     }).join('');
-    return `<tr data-row-index="${i}">${tds}</tr>`;
+    const n = rowNums[i];
+    return `<tr data-row-index="${i}" data-line="${n}"><td class="csv-row-num">${n}</td>${tds}</tr>`;
   }).join('');
 }
 
@@ -263,6 +265,12 @@ export class ChunkedTable {
       }
     }
 
+    // For JSONL, a URL `&line=N` target maps 1:1 to the data-row number, so we
+    // can highlight that row after its page loads. (CSV lines are offset by the
+    // header row, so we keep CSV to page-level navigation only.)
+    if (this.meta.kind === 'jsonl' && this.initialLine != null) {
+      this.pendingHighlightRow = this.initialLine;
+    }
     await this.loadPage(this.computeInitialPage());
   }
 
@@ -372,6 +380,10 @@ export class ChunkedTable {
     let theadHtml: string;
     let tbodyHtml: string;
 
+    // Sequential numbering within the result set (match ordinal across pages).
+    const matchOffset = (this.currentPage - 1) * PAGE_SIZE;
+    const matchNumbering = (rows: unknown[]): number[] => rows.map((_, i) => matchOffset + i + 1);
+
     if (kind === 'csv') {
       const fields = this.csvFields ?? [];
       if (fields.length && result.matches.length) {
@@ -379,17 +391,17 @@ export class ChunkedTable {
         const headerLine = result.headerLine || fields.join(',');
         const chunkText = headerLine + '\n' + result.matches.map((m) => m.text).join('\n');
         const parsed = parseCsvChunk(chunkText, true);
-        theadHtml = this.buildThead(fields);
-        tbodyHtml = renderCsvRows(fields, parsed.rows, query);
+        theadHtml = this.buildThead(fields, true);
+        tbodyHtml = renderCsvRows(fields, parsed.rows, matchNumbering(parsed.rows), query);
       } else {
-        theadHtml = this.buildThead(fields);
+        theadHtml = this.buildThead(fields, true);
         tbodyHtml = '';
       }
     } else if (kind === 'jsonl') {
       const chunkText = result.matches.map((m) => m.text).join('\n');
       const parsed = parseJsonlChunk(chunkText);
-      theadHtml = this.buildThead(parsed.fields);
-      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, query);
+      theadHtml = this.buildThead(parsed.fields, true);
+      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, matchNumbering(parsed.rows), query);
     } else {
       // log
       const isCombined = this.logFormat === 'combined';
@@ -446,24 +458,28 @@ export class ChunkedTable {
     let tbodyHtml: string;
     let infoHtml: string;
 
+    // Global (1-based) data-row number of the first row on this page.
+    const pageStartRow = (this.currentPage - 1) * PAGE_SIZE + 1;
+    const numbering = (rows: unknown[]): number[] => rows.map((_, i) => pageStartRow + i);
+
     if (kind === 'csv') {
       const fields = this.csvFields ?? [];
       if (!fields.length) {
         const parsed = parseCsvChunk(chunkText, true);
         this.csvFields = parsed.fields;
-        theadHtml = this.buildThead(parsed.fields);
-        tbodyHtml = renderCsvRows(parsed.fields, parsed.rows);
+        theadHtml = this.buildThead(parsed.fields, true);
+        tbodyHtml = renderCsvRows(parsed.fields, parsed.rows, numbering(parsed.rows));
       } else {
         const parsed = parseCsvChunk(fields.join(',') + '\n' + chunkText, true);
-        theadHtml = this.buildThead(fields);
-        tbodyHtml = renderCsvRows(fields, parsed.rows);
+        theadHtml = this.buildThead(fields, true);
+        tbodyHtml = renderCsvRows(fields, parsed.rows, numbering(parsed.rows));
       }
       const ext = this.meta.path.split('.').pop()?.toUpperCase() || 'CSV';
       infoHtml = `${(this.meta.totalLines - 1).toLocaleString()} rows &mdash; ${ext} (chunked)`;
     } else if (kind === 'jsonl') {
       const parsed = parseJsonlChunk(chunkText);
-      theadHtml = this.buildThead(parsed.fields);
-      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows);
+      theadHtml = this.buildThead(parsed.fields, true);
+      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, numbering(parsed.rows));
       infoHtml = `${this.meta.totalLines.toLocaleString()} lines &mdash; JSONL (chunked)`;
     } else {
       const isCombined = this.logFormat === 'combined';
@@ -491,10 +507,21 @@ export class ChunkedTable {
 
     const pagination = renderPagination(this.currentPage, this.totalPages);
     const searchBar = renderSearchBar(this.searchQuery, null);
+    const maxRow = kind === 'csv' ? Math.max(1, this.meta.totalLines - 1) : this.meta.totalLines;
+    const rowJumpBar =
+      kind === 'csv' || kind === 'jsonl'
+        ? `<div class="chunk-row-jump">
+            <label class="csv-row-jump-label">行へ移動
+              <input class="chunk-row-jump-input" type="number" min="1" max="${maxRow}" inputmode="numeric" placeholder="#" aria-label="移動する行番号">
+            </label>
+            <button class="chunk-row-jump-btn" type="button">移動</button>
+          </div>`
+        : '';
 
     this.container.innerHTML = `<div class="csv-view${kind === 'log' ? ' log-view' : ''}">
       <div class="csv-info">${infoHtml} &bull; ${sizeLabel} &bull; ${rangeInfo}</div>
       ${searchBar}
+      ${rowJumpBar}
       ${pagination}
       <div class="csv-table-wrap">
         <table class="csv-table">
@@ -506,10 +533,42 @@ export class ChunkedTable {
     </div>`;
 
     this.bindEvents();
+    this.applyRowHighlight();
   }
 
-  private buildThead(cols: string[]): string {
-    return cols.map((f) => `<th>${esc(f)}</th>`).join('');
+  private buildThead(cols: string[], withRowNum = false): string {
+    const rowNumTh = withRowNum ? `<th class="csv-row-num-header" aria-label="Row number">#</th>` : '';
+    return rowNumTh + cols.map((f) => `<th>${esc(f)}</th>`).join('');
+  }
+
+  /** Highlight + scroll to the row with this `data-line` once it is on the
+   *  current page. Set before a page load (row jump / URL `&line=N`). */
+  private pendingHighlightRow: number | null = null;
+
+  private applyRowHighlight(): void {
+    if (this.pendingHighlightRow == null) return;
+    const n = this.pendingHighlightRow;
+    this.pendingHighlightRow = null;
+    const row = this.container.querySelector<HTMLElement>(`tr[data-line="${n}"]`);
+    if (!row) return;
+    this.container.querySelectorAll('.line-highlighted').forEach((el) => el.classList.remove('line-highlighted'));
+    row.classList.add('line-highlighted');
+    requestAnimationFrame(() => row.scrollIntoView({ block: 'center', behavior: 'auto' }));
+  }
+
+  /** Jump to a global (1-based) data-row number: open its page, then highlight. */
+  private async jumpToRow(input: HTMLInputElement): Promise<void> {
+    const n = parseInt(input.value, 10);
+    if (!Number.isFinite(n)) return;
+    const maxRow = this.meta.kind === 'csv' ? Math.max(1, this.meta.totalLines - 1) : this.meta.totalLines;
+    const target = Math.max(1, Math.min(n, maxRow));
+    const page = Math.max(1, Math.min(this.totalPages, Math.ceil(target / PAGE_SIZE)));
+    this.pendingHighlightRow = target;
+    if (page !== this.currentPage) {
+      await this.loadPage(page);
+    } else {
+      this.applyRowHighlight();
+    }
   }
 
   private bindEvents(): void {
@@ -538,6 +597,20 @@ export class ChunkedTable {
       });
       input.addEventListener('change', onSubmit);
     });
+
+    // Row-jump input ("行へ移動")
+    this.container.querySelectorAll<HTMLInputElement>('.chunk-row-jump-input').forEach((input) => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); void this.jumpToRow(input); }
+      });
+    });
+    const rowJumpBtn = this.container.querySelector<HTMLButtonElement>('.chunk-row-jump-btn');
+    if (rowJumpBtn) {
+      rowJumpBtn.addEventListener('click', () => {
+        const input = this.container.querySelector<HTMLInputElement>('.chunk-row-jump-input');
+        if (input) void this.jumpToRow(input);
+      });
+    }
 
     // Search input with debounce
     const searchInput = this.container.querySelector<HTMLInputElement>('.chunk-search-input');

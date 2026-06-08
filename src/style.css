@@ -6644,7 +6644,8 @@ mark.find-current {
   gap: 6px;
 }
 
-.csv-row-jump {
+.csv-row-jump,
+.chunk-row-jump {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -6656,7 +6657,8 @@ mark.find-current {
   gap: 4px;
 }
 
-.csv-row-jump-input {
+.csv-row-jump-input,
+.chunk-row-jump-input {
   width: 5em;
   font-size: 11px;
   padding: 2px 6px;
@@ -6667,7 +6669,8 @@ mark.find-current {
   font-variant-numeric: tabular-nums;
 }
 
-.csv-row-jump-btn {
+.csv-row-jump-btn,
+.chunk-row-jump-btn {
   font-size: 11px;
   padding: 3px 10px;
   border: 1px solid var(--border);
@@ -6678,7 +6681,8 @@ mark.find-current {
   transition: background var(--mo-fast), color var(--mo-fast);
 }
 
-.csv-row-jump-btn:hover {
+.csv-row-jump-btn:hover,
+.chunk-row-jump-btn:hover {
   background: var(--accent-bg);
   color: var(--text-primary);
 }
