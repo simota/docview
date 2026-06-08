@@ -145,6 +145,28 @@ Place a `.docview.css` file in the directory you are viewing (or any parent dire
 }
 ```
 
+## Excluding files
+
+DocView always skips common build, dependency, and cache directories
+(`node_modules`, `dist`, `build`, `out`, `target`, `vendor`, `coverage`,
+`.next`, `.nuxt`, `.svelte-kit`, `.cache`, `__pycache__`, …) and hidden
+directories from the file tree, search, backlinks, and live reload — so it stays
+usable on a real repository. Hidden *files* such as `.env` remain visible.
+
+To exclude more, drop a `.docviewignore` file (gitignore-style) in the directory
+you are viewing. Changes take effect on the next request — no restart needed.
+
+```gitignore
+# .docviewignore
+generated          # any dir/file named "generated"
+docs/legacy        # a specific path, relative to the served root
+*.min.js           # glob within a path segment
+fixtures/**        # everything under fixtures/
+```
+
+`.gitignore` is intentionally **not** honored automatically, because files like
+`.env` are commonly git-ignored yet you usually want to view them here.
+
 ## Tech Stack
 
 - **[Vite](https://vitejs.dev/)** — build tooling and dev server

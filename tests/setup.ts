@@ -106,6 +106,21 @@ flowchart TD
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
 
+  // ---- Ignore-aware scoping fixtures ----
+  // Built-in ignored build/dependency dirs — their contents must NEVER appear
+  // in the tree or search results, even though the files have supported exts.
+  for (const d of ['dist', 'vendor', 'coverage', 'node_modules']) {
+    mkdirSync(join(DIR, d), { recursive: true });
+    writeFileSync(join(DIR, d, 'artifact.md'), `# ${d}\n\nIGNOREDBUILDARTIFACT token in ${d}.\n`);
+  }
+  // Hidden dotfile that MUST stay visible (.env is in SUPPORTED_EXTENSIONS).
+  write('.env', 'PUBLIC_NAME=docview\nVISIBLE_DOTENV_TOKEN=shown\n');
+  // .docviewignore (gitignore-style) — user-defined exclusions.
+  write('.docviewignore', '# DocView ignore fixture\ncustom-ignored\nignore-me.md\n');
+  mkdirSync(join(DIR, 'custom-ignored'), { recursive: true });
+  writeFileSync(join(DIR, 'custom-ignored', 'note.md'), '# custom\n\nCUSTOMIGNORED token.\n');
+  write('ignore-me.md', '# ignore me\n\nIGNOREMEFILE token.\n');
+
   // ---- Album view fixtures ----
   // images/ — 3 direct images for grid rendering tests.
   mkdirSync('/tmp/md-test-docs/images', { recursive: true });
