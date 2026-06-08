@@ -5267,6 +5267,35 @@ body.dragging::after {
   line-height: 1.6;
 }
 
+/* ===== HTML view (sandboxed iframe preview) ===== */
+.html-preview-frame {
+  width: 100%;
+  height: calc(100vh - 160px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.html-scripts-toggle {
+  margin-left: auto;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-interactive);
+}
+
+.html-scripts-toggle--on {
+  background: var(--color-warning, #b8860b);
+  color: #fff;
+  border-color: var(--color-warning, #b8860b);
+}
+
 .jt-group {
   margin: 0;
 }

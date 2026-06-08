@@ -44,6 +44,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **GitHub Alerts** — `[!NOTE]`, `[!WARNING]`, `[!TIP]`, `[!IMPORTANT]`, `[!CAUTION]` callout blocks
 - **YAML / JSON tree views** — structured, collapsible tree rendering for data files
 - **CSV / JSONL tables** — sortable tables with a row-number column; jump to any row via the "行へ移動" toolbar input or a `&line=N` deep link
+- **HTML view** — renders `.html` / `.htm` files in a sandboxed iframe (Preview / Source toggle). Scripts are disabled by default and can be enabled per-file via the toolbar toggle
 - **Crontab preview** — parses crontab files into a table with human-readable schedule descriptions (Japanese / English toggle), a 24-hour timeline visualizing each job's daily run hours, a file-wide day-of-week × hour heatmap, an execution-frequency ranking, same-minute collision warnings, and the next execution times for each job (JST / UTC toggle)
 - **Config file highlighting** — syntax highlighting for TOML, INI, `.env`, `.conf`, and similar formats
 - **Image display** — renders PNG, JPEG, GIF, SVG, WebP, BMP, and ICO files directly in the browser

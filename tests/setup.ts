@@ -122,6 +122,19 @@ flowchart TD
   }
   write('events.jsonl', bigJsonl.join('\n') + '\n');
 
+  // HTML fixture for the sandboxed-iframe HTML view. The inline <script>
+  // appends #js-ran so tests can assert it does NOT run while sandboxed (default)
+  // and DOES run after the scripts toggle is enabled.
+  write('page.html', [
+    '<!doctype html>',
+    '<html lang="en"><head><meta charset="utf-8"><style>.box{color:#c00}</style></head>',
+    '<body>',
+    '<h1 id="hello">Hello HTML</h1>',
+    '<p class="box">Sandboxed preview content.</p>',
+    '<script>var d=document.createElement("div");d.id="js-ran";d.textContent="js executed";document.body.appendChild(d);</script>',
+    '</body></html>',
+  ].join('\n'));
+
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
