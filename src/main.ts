@@ -1959,15 +1959,25 @@ function showReconnectBanner() {
   setTimeout(() => banner.remove(), 4000);
 }
 
+let serverRootPath: string | null = null;
+
 async function detectServerMode(): Promise<{ server: boolean; initialFile: string | null }> {
   try {
     const res = await fetch('/api/info');
     if (res.ok) {
       const data = await res.json();
+      serverRootPath = data.rootPath || null;
       return { server: true, initialFile: data.initialFile || null };
     }
   } catch { /* not server mode */ }
   return { server: false, initialFile: null };
+}
+
+/** Open a file in the split (right) pane, enabling split view if needed. */
+function openInSplit(path: string) {
+  if (!splitActive) toggleSplitView();
+  setActivePane('right');
+  void loadIntoSplit(path);
 }
 
 // --- Custom CSS (#13) ---
@@ -2216,6 +2226,11 @@ async function init() {
       },
       (albumPath) => {
         void loadAlbumView(albumPath, false);
+      },
+      {
+        notify: (msg) => showCopyToast(msg),
+        openInSplit,
+        absPath: (rel) => (serverRootPath ? `${serverRootPath.replace(/\/$/, '')}/${rel}` : null),
       },
     );
     await fileTree.load();

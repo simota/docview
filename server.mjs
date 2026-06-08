@@ -1192,6 +1192,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({
       root: basename(targetDir),
+      rootPath: targetDir,
       initialFile,
       remote: {
         enabled: remoteEnabled,
@@ -1807,6 +1808,7 @@ const TIPS = [
   'Drop a ".docview.css" in the served directory to inject custom styles.',
   'Drop a ".docviewignore" (gitignore-style) to hide files; build dirs are skipped automatically.',
   'HTML files render in a sandboxed iframe — toggle "スクリプト" to allow their JS.',
+  'Right-click a file in the tree to copy its path / name / absolute path or open it in split view.',
   'Large CSV / JSONL / log files stream in chunks — search still hits every row.',
   'Mermaid, KaTeX math, footnotes, and GitHub Alerts all render inline in Markdown.',
   'JSON / YAML files show as an interactive tree — toggle Source to see the raw text.',

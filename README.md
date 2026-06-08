@@ -48,7 +48,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **Crontab preview** — parses crontab files into a table with human-readable schedule descriptions (Japanese / English toggle), a 24-hour timeline visualizing each job's daily run hours, a file-wide day-of-week × hour heatmap, an execution-frequency ranking, same-minute collision warnings, and the next execution times for each job (JST / UTC toggle)
 - **Config file highlighting** — syntax highlighting for TOML, INI, `.env`, `.conf`, and similar formats
 - **Image display** — renders PNG, JPEG, GIF, SVG, WebP, BMP, and ICO files directly in the browser
-- **File tree with auto-reload** — sidebar listing of all files in the served directory; changes are detected and reloaded automatically via file watching
+- **File tree with auto-reload** — sidebar listing of all files in the served directory; changes are detected and reloaded automatically via file watching. Right-click an item for a context menu (copy path / file name / absolute path, open in split view)
 - **Dark / light theme** — toggle between themes; preference is persisted
 - **Table of contents** — auto-generated TOC sidebar from heading structure
 - **Search** — full-text search across all files in the directory
