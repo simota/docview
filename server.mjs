@@ -355,6 +355,8 @@ function shouldSkipFile(name, relPath) {
 const SUPPORTED_EXTENSIONS = new Set([
   // Markdown
   '.md', '.markdown', '.mdx', '.txt',
+  // HTML (rendered in a sandboxed iframe by the frontend)
+  '.html', '.htm',
   // Diagrams
   '.mmd', '.mermaid',
   // Data
@@ -1804,6 +1806,7 @@ const TIPS = [
   'Click any line number in code / log views to copy a link to that exact line.',
   'Drop a ".docview.css" in the served directory to inject custom styles.',
   'Drop a ".docviewignore" (gitignore-style) to hide files; build dirs are skipped automatically.',
+  'HTML files render in a sandboxed iframe — toggle "スクリプト" to allow their JS.',
   'Large CSV / JSONL / log files stream in chunks — search still hits every row.',
   'Mermaid, KaTeX math, footnotes, and GitHub Alerts all render inline in Markdown.',
   'JSON / YAML files show as an interactive tree — toggle Source to see the raw text.',

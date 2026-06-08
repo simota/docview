@@ -8,6 +8,7 @@ import { renderYamlTree } from './yaml-tree';
 import { TabBar, addRecent, getRecent } from './tabs';
 import { renderCsvTable, initCsvSort, initCsvColumnCopy } from './csv-viewer';
 import { renderJsonlTable } from './jsonl-viewer';
+import { renderHtmlView, initHtmlScriptsToggle } from './html-viewer';
 import { renderLogTable, initLaravelSort } from './log-viewer';
 import { renderCronTable, initCronToggles } from './cron-viewer';
 import { ChunkedTable } from './chunked-table';
@@ -165,8 +166,9 @@ const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.b
 const VIDEO_EXT = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const LOG_EXT = new Set(['.log']);
 const CRON_EXT = new Set(['.cron', '.crontab']);
+const HTML_EXT = new Set(['.html', '.htm']);
 
-type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'unknown';
+type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'html' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
@@ -192,6 +194,7 @@ function detectFileType(path: string): FileType {
   if (CRON_EXT.has(ext) || isCrontabFile(path)) return 'cron';
   if (IMAGE_EXT.has(ext)) return 'image';
   if (VIDEO_EXT.has(ext)) return 'video';
+  if (HTML_EXT.has(ext)) return 'html';
   return 'unknown';
 }
 
@@ -915,6 +918,17 @@ function renderContent(content: string, path: string, target: HTMLElement = view
         </div>
         <div class="json-view-tree">${tableHtml}</div>
         <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">CRONTAB</span><pre class="hljs"><code>${escaped}</code></pre></div></div>`;
+      initToggleButtons(target);
+      if (target === viewer) toc.clear();
+      break;
+    }
+
+    case 'html': {
+      const htmlExt = (path.split('.').pop() || 'html').toUpperCase();
+      const htmlSource = hljs.getLanguage('xml')
+        ? hljs.highlight(displayContent, { language: 'xml' }).value
+        : escapeHtml(displayContent);
+      target.innerHTML = renderHtmlView(displayContent, htmlExt, htmlSource);
       initToggleButtons(target);
       if (target === viewer) toc.clear();
       break;
@@ -2228,6 +2242,7 @@ async function init() {
     initCsvSort();
     initCsvColumnCopy();
     initTableRowJump();
+    initHtmlScriptsToggle();
     initLaravelSort();
     initCronToggles();
 
