@@ -54,6 +54,16 @@ interface TreeResponse {
 type FileSelectCallback = (path: string) => void;
 type AlbumCallback = (path: string) => void;
 
+/** App-level hooks for the right-click context menu. All optional. */
+export interface FileTreeActions {
+  /** Show a transient confirmation message (e.g. a toast). */
+  notify?: (msg: string) => void;
+  /** Open a file in the split (right) pane. */
+  openInSplit?: (path: string) => void;
+  /** Resolve a tree-relative path to an absolute filesystem path, or null. */
+  absPath?: (relPath: string) => string | null;
+}
+
 // --- File type icons (#1, SVG) ---
 const SVG_MARKDOWN = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="9" rx="1"/><line x1="3" y1="12.5" x2="11" y2="12.5"/><line x1="3.5" y1="5" x2="7" y2="5"/><line x1="3.5" y1="7" x2="10.5" y2="7"/></svg>`;
 const SVG_JSON = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2C3 2 2 3 2 4v1.5c0 .8-.6 1.5-1.5 1.5C1.4 7 2 7.7 2 8.5V10c0 1 1 2 2 2"/><path d="M10 2c1 0 2 1 2 2v1.5c0 .8.6 1.5 1.5 1.5-.9 0-1.5.7-1.5 1.5V10c0 1-1 2-2 2"/></svg>`;
@@ -156,15 +166,23 @@ export class FileTree {
   private treeList: HTMLElement;
   private onSelect: FileSelectCallback;
   private onAlbum: AlbumCallback | null;
+  private actions: FileTreeActions;
   private activePath: string | null = null;
   private openDirs = new Set<string>();
   private treeData: FileNode[] = [];
   private filterQuery = '';
+  private contextMenuEl: HTMLElement | null = null;
 
-  constructor(container: HTMLElement, onSelect: FileSelectCallback, onAlbum: AlbumCallback | null = null) {
+  constructor(
+    container: HTMLElement,
+    onSelect: FileSelectCallback,
+    onAlbum: AlbumCallback | null = null,
+    actions: FileTreeActions = {},
+  ) {
     this.container = container;
     this.onSelect = onSelect;
     this.onAlbum = onAlbum;
+    this.actions = actions;
 
     this.rootLabel = document.createElement('div');
     this.rootLabel.className = 'filetree-root';
@@ -187,6 +205,80 @@ export class FileTree {
     this.container.appendChild(this.rootLabel);
     this.container.appendChild(this.filterInput);
     this.container.appendChild(this.treeList);
+
+    // Right-click context menu (delegated — survives tree re-renders).
+    this.treeList.addEventListener('contextmenu', (e) => {
+      const item = (e.target as HTMLElement).closest('.filetree-item') as HTMLElement | null;
+      if (!item || !item.dataset.path) return;
+      e.preventDefault();
+      this.showContextMenu(e.clientX, e.clientY, item.dataset.path, item.dataset.type === 'dir' ? 'dir' : 'file');
+    });
+    document.addEventListener('click', () => this.hideContextMenu());
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.hideContextMenu(); });
+    window.addEventListener('scroll', () => this.hideContextMenu(), true);
+  }
+
+  private hideContextMenu(): void {
+    this.contextMenuEl?.remove();
+    this.contextMenuEl = null;
+  }
+
+  private async copyText(text: string, msg: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      this.actions.notify?.(msg);
+    } catch {
+      this.actions.notify?.(`コピー: ${text}`);
+    }
+  }
+
+  private showContextMenu(x: number, y: number, path: string, type: 'file' | 'dir'): void {
+    this.hideContextMenu();
+    const name = path.split('/').pop() || path;
+
+    const entries: { label: string; run: () => void }[] = [
+      { label: 'パスをコピー', run: () => this.copyText(path, 'パスをコピーしました') },
+      { label: type === 'dir' ? 'フォルダ名をコピー' : 'ファイル名をコピー', run: () => this.copyText(name, '名前をコピーしました') },
+      {
+        label: '絶対パスをコピー',
+        run: () => {
+          const abs = this.actions.absPath?.(path) ?? path;
+          this.copyText(abs, '絶対パスをコピーしました');
+        },
+      },
+    ];
+    if (type === 'file' && this.actions.openInSplit) {
+      entries.push({ label: '分割ビューで開く', run: () => this.actions.openInSplit!(path) });
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'filetree-context-menu';
+    menu.setAttribute('role', 'menu');
+    for (const entry of entries) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'filetree-context-item';
+      btn.setAttribute('role', 'menuitem');
+      btn.textContent = entry.label;
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        entry.run();
+        this.hideContextMenu();
+      });
+      menu.appendChild(btn);
+    }
+
+    document.body.appendChild(menu);
+    // Clamp to the viewport so the menu is never clipped off-screen.
+    // Coerce non-finite coordinates (defensive) to 0 so positioning never breaks.
+    const cx = Number.isFinite(x) ? x : 0;
+    const cy = Number.isFinite(y) ? y : 0;
+    const rect = menu.getBoundingClientRect();
+    const px = Math.max(4, Math.min(cx, window.innerWidth - rect.width - 4));
+    const py = Math.max(4, Math.min(cy, window.innerHeight - rect.height - 4));
+    menu.style.left = `${px}px`;
+    menu.style.top = `${py}px`;
+    this.contextMenuEl = menu;
   }
 
   private filterTree(nodes: FileNode[], query: string): FileNode[] {
