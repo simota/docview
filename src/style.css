@@ -6644,6 +6644,45 @@ mark.find-current {
   gap: 6px;
 }
 
+.csv-row-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-row-jump-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.csv-row-jump-input {
+  width: 5em;
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.csv-row-jump-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-secondary, #f6f8fa);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--mo-fast), color var(--mo-fast);
+}
+
+.csv-row-jump-btn:hover {
+  background: var(--accent-bg);
+  color: var(--text-primary);
+}
+
 .csv-col-toggle-all,
 .csv-copy-cols {
   font-size: 11px;

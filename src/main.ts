@@ -617,6 +617,42 @@ function showCopyToast(message: string) {
   }, 1600);
 }
 
+// --- Table row jump (CSV/JSONL "行へ移動" toolbar input) ---
+// Reuses the line-jump machinery: table rows carry `data-line="<rowNumber>"`,
+// so scrollToLine highlights + centers the requested row.
+function jumpToTableRow(input: HTMLInputElement) {
+  const n = parseInt(input.value, 10);
+  if (!Number.isFinite(n)) return;
+  const maxRow = parseInt(input.max || '', 10);
+  const clamped = Math.max(1, Number.isFinite(maxRow) ? Math.min(n, maxRow) : n);
+  let target: HTMLElement = viewer;
+  let pane: PaneId = 'left';
+  if (splitViewer && splitViewer.contains(input)) {
+    target = splitViewer;
+    pane = 'right';
+  }
+  if (!scrollToLine(clamped, null, target, pane)) {
+    showCopyToast(`行 ${clamped} が見つかりません`);
+  }
+}
+
+function initTableRowJump() {
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.csv-row-jump-btn');
+    if (!btn) return;
+    const input = btn
+      .closest('.csv-row-jump')
+      ?.querySelector('.csv-row-jump-input') as HTMLInputElement | null;
+    if (input) jumpToTableRow(input);
+  });
+  document.addEventListener('keydown', (e) => {
+    const t = e.target as HTMLElement;
+    if (!t.classList.contains('csv-row-jump-input') || e.key !== 'Enter') return;
+    e.preventDefault();
+    jumpToTableRow(t as HTMLInputElement);
+  });
+}
+
 async function copyLinkToLine(pane: PaneId, line: number, lineEnd: number | null) {
   const path = getPanePath(pane);
   if (!path) return;
@@ -2191,6 +2227,7 @@ async function init() {
     initSidebarResize(sidebar);
     initCsvSort();
     initCsvColumnCopy();
+    initTableRowJump();
     initLaravelSort();
     initCronToggles();
 

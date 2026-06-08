@@ -102,6 +102,19 @@ flowchart TD
   // Standalone Mermaid source file — should render the diagram directly.
   write('flow.mmd', 'flowchart LR\n  A[Start] --> B{Decision}\n  B -->|Yes| C[OK]\n  B -->|No| D[NG]\n');
 
+  // JSONL fixture for table row-number + jump tests. 10 valid objects with one
+  // invalid line in the middle (verifies invalid lines are skipped and row
+  // numbers count only valid rows).
+  const jsonlLines: string[] = [];
+  for (let i = 1; i <= 5; i++) {
+    jsonlLines.push(JSON.stringify({ id: i, name: `event-${i}`, status: i % 2 ? 'ok' : 'warn' }));
+  }
+  jsonlLines.push('this is not valid json — should be skipped');
+  for (let i = 6; i <= 10; i++) {
+    jsonlLines.push(JSON.stringify({ id: i, name: `event-${i}`, status: i % 2 ? 'ok' : 'warn' }));
+  }
+  write('events.jsonl', jsonlLines.join('\n') + '\n');
+
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
