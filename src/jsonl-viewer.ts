@@ -41,12 +41,16 @@ export function renderJsonlTable(content: string, path: string, maskValue?: Secr
       ? `<div class="csv-info csv-info--warn">Skipped ${parseErrors.length} invalid line(s): ${parseErrors.slice(0, 10).join(', ')}${parseErrors.length > 10 ? '…' : ''}</div>`
       : '';
 
-  const ths = fields
-    .map(
-      (f) =>
-        `<th data-col="${esc(f)}" role="columnheader" aria-sort="none">${esc(f)}<span class="sort-indicator" aria-hidden="true"></span></th>`,
-    )
-    .join('');
+  // Row-number header (not sortable — has no aria-sort, so initCsvSort skips it).
+  const rowNumTh = `<th class="csv-row-num-header" aria-label="Row number">#</th>`;
+  const ths =
+    rowNumTh +
+    fields
+      .map(
+        (f) =>
+          `<th data-col="${esc(f)}" role="columnheader" aria-sort="none">${esc(f)}<span class="sort-indicator" aria-hidden="true"></span></th>`,
+      )
+      .join('');
 
   const trs = rows
     .map((row, i) => {
@@ -62,12 +66,22 @@ export function renderJsonlTable(content: string, path: string, maskValue?: Secr
           return `<td>${cell}</td>`;
         })
         .join('');
-      return `<tr data-row-index="${i}">${tds}</tr>`;
+      // `data-line` (1-based table row number) lets the shared line-jump
+      // machinery (URL `&line=N` + the row-jump input) target this row.
+      return `<tr data-row-index="${i}" data-line="${i + 1}"><td class="csv-row-num">${i + 1}</td>${tds}</tr>`;
     })
     .join('');
 
   return `<div class="csv-view">
-    <div class="csv-info">${rows.length} rows &times; ${fields.length} columns</div>
+    <div class="csv-info">
+      <span>${rows.length} rows &times; ${fields.length} columns</span>
+      <span class="csv-row-jump">
+        <label class="csv-row-jump-label">行へ移動
+          <input class="csv-row-jump-input" type="number" min="1" max="${rows.length}" inputmode="numeric" placeholder="#" aria-label="移動する行番号">
+        </label>
+        <button class="csv-row-jump-btn" type="button">移動</button>
+      </span>
+    </div>
     ${errorBanner}
     <div class="csv-table-wrap">
       <table class="csv-table csv-sortable">
