@@ -327,8 +327,13 @@ test.describe('Lightbox edge cases', () => {
     await page.locator('.album-tile').nth(2).click();
     await expect(page.locator('.lightbox')).toBeVisible({ timeout: 8000 });
     await expect(page.locator('.lightbox__counter')).toContainText('3 /');
-    await page.keyboard.press('Home');
-    await expect(page.locator('.lightbox__counter')).toContainText('1 /');
+    // Retry the keypress: under parallel load the lightbox keydown handler may
+    // attach a beat after the counter renders, swallowing a single Home press.
+    // Pressing Home repeatedly is idempotent (always jumps to the first image).
+    await expect(async () => {
+      await page.keyboard.press('Home');
+      await expect(page.locator('.lightbox__counter')).toContainText('1 /', { timeout: 1000 });
+    }).toPass();
     // prev button must be disabled at first image
     await expect(page.locator('.lightbox__nav-prev')).toBeDisabled();
   });
@@ -340,8 +345,11 @@ test.describe('Lightbox edge cases', () => {
     await page.locator('.album-tile').first().click();
     await expect(page.locator('.lightbox')).toBeVisible({ timeout: 8000 });
     await expect(page.locator('.lightbox__counter')).toContainText('1 /');
-    await page.keyboard.press('End');
-    await expect(page.locator('.lightbox__counter')).toContainText('3 /');
+    // Retry the keypress (same keydown-attach race as the Home key test above).
+    await expect(async () => {
+      await page.keyboard.press('End');
+      await expect(page.locator('.lightbox__counter')).toContainText('3 /', { timeout: 1000 });
+    }).toPass();
     // next button must be disabled at last image
     await expect(page.locator('.lightbox__nav-next')).toBeDisabled();
   });

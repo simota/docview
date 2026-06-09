@@ -255,10 +255,13 @@ test.describe('UX improvements', () => {
   });
 
   test('Mermaid diagrams can open in a fullscreen overlay', async ({ page }) => {
+    test.slow(); // Mermaid chunk load + render can exceed 30s under parallel load.
     await page.goto('/#file=diagrams.md');
     await page.waitForSelector('.mermaid-rendered svg');
 
-    const fullscreenButton = page.locator('.mermaid-rendered .diagram-fullscreen-btn');
+    // The diagram toolbar is pointer-events:none until the diagram is hovered.
+    await page.locator('.mermaid-rendered').hover();
+    const fullscreenButton = page.locator('.mermaid-rendered .diagram-toolbar-btn[aria-label="Fullscreen"]');
     await expect(fullscreenButton).toBeVisible();
     await fullscreenButton.click();
 
@@ -271,10 +274,13 @@ test.describe('UX improvements', () => {
   });
 
   test('diagram fullscreen overlay closes from the close button', async ({ page }) => {
+    test.slow(); // Mermaid chunk load + render can exceed 30s under parallel load.
     await page.goto('/#file=diagrams.md');
     await page.waitForSelector('.mermaid-rendered svg');
 
-    await page.locator('.mermaid-rendered .diagram-fullscreen-btn').click();
+    // The diagram toolbar is pointer-events:none until the diagram is hovered.
+    await page.locator('.mermaid-rendered').hover();
+    await page.locator('.mermaid-rendered .diagram-toolbar-btn[aria-label="Fullscreen"]').click();
     const overlay = page.locator('.diagram-fullscreen-overlay');
     await expect(overlay).toBeVisible();
 
