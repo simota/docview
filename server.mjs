@@ -819,7 +819,10 @@ async function safePath(reqPath) {
     const realPrefix = realBase.endsWith(sep) ? realBase : realBase + sep;
     if (real !== realBase && !real.startsWith(realPrefix)) return null;
     return real;
-  } catch {
+  } catch (err) {
+    // Path is inside the boundary but missing — return it so the caller's
+    // stat/read fails with ENOENT and surfaces 404 instead of 403.
+    if (err && err.code === 'ENOENT') return resolved;
     return null;
   }
 }
@@ -967,6 +970,11 @@ async function searchFileLines(filePath, query, offset, limit) {
 // HTTP server
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${port}`);
+
+  // Client disconnects (ECONNRESET etc.) must not bubble up to
+  // uncaughtException, which would exit the whole process.
+  req.on('error', () => { res.destroy(); });
+  res.on('error', () => {});
 
   // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -1192,6 +1200,7 @@ const server = createServer(async (req, res) => {
 
     sseClients.add(res);
     req.on('close', () => sseClients.delete(res));
+    res.on('error', () => sseClients.delete(res));
     return;
   }
 
@@ -1545,13 +1554,19 @@ const server = createServer(async (req, res) => {
     const MAX_TOTAL_BYTES = 500 * 1024 * 1024;
 
     let body = '';
-    for await (const chunk of req) {
-      body += chunk;
-      if (body.length > MAX_BODY) {
-        res.writeHead(413, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Request body too large' }));
-        return;
+    try {
+      for await (const chunk of req) {
+        body += chunk;
+        if (body.length > MAX_BODY) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request body too large' }));
+          return;
+        }
       }
+    } catch {
+      // Client aborted mid-body — connection is gone, nothing to answer.
+      res.destroy();
+      return;
     }
 
     let data;
@@ -1648,13 +1663,19 @@ const server = createServer(async (req, res) => {
     // Body size limit (1 MB) to prevent memory exhaustion
     const MAX_BODY = 1024 * 1024;
     let body = '';
-    for await (const chunk of req) {
-      body += chunk;
-      if (body.length > MAX_BODY) {
-        res.writeHead(413, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Request body too large' }));
-        return;
+    try {
+      for await (const chunk of req) {
+        body += chunk;
+        if (body.length > MAX_BODY) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request body too large' }));
+          return;
+        }
       }
+    } catch {
+      // Client aborted mid-body — connection is gone, nothing to answer.
+      res.destroy();
+      return;
     }
 
     let data;
