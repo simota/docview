@@ -1074,7 +1074,7 @@ function enterSlideMode() {
       </div>`;
     overlay.querySelector('#slide-prev')?.addEventListener('click', () => { if (idx > 0) { idx--; renderSlide(); } });
     overlay.querySelector('#slide-next')?.addEventListener('click', () => { if (idx < slides.length - 1) { idx++; renderSlide(); } });
-    overlay.querySelector('#slide-exit')?.addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#slide-exit')?.addEventListener('click', () => { overlay.remove(); document.removeEventListener('keydown', keyHandler); });
   }
 
   renderSlide();
@@ -1429,17 +1429,6 @@ function initComparePaneZoom(wrap: HTMLElement, paneIndex: number): void {
   let startX = 0;
   let startY = 0;
 
-  imgWrap.addEventListener('mousedown', (e: MouseEvent) => {
-    const state = _compareZoomStates[paneIndex];
-    if (!state || state.scale <= 1) return;
-    isDragging = true;
-    startX = e.clientX - state.translateX;
-    startY = e.clientY - state.translateY;
-    const el = getEl();
-    if (el) el.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
-
   const mouseMoveHandler = (e: MouseEvent): void => {
     if (!isDragging) return;
     const state = _compareZoomStates[paneIndex];
@@ -1458,10 +1447,22 @@ function initComparePaneZoom(wrap: HTMLElement, paneIndex: number): void {
       const el = getEl();
       if (el && state) el.style.cursor = state.scale > 1 ? 'grab' : 'zoom-in';
     }
+    document.removeEventListener('mousemove', mouseMoveHandler);
+    document.removeEventListener('mouseup', mouseUpHandler);
   };
 
-  document.addEventListener('mousemove', mouseMoveHandler);
-  document.addEventListener('mouseup', mouseUpHandler);
+  imgWrap.addEventListener('mousedown', (e: MouseEvent) => {
+    const state = _compareZoomStates[paneIndex];
+    if (!state || state.scale <= 1) return;
+    isDragging = true;
+    startX = e.clientX - state.translateX;
+    startY = e.clientY - state.translateY;
+    const el = getEl();
+    if (el) el.style.cursor = 'grabbing';
+    e.preventDefault();
+    document.addEventListener('mousemove', mouseMoveHandler);
+    document.addEventListener('mouseup', mouseUpHandler);
+  });
 }
 
 function showWelcome() {
@@ -2026,6 +2027,22 @@ function initImageZoom(target: HTMLElement = viewer) {
       applyTransform();
     });
 
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      applyTransform();
+    };
+
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        el.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
     el.addEventListener('mousedown', (e: MouseEvent) => {
       if (scale <= 1) return;
       isDragging = true;
@@ -2033,20 +2050,8 @@ function initImageZoom(target: HTMLElement = viewer) {
       startY = e.clientY - translateY;
       el.style.cursor = 'grabbing';
       e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e: MouseEvent) => {
-      if (!isDragging) return;
-      translateX = e.clientX - startX;
-      translateY = e.clientY - startY;
-      applyTransform();
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        el.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
-      }
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
     });
   });
 }

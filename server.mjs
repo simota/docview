@@ -325,13 +325,7 @@ function refreshDocviewIgnore() {
   docviewIgnorePatterns = docviewIgnoreLines.map(compileIgnorePattern);
 }
 
-/** Convert `.docviewignore` lines to chokidar-compatible ignore globs. */
-function docviewIgnoreToGlobs(lines) {
-  return lines.flatMap((line) => {
-    const body = line.replace(/^\/+|\/+$/g, '');
-    return [`**/${body}`, `**/${body}/**`];
-  });
-}
+
 
 /** Test a user `.docviewignore` pattern set against an entry. */
 function matchesIgnorePattern(name, relPath) {
@@ -1770,28 +1764,43 @@ function tryLocalDiagramCLI(type, source) {
   });
 }
 
-// File watcher
-const mdGlobs = [...SUPPORTED_EXTENSIONS].map((ext) => `**/*${ext}`).concat([...CRON_FILENAMES].map((n) => `**/${n}`));
-const watcher = chokidar.watch(mdGlobs, {
+// File watcher — chokidar v5 has no glob support, so watch the directory
+// itself, prune ignored paths via the `ignored` function, and filter events
+// by extension before broadcasting.
+function isWatchIgnored(path) {
+  const rel = relative(targetDir, resolve(targetDir, path));
+  if (!rel || rel.startsWith('..')) return false;
+  for (const seg of rel.split(sep)) {
+    if (seg.startsWith('.') || DEFAULT_IGNORED_DIRS.has(seg)) return true;
+  }
+  return matchesIgnorePattern(basename(rel), rel);
+}
+
+function isWatchTarget(relPath) {
+  const name = basename(relPath).toLowerCase();
+  return SUPPORTED_EXTENSIONS.has(extname(name)) || CRON_FILENAMES.has(name);
+}
+
+const watcher = chokidar.watch(targetDir, {
   cwd: targetDir,
   ignoreInitial: true,
-  ignored: [
-    '**/.*',
-    ...[...DEFAULT_IGNORED_DIRS].map((d) => `**/${d}/**`),
-    ...docviewIgnoreToGlobs(docviewIgnoreLines),
-  ],
+  ignored: (path) => isWatchIgnored(path),
 });
 
 function broadcast(event, filePath) {
   const data = JSON.stringify({ event, path: filePath });
   for (const client of sseClients) {
-    client.write(`data: ${data}\n\n`);
+    try {
+      client.write(`data: ${data}\n\n`);
+    } catch {
+      sseClients.delete(client);
+    }
   }
 }
 
-watcher.on('change', (path) => broadcast('change', path.replace(/\\/g, '/')));
-watcher.on('add', (path) => broadcast('add', path.replace(/\\/g, '/')));
-watcher.on('unlink', (path) => broadcast('unlink', path.replace(/\\/g, '/')));
+watcher.on('change', (path) => { if (isWatchTarget(path)) broadcast('change', path.replace(/\\/g, '/')); });
+watcher.on('add', (path) => { if (isWatchTarget(path)) broadcast('add', path.replace(/\\/g, '/')); });
+watcher.on('unlink', (path) => { if (isWatchTarget(path)) broadcast('unlink', path.replace(/\\/g, '/')); });
 watcher.on('error', (err) => {
   // Non-fatal: continue running but inform the user
   process.stderr.write(formatFriendlyError(err));
