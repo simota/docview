@@ -1543,6 +1543,13 @@ function wikiLinkPlugin(mdi: MarkdownIt) {
     const display = pipeIdx >= 0 ? content.slice(pipeIdx + 1).trim() : target;
 
     const href = target.includes('.') ? target : target + '.md';
+    // Reject dangerous URL schemes (javascript:, vbscript:, data:) — render as plain text
+    if (/^(javascript|vbscript|data):/i.test(href.replace(/[\u0000-\u0020]/g, ''))) {
+      const tokenT = state.push('text', '', 0);
+      tokenT.content = display;
+      state.pos = closeIdx + 2;
+      return true;
+    }
     const tokenO = state.push('wiki_link_open', 'a', 1);
     tokenO.attrSet('href', href);
     tokenO.attrSet('class', 'wiki-link');

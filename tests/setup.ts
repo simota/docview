@@ -281,4 +281,24 @@ flowchart TD
   mkdirSync('/tmp/md-test-docs/mixed', { recursive: true });
   writeFileSync('/tmp/md-test-docs/mixed/photo1.png', TINY_PNG);
   writeFileSync('/tmp/md-test-docs/mixed/clip3.mp4', TINY_MP4);
+
+  // ---- Regression fixtures (regression.spec.ts) ----
+  // Pre-create the live-reload fixture so the in-test rewrite emits `change`
+  // (file-local reload) instead of `add` (global tree refresh in every page),
+  // keeping cross-test interference minimal.
+  write('live-reload.md', '# Live Reload v1\n');
+
+  // Filename containing an HTML injection payload — the breadcrumb must
+  // escape path segments instead of injecting an <img> element.
+  write('<img src=x onerror=window.__xss=1>.md', '# XSS filename fixture\n');
+
+  // Wiki links with dangerous URL schemes must render as plain text,
+  // while normal wiki links keep working.
+  write('wiki.md', [
+    '# Wiki Links',
+    '',
+    'Safe: [[README]]',
+    '',
+    'Evil: [[javascript:alert(1)]] and [[data:text/html;base64,PHNjcmlwdD4=]]',
+  ].join('\n') + '\n');
 }

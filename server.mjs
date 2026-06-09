@@ -239,7 +239,14 @@ for (let i = 0; i < args.length; i++) {
         { code: 'EINVALIDREMOTESIZE' },
       ));
     }
-    remoteMaxSize = Number(raw);
+    const parsedSize = Number(raw);
+    if (parsedSize < 1) {
+      reportAndExit(Object.assign(
+        new Error(`--remote-max-size の値が範囲外です: "${raw}" (1 以上のバイト数を指定してください)`),
+        { code: 'EINVALIDREMOTESIZE' },
+      ));
+    }
+    remoteMaxSize = parsedSize;
   } else if (args[i] === '--remote-strict-tls') {
     remoteInsecureTls = false;
   } else if (args[i] === '--remote-insecure-tls') {

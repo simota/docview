@@ -317,7 +317,7 @@ function updateBreadcrumb(path: string | null, mtime?: string | null) {
   const parts = path.split('/');
   let html = parts.map((p, i) => {
     const isLast = i === parts.length - 1;
-    return `<span class="breadcrumb-item ${isLast ? 'active' : ''}">${p}</span>`;
+    return `<span class="breadcrumb-item ${isLast ? 'active' : ''}">${escapeHtml(p)}</span>`;
   }).join('<span class="breadcrumb-sep">/</span>');
   if (mtime) {
     const date = new Date(mtime);
@@ -1090,7 +1090,7 @@ function enterSlideMode() {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function leaveCompareViewForNavigation(): void {
