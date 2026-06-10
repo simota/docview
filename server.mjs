@@ -270,6 +270,12 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
+try {
+  targetDir = await realpath(targetDir);
+} catch {
+  // Non-existent roots are handled by the existing friendly error flow later.
+}
+
 // --- Directory ignore rules -------------------------------------------------
 // Built-in directory names that are almost always build artifacts, vendored
 // dependencies, caches, or VCS metadata. They are excluded everywhere the tree

@@ -17,6 +17,20 @@ const TINY_JPG = TINY_PNG;
 
 // Minimal SVG image.
 const TINY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+const PORTRAIT_SVG = [
+  '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="240" viewBox="0 0 80 240">',
+  '<rect width="80" height="240" fill="#f97316"/>',
+  '<circle cx="40" cy="40" r="24" fill="#fff7ed"/>',
+  '<rect x="18" y="92" width="44" height="112" rx="10" fill="#7c2d12"/>',
+  '</svg>',
+].join('');
+const LANDSCAPE_SVG = [
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80">',
+  '<rect width="240" height="80" fill="#0ea5e9"/>',
+  '<circle cx="48" cy="40" r="24" fill="#e0f2fe"/>',
+  '<rect x="96" y="24" width="104" height="32" rx="8" fill="#075985"/>',
+  '</svg>',
+].join('');
 
 // Minimal valid MP4 (146 bytes): ftyp(isom/mp41) + moov(mvhd only) + mdat(empty).
 // Constructed to satisfy ISO Base Media File Format requirements just enough for
@@ -197,6 +211,11 @@ flowchart TD
   for (let i = 1; i <= 6; i++) {
     writeFileSync(`/tmp/md-test-docs/gallery-many/m${i}.png`, TINY_PNG);
   }
+
+  // aspect-ratio/ — portrait and landscape images for tile fit regression tests.
+  mkdirSync('/tmp/md-test-docs/aspect-ratio', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/aspect-ratio/landscape.svg', LANDSCAPE_SVG);
+  writeFileSync('/tmp/md-test-docs/aspect-ratio/portrait.svg', PORTRAIT_SVG);
 
   // Apache-style combined access log with one unparseable line in the middle.
   // Used to verify the log table's `#` column uses the original file-line

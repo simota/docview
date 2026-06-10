@@ -136,6 +136,53 @@ test.describe('Album view UI', () => {
     expect(src + lazySrc).toContain('/api/file');
   });
 
+  test('portrait and landscape album tile images fit fully inside the tile', async ({ page }) => {
+    await page.goto('/#album=aspect-ratio');
+    await page.waitForSelector('.album-tile img');
+    await page.waitForFunction(() => {
+      return Array.from(document.querySelectorAll('.album-tile__img')).every((el) => {
+        return el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0;
+      });
+    });
+
+    const readTileMetrics = async (alt: string) => {
+      return page.locator(`.album-tile__img[alt="${alt}"]`).evaluate((img) => {
+        const wrap = img.closest('.album-tile__img-wrap');
+        if (!(wrap instanceof HTMLElement)) throw new Error('missing tile image wrapper');
+
+        const imageRect = img.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        return {
+          objectFit: getComputedStyle(img).objectFit,
+          imageWidth: imageRect.width,
+          imageHeight: imageRect.height,
+          imageTop: imageRect.top,
+          imageRight: imageRect.right,
+          imageBottom: imageRect.bottom,
+          imageLeft: imageRect.left,
+          wrapTop: wrapRect.top,
+          wrapRight: wrapRect.right,
+          wrapBottom: wrapRect.bottom,
+          wrapLeft: wrapRect.left,
+        };
+      });
+    };
+
+    const portrait = await readTileMetrics('portrait.svg');
+    const landscape = await readTileMetrics('landscape.svg');
+
+    for (const metrics of [portrait, landscape]) {
+      expect(metrics.objectFit).toBe('contain');
+      expect(metrics.imageTop).toBeGreaterThanOrEqual(metrics.wrapTop - 1);
+      expect(metrics.imageLeft).toBeGreaterThanOrEqual(metrics.wrapLeft - 1);
+      expect(metrics.imageRight).toBeLessThanOrEqual(metrics.wrapRight + 1);
+      expect(metrics.imageBottom).toBeLessThanOrEqual(metrics.wrapBottom + 1);
+    }
+
+    expect(portrait.imageHeight).toBeGreaterThan(portrait.imageWidth * 2);
+    expect(landscape.imageWidth).toBeGreaterThan(landscape.imageHeight * 2);
+  });
+
   test('toolbar is visible and contains the directory path', async ({ page }) => {
     await page.goto('/#album=images');
     await page.waitForSelector('.album-toolbar');
