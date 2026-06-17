@@ -41,6 +41,18 @@ const server = createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === '/preview-style.css') {
+    res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
+    res.end('#external-style-target { color: rgb(147, 51, 234); }');
+    return;
+  }
+
+  if (url.pathname === '/preview-script.js') {
+    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
+    res.end('new Function("document.getElementById(\\"external-script-target\\").style.color = \\"rgb(22, 163, 74)\\"")();');
+    return;
+  }
+
   if (url.pathname === '/foo.exe') {
     res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
     res.end(Buffer.from([0x4d, 0x5a]));

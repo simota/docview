@@ -149,6 +149,69 @@ flowchart TD
     '</body></html>',
   ].join('\n'));
 
+  mkdirSync('/tmp/md-test-docs/html-assets', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/html-assets/theme.css', [
+    '#linked-style-target {',
+    '  color: rgb(14, 116, 144);',
+    '  background-image: url("./badge.svg");',
+    '}',
+  ].join('\n'));
+  writeFileSync('/tmp/md-test-docs/html-assets/badge.svg', [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4">',
+    '<rect width="4" height="4" fill="#0e7490"/>',
+    '</svg>',
+  ].join(''));
+  writeFileSync('/tmp/md-test-docs/html-assets/inline-badge.svg', [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">',
+    '<rect width="24" height="24" fill="#0ea5e9"/>',
+    '</svg>',
+  ].join(''));
+  write('page-with-assets.html', [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<link rel="stylesheet" href="./html-assets/theme.css">',
+    '</head>',
+    '<body>',
+    '<div id="linked-style-target">Styled by linked CSS</div>',
+    '</body>',
+    '</html>',
+  ].join('\n'));
+  write('page-with-external-style.html', [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<link rel="stylesheet" href="http://127.0.0.1:4090/preview-style.css">',
+    '</head>',
+    '<body>',
+    '<div id="external-style-target">Styled by external CSS</div>',
+    '</body>',
+    '</html>',
+  ].join('\n'));
+  write('page-with-external-script.html', [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '</head>',
+    '<body>',
+    '<div id="external-script-target">Styled by external script</div>',
+    '<script src="http://127.0.0.1:4090/preview-script.js"></script>',
+    '</body>',
+    '</html>',
+  ].join('\n'));
+  write('html-assets/relative.html', [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<body>',
+    '<h1 id="asset-title">Relative asset fixture</h1>',
+    '<img id="relative-badge" src="inline-badge.svg" width="24" height="24" alt="relative badge">',
+    '</body>',
+    '</html>',
+  ].join('\n'));
+
   // Nested directory files for tab disambiguation test.
   mkdirSync('/tmp/md-test-docs/subdir', { recursive: true });
   writeFileSync('/tmp/md-test-docs/subdir/README.md', '# Subdir Readme\n\nThis is the subdir readme.\n');
