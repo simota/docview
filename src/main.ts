@@ -928,7 +928,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       const htmlSource = hljs.getLanguage('xml')
         ? hljs.highlight(displayContent, { language: 'xml' }).value
         : escapeHtml(displayContent);
-      target.innerHTML = renderHtmlView(displayContent, htmlExt, htmlSource);
+      target.innerHTML = renderHtmlView(displayContent, htmlExt, htmlSource, path);
       initToggleButtons(target);
       if (target === viewer) toc.clear();
       break;

@@ -647,6 +647,92 @@ const VIDEO_MIME = {
   '.mov': 'video/quicktime',
 };
 
+const TEXT_MIME = {
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
+  '.svg': 'image/svg+xml',
+};
+
+async function serveRawFile(req, res, filePath) {
+  const resolved = await safePath(filePath);
+  if (!resolved) {
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Access denied' }));
+    return;
+  }
+
+  try {
+    const fileStat = await stat(resolved);
+    const mtime = fileStat.mtime.toISOString();
+    const ext = extname(resolved).toLowerCase();
+
+    if (IMAGE_EXTENSIONS.has(ext)) {
+      const content = await readFile(resolved);
+      const mime = IMAGE_MIME[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime });
+      res.end(content);
+      return;
+    }
+
+    if (VIDEO_EXTENSIONS.has(ext)) {
+      const total = fileStat.size;
+      const mime = VIDEO_MIME[ext] || 'application/octet-stream';
+      const rangeHeader = req.headers['range'];
+      const baseHeaders = {
+        'Content-Type': mime,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-store',
+        'X-File-Mtime': mtime,
+      };
+
+      if (rangeHeader) {
+        const range = parseRange(rangeHeader, total);
+        if (!range) {
+          res.writeHead(416, { ...baseHeaders, 'Content-Range': `bytes */${total}`, 'Content-Length': '0' });
+          res.end();
+          return;
+        }
+        const { start, end } = range;
+        res.writeHead(206, {
+          ...baseHeaders,
+          'Content-Range': `bytes ${start}-${end}/${total}`,
+          'Content-Length': String(end - start + 1),
+        });
+        if (req.method === 'HEAD') {
+          res.end();
+          return;
+        }
+        const stream = createReadStream(resolved, { start, end });
+        stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+        res.on('close', () => stream.destroy());
+        stream.pipe(res);
+        return;
+      }
+
+      res.writeHead(200, { ...baseHeaders, 'Content-Length': String(total) });
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
+      const stream = createReadStream(resolved);
+      stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+      res.on('close', () => stream.destroy());
+      stream.pipe(res);
+      return;
+    }
+
+    const content = await readFileText(resolved);
+    res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
+    res.end(content);
+  } catch {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'File not found' }));
+  }
+}
+
 /**
  * Parse an HTTP Range header against a known total size.
  *
@@ -979,7 +1065,7 @@ const server = createServer(async (req, res) => {
   // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; font-src 'self' data: https: http:; img-src 'self' data: blob: https: http:; connect-src 'self'");
   // CORS restricted to same origin (no external access)
   const origin = req.headers.origin;
   if (origin && (origin === `http://localhost:${port}` || origin === `http://127.0.0.1:${port}`)) {
@@ -1040,6 +1126,12 @@ const server = createServer(async (req, res) => {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'File not found' }));
     }
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/raw/')) {
+    const rawPath = decodeURIComponent(url.pathname.slice('/api/raw/'.length));
+    await serveRawFile(req, res, rawPath);
     return;
   }
 
@@ -1146,7 +1238,7 @@ const server = createServer(async (req, res) => {
         res.end(lines.join('\n'));
       } else {
         const content = await readFileText(resolved);
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
+        res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
         res.end(content);
       }
     } catch {
