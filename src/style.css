@@ -4443,6 +4443,42 @@ body.dragging::after {
   opacity: 1 !important;
 }
 
+/* ===== Heading copy-reference button (path#heading) ===== */
+.heading-copy-btn {
+  margin-left: 0.4em;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  opacity: 0;
+  vertical-align: middle;
+  line-height: 1;
+  transition: opacity var(--mo-base) ease;
+}
+
+.markdown-body h1:hover .heading-copy-btn,
+.markdown-body h2:hover .heading-copy-btn,
+.markdown-body h3:hover .heading-copy-btn,
+.markdown-body h4:hover .heading-copy-btn,
+.markdown-body h5:hover .heading-copy-btn,
+.markdown-body h6:hover .heading-copy-btn {
+  opacity: 0.6;
+}
+
+.heading-copy-btn:hover {
+  opacity: 1 !important;
+}
+
+.heading-copy-btn svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@media (hover: none) {
+  .heading-copy-btn { opacity: 0.6; }
+}
+
 /* ===== Definition Lists ===== */
 .markdown-body dl {
   margin: 0 0 1.3em;

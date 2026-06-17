@@ -362,6 +362,44 @@ function addCopyButtons(target: HTMLElement = viewer) {
   });
 }
 
+// --- Copy reference button on markdown headings (#13) ---
+// Adds a per-heading button that copies a `path#heading` reference so a section
+// can be linked/quoted elsewhere. Mirrors the hover-reveal feel of .header-anchor.
+const HEADING_COPY_ICON =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+function headingText(h: HTMLElement): string {
+  const clone = h.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('.header-anchor, .heading-copy-btn').forEach((el) => el.remove());
+  return (clone.textContent || '').trim();
+}
+
+function addHeadingCopyButtons(target: HTMLElement, path: string) {
+  target
+    .querySelectorAll<HTMLElement>('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6')
+    .forEach((h) => {
+      if (h.querySelector('.heading-copy-btn')) return;
+      const text = headingText(h);
+      if (!text) return;
+      const ref = `${path}#${text}`;
+      const btn = document.createElement('button');
+      btn.className = 'heading-copy-btn';
+      btn.type = 'button';
+      btn.title = `Copy "${ref}"`;
+      btn.setAttribute('aria-label', `Copy reference ${ref}`);
+      btn.innerHTML = HEADING_COPY_ICON;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard.writeText(ref).then(
+          () => showCopyToast(`Copied: ${ref}`),
+          () => showCopyToast(`Reference: ${ref}`),
+        );
+      });
+      h.appendChild(btn);
+    });
+}
+
 // --- Collapse button on code blocks ---
 function setBlockCollapsed(block: HTMLElement, collapsed: boolean) {
   block.classList.toggle('collapsed', collapsed);
@@ -796,6 +834,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
         toc.loadBacklinks(path);
       }
       interceptRelativeLinks(path, target, pane);
+      addHeadingCopyButtons(target, path);
       break;
     }
 
