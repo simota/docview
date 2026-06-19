@@ -4,11 +4,9 @@ export type Theme =
   | 'paper'
   | 'whiteboard'
   | 'handwritten'
-  | 'terminal'
   | 'sakura'
   | 'matrix'
   | 'cyberpunk'
-  | 'hackerman'
   | 'ascii'
   | 'origami'
   | 'brutalist'
@@ -23,7 +21,6 @@ export type Theme =
   | 'aurora'
   | 'glass'
   | 'holo'
-  | 'forest'
   | 'highcontrast'
   | 'ocean'
   | 'eink';
@@ -34,11 +31,9 @@ export const THEMES: readonly Theme[] = [
   'paper',
   'whiteboard',
   'handwritten',
-  'terminal',
   'sakura',
   'matrix',
   'cyberpunk',
-  'hackerman',
   'ascii',
   'origami',
   'brutalist',
@@ -53,7 +48,6 @@ export const THEMES: readonly Theme[] = [
   'aurora',
   'glass',
   'holo',
-  'forest',
   'highcontrast',
   'ocean',
   'eink',
@@ -65,11 +59,9 @@ export const THEME_LABELS: Record<Theme, string> = {
   paper: 'Paper',
   whiteboard: 'Whiteboard',
   handwritten: 'Handwritten',
-  terminal: 'Terminal',
   sakura: 'Sakura',
   matrix: 'Matrix',
   cyberpunk: 'Cyberpunk',
-  hackerman: 'Hackerman',
   ascii: 'ASCII',
   origami: 'Origami',
   brutalist: 'Brutalist',
@@ -84,7 +76,6 @@ export const THEME_LABELS: Record<Theme, string> = {
   aurora: 'Aurora',
   glass: 'Liquid Glass',
   holo: 'Holographic',
-  forest: 'Forest',
   highcontrast: 'High Contrast',
   ocean: 'Ocean',
   eink: 'E-Ink',
