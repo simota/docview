@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync, utimesSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Minimal valid 1×1 PNG (67 bytes) for album fixture images.
@@ -383,4 +383,18 @@ flowchart TD
     '',
     'Evil: [[javascript:alert(1)]] and [[data:text/html;base64,PHNjcmlwdD4=]]',
   ].join('\n') + '\n');
+
+  // mtime filter fixtures (filetree-mtime-filter.spec.ts).
+  // archived-old.md: backdated ~400 days → excluded by every preset except "すべて".
+  // edited-yesterday.md: dated to yesterday noon → excluded by "今日" but included
+  //   from "昨日" onward. The fresh fixtures above all stay within "今日".
+  write('archived-old.md', '# Archived\n\nOld document for the mtime filter test.\n');
+  const oldTime = new Date(Date.now() - 400 * 86_400_000);
+  utimesSync(join(DIR, 'archived-old.md'), oldTime, oldTime);
+
+  write('edited-yesterday.md', '# Yesterday\n\nDocument from yesterday for the mtime filter test.\n');
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const yesterdayNoon = new Date(todayStart.getTime() - 12 * 3_600_000); // always yesterday 12:00
+  utimesSync(join(DIR, 'edited-yesterday.md'), yesterdayNoon, yesterdayNoon);
 }

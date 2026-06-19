@@ -7266,7 +7266,7 @@ mark.find-current {
   .error-banner, .welcome, .progress-bar,
   .diagram-fullscreen-btn, .diagram-fullscreen-overlay, .diagram-toolbar,
   .diagram-label, .viewer-pane-split,
-  .backlinks-section, .filetree-filter {
+  .backlinks-section, .filetree-filter, .filetree-filter-row {
     display: none !important;
   }
 
@@ -7753,10 +7753,16 @@ mark.find-current {
 }
 
 /* ===== File Tree Filter ===== */
-.filetree-filter {
-  display: block;
-  width: calc(100% - 16px);
+.filetree-filter-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   margin: 6px 8px;
+}
+
+.filetree-filter {
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -7775,6 +7781,26 @@ mark.find-current {
 
 .filetree-filter::placeholder {
   color: var(--text-muted);
+}
+
+.filetree-mtime-filter {
+  flex: 0 0 auto;
+  max-width: 40%;
+  padding: 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--mo-base);
+}
+
+.filetree-mtime-filter:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
 /* ===== Search Regex Toggle ===== */

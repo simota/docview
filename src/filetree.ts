@@ -162,7 +162,9 @@ function buildGalleryButtonAttrs(imageCount: number, videoCount: number, dirName
 export class FileTree {
   private container: HTMLElement;
   private rootLabel: HTMLElement;
+  private filterRow: HTMLElement;
   private filterInput: HTMLInputElement;
+  private mtimeSelect: HTMLSelectElement;
   private treeList: HTMLElement;
   private onSelect: FileSelectCallback;
   private onAlbum: AlbumCallback | null;
@@ -171,6 +173,8 @@ export class FileTree {
   private openDirs = new Set<string>();
   private treeData: FileNode[] = [];
   private filterQuery = '';
+  /** Max age in days for the mtime filter; 0 (or NaN) means no time filter. */
+  private mtimeMaxDays = 0;
   private contextMenuEl: HTMLElement | null = null;
 
   constructor(
@@ -189,21 +193,53 @@ export class FileTree {
     this.rootLabel.setAttribute('role', 'heading');
     this.rootLabel.setAttribute('aria-level', '2');
 
+    this.filterRow = document.createElement('div');
+    this.filterRow.className = 'filetree-filter-row';
+
     this.filterInput = document.createElement('input');
     this.filterInput.className = 'filetree-filter';
     this.filterInput.type = 'text';
     this.filterInput.placeholder = 'Filter files...';
     this.filterInput.addEventListener('input', () => {
       this.filterQuery = this.filterInput.value.toLowerCase();
-      this.renderTree(this.filterQuery ? this.filterTree(this.treeData, this.filterQuery) : this.treeData, this.treeList, 0);
+      this.applyFilters();
     });
+
+    // Modification-time filter — preset age ranges, combined with the text query (AND).
+    this.mtimeSelect = document.createElement('select');
+    this.mtimeSelect.className = 'filetree-mtime-filter';
+    this.mtimeSelect.setAttribute('aria-label', '更新時間で絞り込み');
+    // days: 0 = no filter; negative = calendar-day cutoff (-1 today, -2 yesterday …);
+    // positive = rolling N-day window. All presets are cumulative (lower bound only).
+    const MTIME_OPTIONS: { label: string; days: number }[] = [
+      { label: 'すべて', days: 0 },
+      { label: '今日', days: -1 },
+      { label: '昨日', days: -2 },
+      { label: '過去3日', days: 3 },
+      { label: '過去7日', days: 7 },
+      { label: '過去30日', days: 30 },
+      { label: '過去90日', days: 90 },
+    ];
+    for (const opt of MTIME_OPTIONS) {
+      const el = document.createElement('option');
+      el.value = String(opt.days);
+      el.textContent = opt.label;
+      this.mtimeSelect.appendChild(el);
+    }
+    this.mtimeSelect.addEventListener('change', () => {
+      this.mtimeMaxDays = Number(this.mtimeSelect.value);
+      this.applyFilters();
+    });
+
+    this.filterRow.appendChild(this.filterInput);
+    this.filterRow.appendChild(this.mtimeSelect);
 
     this.treeList = document.createElement('div');
     this.treeList.className = 'filetree-list';
     this.treeList.setAttribute('role', 'tree');
 
     this.container.appendChild(this.rootLabel);
-    this.container.appendChild(this.filterInput);
+    this.container.appendChild(this.filterRow);
     this.container.appendChild(this.treeList);
 
     // Right-click context menu (delegated — survives tree re-renders).
@@ -281,21 +317,53 @@ export class FileTree {
     this.contextMenuEl = menu;
   }
 
-  private filterTree(nodes: FileNode[], query: string): FileNode[] {
+  /** Earliest mtime (epoch ms) a file may have to pass the current time filter, or null when inactive. */
+  private mtimeCutoff(): number | null {
+    if (!this.mtimeMaxDays) return null; // 0 / NaN → no time filter
+    if (this.mtimeMaxDays < 0) {
+      // Calendar-day cutoff: -1 → today's 00:00, -2 → yesterday's 00:00, …
+      const daysBack = -this.mtimeMaxDays - 1;
+      const n = new Date();
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate() - daysBack).getTime();
+    }
+    return Date.now() - this.mtimeMaxDays * 86_400_000;
+  }
+
+  private matchesFilters(node: FileNode, query: string, cutoff: number | null): boolean {
+    if (query && !node.name.toLowerCase().includes(query) && !node.path.toLowerCase().includes(query)) {
+      return false;
+    }
+    if (cutoff !== null) {
+      if (!node.mtime) return false;
+      const t = new Date(node.mtime).getTime();
+      if (Number.isNaN(t) || t < cutoff) return false;
+    }
+    return true;
+  }
+
+  private filterTree(nodes: FileNode[], query: string, cutoff: number | null): FileNode[] {
     const result: FileNode[] = [];
     for (const node of nodes) {
       if (node.type === 'file') {
-        if (node.name.toLowerCase().includes(query) || node.path.toLowerCase().includes(query)) {
+        if (this.matchesFilters(node, query, cutoff)) {
           result.push(node);
         }
       } else if (node.children) {
-        const filtered = this.filterTree(node.children, query);
+        const filtered = this.filterTree(node.children, query, cutoff);
         if (filtered.length > 0) {
           result.push({ ...node, children: filtered });
         }
       }
     }
     return result;
+  }
+
+  /** Re-render the tree applying the active text + mtime filters. */
+  private applyFilters(): void {
+    const cutoff = this.mtimeCutoff();
+    const active = this.filterQuery !== '' || cutoff !== null;
+    const display = active ? this.filterTree(this.treeData, this.filterQuery, cutoff) : this.treeData;
+    this.renderTree(display, this.treeList, 0);
   }
 
   async load(): Promise<void> {
@@ -305,8 +373,7 @@ export class FileTree {
       const data: TreeResponse = await res.json();
       this.rootLabel.textContent = data.root;
       this.treeData = data.tree;
-      const display = this.filterQuery ? this.filterTree(this.treeData, this.filterQuery) : this.treeData;
-      this.renderTree(display, this.treeList, 0);
+      this.applyFilters();
     } catch {
       this.container.style.display = 'none';
     }
