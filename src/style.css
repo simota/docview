@@ -4137,23 +4137,91 @@ body.dragging::after {
   border-color: rgba(239, 68, 68, 0.2);
 }
 
+/* ===== Syntax highlighting tokens =====
+   highlight.js colors are tokenized so every theme controls its own code
+   palette instead of inheriting the light one. :root holds the (AA-hardened)
+   light values; near-black themes share one dark set; tinted/identity themes
+   (parchment, tokyo, solarized) override with their own AA-clean inks.
+   --syn-comment intentionally tracks each theme's --text-muted. */
+:root {
+  --syn-keyword: #7c3aed;
+  --syn-string: #0f766e;
+  --syn-title: #2563eb;
+  --syn-attr: #c2410c;
+  --syn-variable: #c1121f;
+  --syn-comment: var(--text-muted);
+  --syn-deletion: #b91c1c;
+}
+
+[data-theme='dark'],
+[data-theme='terminal'],
+[data-theme='matrix'],
+[data-theme='cyberpunk'],
+[data-theme='hackerman'],
+[data-theme='galaxy'],
+[data-theme='spotlight'],
+[data-theme='blueprint'],
+[data-theme='aurora'],
+[data-theme='glass'],
+[data-theme='holo'] {
+  --syn-keyword: #a78bfa;
+  --syn-string: #5eead4;
+  --syn-title: #60a5fa;
+  --syn-attr: #fb923c;
+  --syn-variable: #fca5a5;
+  --syn-deletion: #ef4444;
+}
+
+/* Parchment / newsprint — dark inks on a warm mid-tone code surface */
+[data-theme='paper'],
+[data-theme='newspaper'],
+[data-theme='codex'] {
+  --syn-keyword: #5b21b6;
+  --syn-string: #0b5850;
+  --syn-title: #1e40af;
+  --syn-attr: #7c2d12;
+  --syn-variable: #991b1b;
+  --syn-deletion: #991b1b;
+  --syn-comment: #5e4f29; /* tuned for the darker parchment code surface */
+}
+
+/* Tokyo Night — canonical identity palette */
+[data-theme='tokyo'] {
+  --syn-keyword: #bb9af7;
+  --syn-string: #9ece6a;
+  --syn-title: #7aa2f7;
+  --syn-attr: #e0af68;
+  --syn-variable: #f7768e;
+  --syn-deletion: #f7768e;
+}
+
+/* Solarized — darkened Solarized hues that clear AA on the sepia code surface */
+[data-theme='solarized'] {
+  --syn-keyword: #5c6a00;
+  --syn-string: #0a6b63;
+  --syn-title: #1565a8;
+  --syn-attr: #785700;
+  --syn-variable: #b51d1a;
+  --syn-deletion: #b51d1a;
+  --syn-comment: #556668;
+}
+
+/* Comment ink overrides where the code surface differs enough from the page bg
+   that the inherited --text-muted dips below AA on code comments. */
+[data-theme='dark'] { --syn-comment: #828ba6; }
+[data-theme='sakura'] { --syn-comment: #945675; }
+
 /* ===== Highlight.js Theme ===== */
 .hljs-comment,
 .hljs-quote {
-  color: var(--text-muted);
+  color: var(--syn-comment);
   font-style: italic;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-addition {
-  color: #7c3aed;
-}
-
-[data-theme='dark'] .hljs-keyword,
-[data-theme='dark'] .hljs-selector-tag,
-[data-theme='dark'] .hljs-addition {
-  color: #a78bfa;
+  color: var(--syn-keyword);
 }
 
 .hljs-number,
@@ -4162,16 +4230,7 @@ body.dragging::after {
 .hljs-literal,
 .hljs-doctag,
 .hljs-regexp {
-  color: #0d9488;
-}
-
-[data-theme='dark'] .hljs-number,
-[data-theme='dark'] .hljs-string,
-[data-theme='dark'] .hljs-meta .hljs-meta-string,
-[data-theme='dark'] .hljs-literal,
-[data-theme='dark'] .hljs-doctag,
-[data-theme='dark'] .hljs-regexp {
-  color: #5eead4;
+  color: var(--syn-string);
 }
 
 .hljs-title,
@@ -4179,25 +4238,12 @@ body.dragging::after {
 .hljs-name,
 .hljs-selector-id,
 .hljs-selector-class {
-  color: #2563eb;
-}
-
-[data-theme='dark'] .hljs-title,
-[data-theme='dark'] .hljs-section,
-[data-theme='dark'] .hljs-name,
-[data-theme='dark'] .hljs-selector-id,
-[data-theme='dark'] .hljs-selector-class {
-  color: #60a5fa;
+  color: var(--syn-title);
 }
 
 .hljs-attribute,
 .hljs-attr {
-  color: #c2410c;
-}
-
-[data-theme='dark'] .hljs-attribute,
-[data-theme='dark'] .hljs-attr {
-  color: #fb923c;
+  color: var(--syn-attr);
 }
 
 .hljs-variable,
@@ -4207,21 +4253,11 @@ body.dragging::after {
 .hljs-builtin-name,
 .hljs-symbol,
 .hljs-link {
-  color: #dc2626;
-}
-
-[data-theme='dark'] .hljs-variable,
-[data-theme='dark'] .hljs-template-variable,
-[data-theme='dark'] .hljs-type,
-[data-theme='dark'] .hljs-built_in,
-[data-theme='dark'] .hljs-builtin-name,
-[data-theme='dark'] .hljs-symbol,
-[data-theme='dark'] .hljs-link {
-  color: #fca5a5;
+  color: var(--syn-variable);
 }
 
 .hljs-deletion {
-  color: #ef4444;
+  color: var(--syn-deletion);
 }
 
 .hljs-formula {
