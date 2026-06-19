@@ -1754,16 +1754,6 @@
   hyphens: auto;
   -webkit-hyphens: auto;
 }
-[data-theme='paper'] .markdown-body > h1 + p::first-letter,
-[data-theme='paper'] .markdown-body > h2 + p::first-letter {
-  float: left;
-  font-family: 'Playfair Display', 'Lora', Georgia, serif;
-  font-size: 4.2em;
-  line-height: 0.85;
-  padding: 6px 10px 0 0;
-  color: var(--accent);
-  font-weight: 700;
-}
 [data-theme='paper'] .markdown-body ul > li::marker {
   content: '\2756  ';
   color: var(--accent);
@@ -2413,16 +2403,6 @@
   font-size: 1.4em;
 }
 /* Drop cap on the first paragraph after h1 */
-[data-theme='newspaper'] .markdown-body > h1 + p::first-letter,
-[data-theme='newspaper'] .markdown-body > h2 + p::first-letter {
-  font-family: 'Playfair Display', 'Lora', serif;
-  font-weight: 900;
-  font-size: 3.6em;
-  line-height: 0.85;
-  float: left;
-  margin: 0.05em 0.12em 0 0;
-  color: var(--accent);
-}
 [data-theme='newspaper'] .markdown-body blockquote {
   border-left: 4px solid var(--accent);
   font-style: italic;
@@ -2955,20 +2935,6 @@
   padding-bottom: 0.2em;
 }
 /* Illuminated dropcap on first paragraph */
-[data-theme='codex'] .markdown-body > h1 + p::first-letter,
-[data-theme='codex'] .markdown-body > h2 + p::first-letter {
-  font-family: 'UnifrakturCook', 'EB Garamond', serif;
-  font-weight: 700;
-  font-size: 4em;
-  line-height: 0.8;
-  float: left;
-  margin: 0.08em 0.12em 0 0;
-  padding: 0.1em 0.15em;
-  color: var(--accent);
-  background: var(--mark-bg);
-  border: 2px solid var(--accent);
-  box-shadow: 2px 2px 0 var(--border-strong);
-}
 [data-theme='codex'] .markdown-body blockquote {
   border: 1px solid var(--accent);
   border-left-width: 4px;
