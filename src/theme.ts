@@ -9,12 +9,8 @@ export type Theme =
   | 'cyberpunk'
   | 'ascii'
   | 'origami'
-  | 'brutalist'
   | 'newspaper'
-  | 'sumi'
   | 'galaxy'
-  | 'codex'
-  | 'spotlight'
   | 'blueprint'
   | 'solarized'
   | 'tokyo'
@@ -23,7 +19,13 @@ export type Theme =
   | 'holo'
   | 'highcontrast'
   | 'ocean'
-  | 'eink';
+  | 'eink'
+  | 'cyanotype'
+  | 'linen'
+  | 'dotmatrix'
+  | 'ledger'
+  | 'plaintext'
+  | 'braille';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -36,12 +38,8 @@ export const THEMES: readonly Theme[] = [
   'cyberpunk',
   'ascii',
   'origami',
-  'brutalist',
   'newspaper',
-  'sumi',
   'galaxy',
-  'codex',
-  'spotlight',
   'blueprint',
   'solarized',
   'tokyo',
@@ -51,6 +49,12 @@ export const THEMES: readonly Theme[] = [
   'highcontrast',
   'ocean',
   'eink',
+  'cyanotype',
+  'linen',
+  'dotmatrix',
+  'ledger',
+  'plaintext',
+  'braille',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -64,12 +68,8 @@ export const THEME_LABELS: Record<Theme, string> = {
   cyberpunk: 'Cyberpunk',
   ascii: 'ASCII',
   origami: 'Origami',
-  brutalist: 'Brutalist',
   newspaper: 'Newspaper',
-  sumi: 'Sumi',
   galaxy: 'Galaxy',
-  codex: 'Codex',
-  spotlight: 'Spotlight',
   blueprint: 'Blueprint',
   solarized: 'Solarized',
   tokyo: 'Tokyo Night',
@@ -79,6 +79,12 @@ export const THEME_LABELS: Record<Theme, string> = {
   highcontrast: 'High Contrast',
   ocean: 'Ocean',
   eink: 'E-Ink',
+  cyanotype: 'Cyanotype',
+  linen: 'Linen',
+  dotmatrix: 'Dot Matrix',
+  ledger: 'Ledger',
+  plaintext: 'Plaintext',
+  braille: 'Braille',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';

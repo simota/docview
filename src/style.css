@@ -615,64 +615,6 @@
   --icon-default: #7a766c;
 }
 
-/* Brutalist — raw concrete, oversize typography, neon highlight as warning */
-[data-theme='brutalist'] {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f0f0f0;
-  --bg-tertiary: #e0e0e0;
-  --bg-editor: #ffffff;
-  --text-primary: #000000;
-  --text-secondary: #1a1a1a;
-  --text-muted: #595959;
-  --border: #000000;
-  --border-subtle: #b0b0b0;
-  --border-strong: #000000;
-  --accent: #000000;
-  --accent-light: #1a1a1a;
-  --accent-lighter: #595959;
-  --accent-bg: rgba(255, 242, 0, 0.20);
-  --accent-border: #000000;
-  --accent-gradient: linear-gradient(135deg, #000000, #1a1a1a);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(255, 242, 0, 0.12));
-  --gutter-bg: #e0e0e0;
-  --gutter-hover: #cccccc;
-  --shadow-sm: 4px 4px 0 #000000;
-  --shadow-md: 6px 6px 0 #000000;
-  --shadow-lg: 10px 10px 0 #000000;
-  --code-bg: #f0f0f0;
-  --code-text: #c00000;
-  --code-block-bg: #f5f5f5;
-  --blockquote-border: #000000;
-  --blockquote-bg: rgba(255, 242, 0, 0.15);
-  --table-stripe: #f0f0f0;
-  --table-border: #000000;
-  --table-header-bg: #000000;
-  --link-color: #0000ee;
-  --link-hover: #ff0000;
-  --hr-gradient: none;
-  --mark-bg: #fff200;
-  --scrollbar-thumb: #000000;
-  --scrollbar-track: #e0e0e0;
-  --glass-bg: rgba(255, 255, 255, 0.98);
-  --glass-border: #000000;
-  --color-info: #0000ee;
-  --color-info-bg: rgba(0, 0, 238, 0.06);
-  --color-success: #006400;
-  --color-success-bg: rgba(0, 100, 0, 0.06);
-  --color-warning: #c00000;
-  --color-warning-bg: rgba(192, 0, 0, 0.06);
-  --color-danger: #c00000;
-  --color-danger-bg: rgba(192, 0, 0, 0.10);
-  --color-important: #000000;
-  --color-important-bg: rgba(255, 242, 0, 0.18);
-  --icon-markdown: #000000;
-  --icon-data: #006400;
-  --icon-config: #c00000;
-  --icon-image: #0000ee;
-  --icon-video: #c00000;
-  --icon-default: #595959;
-}
-
 /* Newspaper — printed broadsheet, old-style serif, two-column flow */
 [data-theme='newspaper'] {
   --bg-primary: #f3ecdb;
@@ -731,73 +673,6 @@
   --icon-default: #6e6e6e;
 }
 
-/* Sumi — ink wash painting, five ink gradations, vermillion seal.
-   Variables aligned to the "five inks" (go-boku): 焦・濃・重・淡・清.
-   焦 (sho) #1a1714 — burnt, deepest. 濃 (no) #2b2723 — concentrated.
-   重 (ju) #4a453e — heavy. 淡 (tan) #888279 — pale. 清 (sei) #b8b2a4 — clear. */
-[data-theme='sumi'] {
-  --bg-primary: #fdfbf4;
-  --bg-secondary: #f5f1e6;
-  --bg-tertiary: #e9e3d2;
-  --bg-editor: #fefcf6;
-  --text-primary: #1a1714;
-  --text-secondary: #4a453e;
-  --text-muted: #736d63;
-  --border: #c8c2b3;
-  --border-subtle: #ddd6c4;
-  --border-strong: #757064;
-  --accent: #a8332b;
-  --accent-light: #ba4a40;
-  --accent-lighter: #d07a72;
-  /* Five ink gradations as theme-scoped tokens for layered ink work. */
-  --sumi-sho: #1a1714;
-  --sumi-no: #2b2723;
-  --sumi-ju: #4a453e;
-  --sumi-tan: #888279;
-  --sumi-sei: #b8b2a4;
-  --accent-bg: rgba(168, 51, 43, 0.07);
-  --accent-border: rgba(168, 51, 43, 0.28);
-  --accent-gradient: linear-gradient(135deg, #a8332b, #ba4a40);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(168, 51, 43, 0.10), rgba(208, 122, 114, 0.05));
-  --gutter-bg: #e7e2d4;
-  --gutter-hover: #d6d0bd;
-  --shadow-sm: 0 1px 3px rgba(40, 35, 30, 0.06);
-  --shadow-md: 0 3px 12px rgba(40, 35, 30, 0.08);
-  --shadow-lg: 0 10px 28px rgba(40, 35, 30, 0.10);
-  --code-bg: #f3f0e7;
-  --code-text: #5a5036;
-  --code-block-bg: #f7f4eb;
-  --blockquote-border: #2b2723;
-  --blockquote-bg: transparent;
-  --table-stripe: #f3f0e7;
-  --table-border: #888279;
-  --table-header-bg: transparent;
-  --link-color: #4a453e;
-  --link-hover: #a8332b;
-  --hr-gradient: linear-gradient(90deg, transparent, #2b2723, transparent);
-  --mark-bg: #e8d873;
-  --scrollbar-thumb: #b6b0a0;
-  --scrollbar-track: transparent;
-  --glass-bg: rgba(251, 250, 246, 0.94);
-  --glass-border: rgba(43, 39, 35, 0.10);
-  --color-info: #2b4a8a;
-  --color-info-bg: rgba(43, 74, 138, 0.06);
-  --color-success: #2f6131;
-  --color-success-bg: rgba(47, 97, 49, 0.06);
-  --color-warning: #8a5a14;
-  --color-warning-bg: rgba(138, 90, 20, 0.07);
-  --color-danger: #a8332b;
-  --color-danger-bg: rgba(168, 51, 43, 0.07);
-  --color-important: #5e2787;
-  --color-important-bg: rgba(94, 39, 135, 0.07);
-  --icon-markdown: #4a453e;
-  --icon-data: #2f6131;
-  --icon-config: #8a5a14;
-  --icon-image: #a8332b;
-  --icon-video: #5e2787;
-  --icon-default: #888279;
-}
-
 /* Galaxy — deep space silence, nebula gradients, golden stars */
 [data-theme='galaxy'] {
   --bg-primary: #03020a;
@@ -854,122 +729,6 @@
   --icon-image: #6ee0ff;
   --icon-video: #c084ff;
   --icon-default: #8a87aa;
-}
-
-/* Codex — medieval manuscript, parchment, illuminated initials */
-[data-theme='codex'] {
-  --bg-primary: #e8dab8;
-  --bg-secondary: #ddcca4;
-  --bg-tertiary: #d0bd8e;
-  --bg-editor: #ede0c2;
-  --text-primary: #2b1a08;
-  --text-secondary: #3f2912;
-  --text-muted: #5e4f29;
-  --border: #b89a5c;
-  --border-subtle: #c8af72;
-  --border-strong: #6e5a35;
-  --accent: #9b1c1c;
-  --accent-light: #b22929;
-  --accent-lighter: #c95252;
-  --accent-bg: rgba(155, 28, 28, 0.07);
-  --accent-border: rgba(155, 28, 28, 0.30);
-  --accent-gradient: linear-gradient(135deg, #9b1c1c, #c19a35, #9b1c1c);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(155, 28, 28, 0.10), rgba(193, 154, 53, 0.06));
-  --gutter-bg: #d0bd8e;
-  --gutter-hover: #c1ad7a;
-  --shadow-sm: 0 1px 3px rgba(70, 50, 20, 0.10);
-  --shadow-md: 0 4px 14px rgba(70, 50, 20, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 12px 36px rgba(70, 50, 20, 0.20), 0 4px 12px rgba(0, 0, 0, 0.08);
-  --code-bg: #d0bd8e;
-  --code-text: #5a3e1a;
-  --code-block-bg: #d8c898;
-  --blockquote-border: var(--accent-gradient);
-  --blockquote-bg: rgba(155, 28, 28, 0.04);
-  --table-stripe: #ddcca4;
-  --table-border: #6e5a35;
-  --table-header-bg: linear-gradient(180deg, #c19a35, #ad8a2a);
-  --link-color: #9b1c1c;
-  --link-hover: #7a5a14;
-  --hr-gradient: linear-gradient(90deg, transparent, #9b1c1c, #c19a35, #9b1c1c, transparent);
-  --mark-bg: #c19a35;
-  --scrollbar-thumb: #a08550;
-  --scrollbar-track: transparent;
-  --glass-bg: rgba(232, 218, 184, 0.92);
-  --glass-border: rgba(110, 90, 53, 0.18);
-  --color-info: #1c3a8a;
-  --color-info-bg: rgba(28, 58, 138, 0.07);
-  --color-success: #1c5c2c;
-  --color-success-bg: rgba(28, 92, 44, 0.07);
-  --color-warning: #8a5a14;
-  --color-warning-bg: rgba(138, 90, 20, 0.08);
-  --color-danger: #9b1c1c;
-  --color-danger-bg: rgba(155, 28, 28, 0.08);
-  --color-important: #6a2a8a;
-  --color-important-bg: rgba(106, 42, 138, 0.08);
-  --icon-markdown: #9b1c1c;
-  --icon-data: #1c5c2c;
-  --icon-config: #8a5a14;
-  --icon-image: #c19a35;
-  --icon-video: #6a2a8a;
-  --icon-default: #7a6a40;
-}
-
-/* Spotlight — focused reading, dim ambient + warm pool of light */
-[data-theme='spotlight'] {
-  --bg-primary: #0e0d12;
-  --bg-secondary: #161520;
-  --bg-tertiary: #1e1d2e;
-  --bg-editor: #0a0910;
-  --text-primary: #fef6e0;
-  --text-secondary: #d4cfb8;
-  --text-muted: #a8a187;
-  --border: #2a2840;
-  --border-subtle: #1a1928;
-  --border-strong: #6a6580;
-  --accent: #ffb24d;
-  --accent-light: #ffc471;
-  --accent-lighter: #ffd99a;
-  --accent-bg: rgba(255, 178, 77, 0.10);
-  --accent-border: rgba(255, 178, 77, 0.32);
-  --accent-gradient: linear-gradient(135deg, #ffb24d, #ffc471, #ffd99a);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(255, 178, 77, 0.12), rgba(255, 217, 154, 0.06));
-  --gutter-bg: #161520;
-  --gutter-hover: #1e1d2e;
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.40);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.50);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.60);
-  --code-bg: #161520;
-  --code-text: #ffd47a;
-  --code-block-bg: #0a0910;
-  --blockquote-border: var(--accent-gradient);
-  --blockquote-bg: rgba(255, 178, 77, 0.05);
-  --table-stripe: #161520;
-  --table-border: #2a2840;
-  --table-header-bg: linear-gradient(180deg, #1e1d2e, #2a2840);
-  --link-color: #ffc471;
-  --link-hover: #ffd99a;
-  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
-  --mark-bg: #6a4a14;
-  --scrollbar-thumb: #2a2840;
-  --scrollbar-track: transparent;
-  --glass-bg: rgba(14, 13, 18, 0.92);
-  --glass-border: rgba(255, 178, 77, 0.18);
-  --color-info: #74c0ff;
-  --color-info-bg: rgba(116, 192, 255, 0.10);
-  --color-success: #74e0a0;
-  --color-success-bg: rgba(116, 224, 160, 0.10);
-  --color-warning: #ffc471;
-  --color-warning-bg: rgba(255, 196, 113, 0.10);
-  --color-danger: #ff7474;
-  --color-danger-bg: rgba(255, 116, 116, 0.10);
-  --color-important: #c084ff;
-  --color-important-bg: rgba(192, 132, 255, 0.10);
-  --icon-markdown: #ffb24d;
-  --icon-data: #74e0a0;
-  --icon-config: #ffc471;
-  --icon-image: #ff7474;
-  --icon-video: #c084ff;
-  --icon-default: #908a72;
 }
 
 [data-theme='blueprint'] {
@@ -2179,113 +1938,6 @@
 }
 
 /* ===========================================================================
-   Brutalist — raw concrete, oversized type, hard offset shadows
-   =========================================================================== */
-[data-theme='brutalist'] body,
-[data-theme='brutalist'] .markdown-body {
-  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-  font-weight: 500;
-  line-height: 1.45;
-}
-[data-theme='brutalist'] .markdown-body h1,
-[data-theme='brutalist'] .markdown-body h2,
-[data-theme='brutalist'] .markdown-body h3,
-[data-theme='brutalist'] .markdown-body h4 {
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  line-height: 0.95;
-  text-transform: uppercase;
-}
-[data-theme='brutalist'] .markdown-body h1 {
-  font-size: clamp(2.2rem, 7vw, 5rem);
-  border: none;
-  border-bottom: 6px solid var(--text-primary);
-  padding-bottom: 0.1em;
-  margin-top: 1.4em;
-}
-[data-theme='brutalist'] .markdown-body h2 {
-  font-size: clamp(1.6rem, 4.5vw, 3rem);
-  border: none;
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  padding: 0.15em 0.4em;
-  display: inline-block;
-  margin-top: 1.6em;
-}
-[data-theme='brutalist'] .markdown-body h3 {
-  font-size: clamp(1.2rem, 3vw, 1.8rem);
-  text-decoration: underline;
-  text-decoration-thickness: 4px;
-  text-underline-offset: 0.15em;
-}
-[data-theme='brutalist'] .markdown-body h4 {
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-}
-[data-theme='brutalist'] .markdown-body a {
-  color: var(--link-color);
-  text-decoration: underline;
-  text-decoration-thickness: 3px;
-  text-underline-offset: 3px;
-  font-weight: 700;
-}
-[data-theme='brutalist'] .markdown-body a:hover {
-  background: #fff200;
-  color: #000;
-  text-decoration: underline;
-}
-[data-theme='brutalist'] .markdown-body mark {
-  background: var(--mark-bg);
-  color: var(--text-primary);
-  padding: 0 4px;
-  font-weight: 700;
-}
-[data-theme='brutalist'] .markdown-body blockquote {
-  border: 3px solid var(--text-primary);
-  border-left-width: 12px;
-  background: var(--accent-bg);
-  padding: 1em 1.2em;
-  font-weight: 600;
-  font-size: 1.1em;
-  box-shadow: var(--shadow-sm);
-}
-[data-theme='brutalist'] .markdown-body code {
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  padding: 0.05em 0.3em;
-  border: none;
-}
-[data-theme='brutalist'] .markdown-body pre.hljs {
-  border: 3px solid var(--text-primary);
-  box-shadow: var(--shadow-md);
-}
-[data-theme='brutalist'] .markdown-body table {
-  border: 3px solid var(--text-primary);
-  box-shadow: var(--shadow-sm);
-}
-[data-theme='brutalist'] .markdown-body th {
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-[data-theme='brutalist'] .markdown-body hr {
-  border: none;
-  height: 8px;
-  background: var(--text-primary);
-  margin: 2em 0;
-}
-[data-theme='brutalist'] button,
-[data-theme='brutalist'] input,
-[data-theme='brutalist'] select,
-[data-theme='brutalist'] textarea {
-  border-radius: 0 !important;
-  border-width: 2px;
-  font-weight: 600;
-}
-
-/* ===========================================================================
    Newspaper — broadsheet typography, two-column flow, dropcap
    =========================================================================== */
 [data-theme='newspaper'] body,
@@ -2369,388 +2021,6 @@
 }
 
 /* ===========================================================================
-   Sumi — 水墨画 ink wash, five ink gradations, vermillion seal (落款)
-   Inspired by 山水画 and 書道. Layered ink, generous whitespace ("間"),
-   subtle washi paper texture, and a real ink-stroke feel on every flourish.
-   =========================================================================== */
-[data-theme='sumi'] body,
-[data-theme='sumi'] .markdown-body {
-  font-family: 'Klee One', 'Yuji Syuku', 'Noto Serif JP', 'Hiragino Mincho ProN',
-    'YuMincho', 'Lora', serif;
-  line-height: 2.05;
-  letter-spacing: 0.02em;
-  /* Honor Japanese typography conventions */
-  font-feature-settings: 'palt' 1, 'pkna' 1, 'kern' 1;
-  text-rendering: optimizeLegibility;
-}
-/* Washi paper texture — subtle layered noise from gradients (no SVG asset
-   needed). Fibres + slight warm cast give the surface organic warmth. */
-[data-theme='sumi'] body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      92deg,
-      transparent 0,
-      transparent 38px,
-      rgba(26, 23, 20, 0.012) 38px,
-      rgba(26, 23, 20, 0.012) 40px
-    ),
-    repeating-linear-gradient(
-      176deg,
-      transparent 0,
-      transparent 60px,
-      rgba(168, 51, 43, 0.008) 60px,
-      rgba(168, 51, 43, 0.008) 62px
-    ),
-    radial-gradient(ellipse at 18% 22%, rgba(60, 50, 30, 0.025), transparent 40%),
-    radial-gradient(ellipse at 82% 70%, rgba(60, 50, 30, 0.018), transparent 45%);
-  background-size: auto, auto, 100% 100%, 100% 100%;
-  z-index: 0;
-  mix-blend-mode: multiply;
-}
-[data-theme='sumi'] #app {
-  position: relative;
-  z-index: 1;
-}
-
-/* Headings — calligraphic weight with multi-layer ink shadow */
-[data-theme='sumi'] .markdown-body h1,
-[data-theme='sumi'] .markdown-body h2,
-[data-theme='sumi'] .markdown-body h3,
-[data-theme='sumi'] .markdown-body h4 {
-  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
-  font-weight: 700;
-  color: var(--sumi-sho);
-  /* Layered ink bleed: 3 stacked shadows simulate brush wetness on paper. */
-  text-shadow:
-    0 0 0.4px rgba(26, 23, 20, 0.65),
-    0.5px 0.5px 0.6px rgba(43, 39, 35, 0.25),
-    -0.4px 0.6px 1.2px rgba(74, 69, 62, 0.18);
-}
-
-/* H1 — 巻頭の題 (chapter title), large, with vermillion seal at lower-right */
-[data-theme='sumi'] .markdown-body h1 {
-  position: relative;
-  font-size: clamp(2rem, 5vw, 3.2rem);
-  line-height: 1.3;
-  padding: 0.4em 2.2em 0.4em 0;
-  margin-top: 1.6em;
-  margin-bottom: 1em;
-  border: none;
-}
-/* Double under-stroke that fades like a brush lift */
-[data-theme='sumi'] .markdown-body h1::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 1.6em;
-  bottom: 0.05em;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--sumi-sho) 0%,
-    var(--sumi-no) 60%,
-    var(--sumi-tan) 88%,
-    transparent 100%
-  );
-}
-/* 落款 — square red seal with a sumi character (印) inside.
-   Positioned at the lower-right with a slight tilt, the way calligraphers stamp.*/
-[data-theme='sumi'] .markdown-body h1::after {
-  content: '印';
-  position: absolute;
-  right: 0.15em;
-  bottom: 0.1em;
-  width: 1.4em;
-  height: 1.4em;
-  background: var(--accent);
-  color: #fbeae5;
-  font-family: 'Klee One', 'Noto Serif JP', serif;
-  font-size: 0.45em;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(-4deg);
-  box-shadow:
-    inset 0 0 0 2px rgba(251, 234, 229, 0.9),
-    0 1px 2px rgba(168, 51, 43, 0.35);
-  letter-spacing: 0;
-}
-
-/* H2 — section heading with brushed under-line */
-[data-theme='sumi'] .markdown-body h2 {
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-  position: relative;
-  padding-bottom: 0.3em;
-  margin-top: 2.2em;
-  margin-bottom: 0.8em;
-  border: none;
-}
-[data-theme='sumi'] .markdown-body h2::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 3em;
-  height: 2px;
-  background: linear-gradient(90deg, var(--sumi-sho), var(--sumi-tan) 80%, transparent);
-}
-[data-theme='sumi'] .markdown-body h3 {
-  font-size: 1.35em;
-  color: var(--sumi-no);
-  margin-top: 1.8em;
-}
-[data-theme='sumi'] .markdown-body h3::before {
-  content: '○ ';
-  color: var(--accent);
-  font-weight: 400;
-}
-[data-theme='sumi'] .markdown-body h4 {
-  color: var(--sumi-ju);
-}
-[data-theme='sumi'] .markdown-body h4::before {
-  content: '◇ ';
-  color: var(--sumi-tan);
-}
-
-/* Body paragraphs — generous "ma" (間 — meaningful empty space). */
-[data-theme='sumi'] .markdown-body p {
-  margin-bottom: 1.4em;
-}
-/* Japanese first-line indent — soft, but only when paragraphs follow body text */
-[data-theme='sumi'] .markdown-body p + p {
-  text-indent: 1em;
-}
-
-/* Links — under-stroked with vermillion, hover bleeds the ink */
-[data-theme='sumi'] .markdown-body a {
-  color: var(--sumi-sho);
-  text-decoration: underline;
-  text-decoration-color: var(--accent);
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
-  transition: color var(--mo-base) ease, text-shadow var(--mo-base) ease;
-}
-[data-theme='sumi'] .markdown-body a:hover {
-  color: var(--accent);
-  text-shadow: 0 0 4px rgba(168, 51, 43, 0.4);
-  text-decoration-thickness: 2px;
-}
-
-/* Blockquote — 古典書 style with full-width brackets「」 and gray ink */
-[data-theme='sumi'] .markdown-body blockquote {
-  border: none;
-  background: transparent;
-  font-style: normal;
-  color: var(--sumi-ju);
-  padding: 0.4em 2em 0.4em 2em;
-  margin: 1.6em 0;
-  position: relative;
-  font-size: 1.05em;
-}
-[data-theme='sumi'] .markdown-body blockquote::before {
-  content: '「';
-  position: absolute;
-  left: 0;
-  top: -0.2em;
-  font-size: 2.8em;
-  line-height: 1;
-  color: var(--sumi-no);
-  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
-}
-[data-theme='sumi'] .markdown-body blockquote::after {
-  content: '」';
-  position: absolute;
-  right: 0;
-  bottom: -0.5em;
-  font-size: 2.8em;
-  line-height: 1;
-  color: var(--sumi-no);
-  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
-}
-
-/* HR — frayed brush stroke that fades on both ends */
-[data-theme='sumi'] .markdown-body hr {
-  border: none;
-  height: 8px;
-  background: transparent;
-  margin: 3em auto;
-  max-width: 70%;
-  position: relative;
-}
-[data-theme='sumi'] .markdown-body hr::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      var(--sumi-tan) 6%,
-      var(--sumi-no) 18%,
-      var(--sumi-sho) 35%,
-      var(--sumi-sho) 65%,
-      var(--sumi-no) 82%,
-      var(--sumi-tan) 94%,
-      transparent 100%
-    );
-  /* Wavy mask gives the "frayed" feel of a real brush stroke */
-  mask-image: repeating-linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 1) 0,
-    rgba(0, 0, 0, 1) 3px,
-    rgba(0, 0, 0, 0.85) 3px,
-    rgba(0, 0, 0, 0.85) 5px
-  );
-  -webkit-mask-image: repeating-linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 1) 0,
-    rgba(0, 0, 0, 1) 3px,
-    rgba(0, 0, 0, 0.85) 3px,
-    rgba(0, 0, 0, 0.85) 5px
-  );
-  height: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-[data-theme='sumi'] .markdown-body hr::after {
-  /* A pale outer wash — the second drier sweep of the brush */
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(26, 23, 20, 0.08) 30%,
-    rgba(26, 23, 20, 0.12) 50%,
-    rgba(26, 23, 20, 0.08) 70%,
-    transparent
-  );
-  filter: blur(2px);
-}
-
-/* Lists — Japanese hierarchical markers ・○■ */
-[data-theme='sumi'] .markdown-body ul > li::marker {
-  content: '・ ';
-  color: var(--sumi-sho);
-  font-weight: 700;
-}
-[data-theme='sumi'] .markdown-body ul ul > li::marker {
-  content: '○ ';
-  color: var(--sumi-no);
-}
-[data-theme='sumi'] .markdown-body ul ul ul > li::marker {
-  content: '■ ';
-  color: var(--sumi-ju);
-}
-
-/* Code — paper-tone background with muted ink-tone code */
-[data-theme='sumi'] .markdown-body code {
-  background: var(--code-bg);
-  color: var(--sumi-no);
-  border: 1px solid var(--border-subtle);
-  padding: 0 4px;
-}
-[data-theme='sumi'] .markdown-body pre.hljs {
-  background: var(--code-block-bg);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(26, 23, 20, 0.04);
-}
-/* Five-ink syntax highlighting — code looks like brush strokes, not rainbow. */
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-keyword,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-built_in,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-tag,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-name,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-selector-tag {
-  color: var(--sumi-sho);
-  font-weight: 700;
-}
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-string,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-literal,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-number,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-regexp {
-  color: var(--accent);
-}
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-function,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-title,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-attr,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-variable {
-  color: var(--sumi-no);
-}
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-comment,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-meta {
-  color: var(--sumi-tan);
-  font-style: italic;
-}
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-type,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-params,
-[data-theme='sumi'] .markdown-body pre.hljs .hljs-symbol {
-  color: var(--sumi-ju);
-}
-
-/* Tables — 罫線 (ruled lines) old-book style: horizontal only, no verticals */
-[data-theme='sumi'] .markdown-body table {
-  border: none;
-  border-top: 2px solid var(--sumi-sho);
-  border-bottom: 2px solid var(--sumi-sho);
-  border-collapse: collapse;
-  background: transparent;
-}
-[data-theme='sumi'] .markdown-body th {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--sumi-no);
-  color: var(--sumi-sho);
-  font-weight: 700;
-  text-align: left;
-  padding: 0.5em 0.8em;
-  font-family: 'Yuji Syuku', 'Klee One', 'Noto Serif JP', serif;
-}
-[data-theme='sumi'] .markdown-body td {
-  border: none;
-  padding: 0.4em 0.8em;
-}
-[data-theme='sumi'] .markdown-body tbody tr + tr td {
-  border-top: 1px dotted var(--border);
-}
-
-/* Mark — vermillion underline (傍線), not yellow highlighter */
-[data-theme='sumi'] .markdown-body mark {
-  background: transparent;
-  color: var(--sumi-sho);
-  border-bottom: 2px solid var(--accent);
-  padding: 0 1px;
-  border-radius: 0;
-}
-
-/* Images — render in pure grayscale with a brushed mat */
-[data-theme='sumi'] .markdown-body img {
-  filter: grayscale(1) contrast(1.15) brightness(1.02);
-  border: 1px solid var(--border);
-  padding: 0.4em;
-  background: var(--bg-secondary);
-  box-shadow: 0 2px 0 rgba(26, 23, 20, 0.08);
-}
-
-/* Selection — vermillion brush wash */
-[data-theme='sumi'] ::selection {
-  background: rgba(168, 51, 43, 0.18);
-  color: var(--sumi-sho);
-}
-
-/* Scrollbar — pale brushed ink */
-[data-theme='sumi'] ::-webkit-scrollbar-thumb {
-  background: var(--sumi-tan);
-}
-[data-theme='sumi'] ::-webkit-scrollbar-thumb:hover {
-  background: var(--sumi-ju);
-}
-
-/* ===========================================================================
    Galaxy — deep space, nebula gradients, twinkling stars
    =========================================================================== */
 [data-theme='galaxy'] body {
@@ -2824,145 +2094,6 @@
 [data-theme='galaxy'] .markdown-body code {
   background: var(--code-bg);
   text-shadow: 0 0 3px rgba(110, 224, 255, 0.25);
-}
-
-/* ===========================================================================
-   Codex — medieval manuscript, illuminated initials, parchment
-   =========================================================================== */
-[data-theme='codex'] body,
-[data-theme='codex'] .markdown-body {
-  font-family: 'EB Garamond', 'Lora', 'Georgia', 'Noto Serif JP', serif;
-  line-height: 1.8;
-  font-feature-settings: 'kern', 'liga', 'dlig', 'onum';
-}
-[data-theme='codex'] .markdown-body h1,
-[data-theme='codex'] .markdown-body h2,
-[data-theme='codex'] .markdown-body h3 {
-  font-family: 'UnifrakturCook', 'EB Garamond', 'Lora', serif;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.01em;
-}
-[data-theme='codex'] .markdown-body h1 {
-  text-align: center;
-  font-size: clamp(2rem, 5vw, 3rem);
-  border-top: 3px double var(--accent);
-  border-bottom: 3px double var(--accent);
-  padding: 0.4em 0;
-  margin: 1em 0;
-}
-[data-theme='codex'] .markdown-body h2 {
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
-}
-/* Illuminated dropcap on first paragraph */
-[data-theme='codex'] .markdown-body blockquote {
-  border: 1px solid var(--accent);
-  border-left-width: 4px;
-  background: var(--blockquote-bg);
-  padding: 0.6em 1em;
-  font-style: italic;
-}
-[data-theme='codex'] .markdown-body a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 2px;
-}
-[data-theme='codex'] .markdown-body a:hover {
-  color: var(--link-hover);
-  text-decoration-style: solid;
-}
-[data-theme='codex'] .markdown-body hr {
-  border: none;
-  height: 16px;
-  background: var(--hr-gradient);
-  margin: 2em 0;
-}
-
-/* ===========================================================================
-   Spotlight — focused reading with mouse-following pool of light
-   --mx / --my are updated from JS (see main.ts). Defaults centre the spotlight.
-   =========================================================================== */
-[data-theme='spotlight'] {
-  --mx: 50;
-  --my: 50;
-}
-[data-theme='spotlight'] body,
-[data-theme='spotlight'] .markdown-body {
-  font-family: 'Lora', 'EB Garamond', 'Georgia', 'Noto Serif JP', serif;
-  line-height: 1.85;
-}
-/* Dim ambient overlay with a warm pool of light following the cursor */
-[data-theme='spotlight'] #viewer-pane {
-  position: relative;
-}
-[data-theme='spotlight'] #viewer-pane::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    circle 320px at calc(var(--mx) * 1%) calc(var(--my) * 1%),
-    transparent 0,
-    transparent 35%,
-    rgba(14, 13, 18, 0.55) 80%,
-    rgba(14, 13, 18, 0.78) 100%
-  );
-  z-index: 10;
-  transition: opacity var(--mo-base) ease;
-  opacity: 0.9;
-}
-/* When the user is not interacting, fall back to a subtle uniform dim. */
-[data-theme='spotlight'] #viewer-pane:not(:hover)::before {
-  opacity: 0.5;
-}
-[data-theme='spotlight'] .markdown-body h1,
-[data-theme='spotlight'] .markdown-body h2,
-[data-theme='spotlight'] .markdown-body h3 {
-  color: var(--accent);
-  font-weight: 700;
-}
-[data-theme='spotlight'] .markdown-body h2 {
-  color: var(--accent-light);
-}
-[data-theme='spotlight'] .markdown-body h3 {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-[data-theme='spotlight'] .markdown-body h1 {
-  border-bottom: 1px solid var(--accent-border);
-  padding-bottom: 0.25em;
-}
-[data-theme='spotlight'] .markdown-body a {
-  color: var(--link-color);
-  text-decoration: underline;
-  text-decoration-color: var(--accent-border);
-  text-underline-offset: 3px;
-}
-[data-theme='spotlight'] .markdown-body a:hover {
-  text-decoration-color: var(--accent);
-  text-shadow: 0 0 8px var(--accent);
-}
-[data-theme='spotlight'] .markdown-body blockquote {
-  border-left: 3px solid var(--accent);
-  background: var(--blockquote-bg);
-}
-[data-theme='spotlight'] .markdown-body code {
-  background: var(--code-bg);
-  color: var(--code-text);
-}
-/* Honor reduced-motion: kill the dynamic dim, keep a static gentle vignette. */
-@media (prefers-reduced-motion: reduce) {
-  [data-theme='spotlight'] #viewer-pane::before {
-    background: radial-gradient(
-      ellipse at center,
-      transparent 0,
-      transparent 50%,
-      rgba(14, 13, 18, 0.35) 100%
-    );
-    opacity: 1;
-  }
 }
 
 /* Matrix — code-rain backdrop, neon green text, sharp glow */
@@ -3950,7 +3081,6 @@ body.dragging::after {
 [data-theme='matrix'],
 [data-theme='cyberpunk'],
 [data-theme='galaxy'],
-[data-theme='spotlight'],
 [data-theme='blueprint'],
 [data-theme='aurora'],
 [data-theme='glass'],
@@ -3984,8 +3114,7 @@ body.dragging::after {
 
 /* Parchment / newsprint — dark inks on a warm mid-tone code surface */
 [data-theme='paper'],
-[data-theme='newspaper'],
-[data-theme='codex'] {
+[data-theme='newspaper'] {
   --syn-keyword: #5b21b6;
   --syn-string: #0b5850;
   --syn-title: #1e40af;
@@ -4014,15 +3143,6 @@ body.dragging::after {
   --syn-variable: #b51d1a;
   --syn-deletion: #b51d1a;
   --syn-comment: #556668;
-}
-
-/* Sumi — ink-gradation palette; darker ink tokens only (tan #888279 fails AA on code) */
-[data-theme='sumi'] {
-  --syn-keyword: var(--sumi-sho);
-  --syn-string: var(--sumi-ju);
-  --syn-title: var(--sumi-sho);
-  --syn-variable: var(--sumi-ju);
-  --syn-comment: var(--sumi-ju);
 }
 
 /* Comment ink overrides where the code surface differs enough from the page bg
@@ -8110,12 +7230,8 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-cyberpunk { background: linear-gradient(135deg, #ff2d95 50%, #05d9e8 50%); }
 .theme-menu-item-swatch-ascii { background: linear-gradient(135deg, #fdfdf9 50%, #0e0e0e 50%); }
 .theme-menu-item-swatch-origami { background: linear-gradient(135deg, #faf6ee 50%, #c8503c 50%); }
-.theme-menu-item-swatch-brutalist { background: linear-gradient(135deg, #ffffff 50%, #fff200 50%); }
 .theme-menu-item-swatch-newspaper { background: linear-gradient(135deg, #f3ecdb 50%, #8a1419 50%); }
-.theme-menu-item-swatch-sumi { background: linear-gradient(135deg, #fbfaf6 50%, #a8332b 50%); }
 .theme-menu-item-swatch-galaxy { background: linear-gradient(135deg, #03020a 50%, #ffc14d 50%); }
-.theme-menu-item-swatch-codex { background: linear-gradient(135deg, #e8dab8 50%, #9b1c1c 50%); }
-.theme-menu-item-swatch-spotlight { background: linear-gradient(135deg, #0e0d12 50%, #ffb24d 50%); }
 .theme-menu-item-swatch-blueprint { background: linear-gradient(135deg, #0f1d3a 50%, #5fcfff 50%); }
 .theme-menu-item-swatch-solarized { background: linear-gradient(135deg, #fdf6e3 50%, #268bd2 50%); }
 .theme-menu-item-swatch-tokyo { background: linear-gradient(135deg, #1a1b26 50%, #7aa2f7 50%); }
@@ -8125,6 +7241,12 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-highcontrast { background: linear-gradient(135deg, #ffffff 50%, #0a3aa8 50%); }
 .theme-menu-item-swatch-ocean { background: linear-gradient(135deg, #0c1c26 50%, #4fd6c8 50%); }
 .theme-menu-item-swatch-eink { background: linear-gradient(135deg, #f7f7f5 50%, #3a3a37 50%); }
+.theme-menu-item-swatch-cyanotype { background: linear-gradient(135deg, #15324f 50%, #7fb2cf 50%); }
+.theme-menu-item-swatch-linen { background: linear-gradient(135deg, #3a4a3f 50%, #c9a24b 50%); }
+.theme-menu-item-swatch-dotmatrix { background: linear-gradient(135deg, #f83800 33%, #3cbcfc 33% 66%, #fcc000 66%); }
+.theme-menu-item-swatch-ledger { background: linear-gradient(135deg, #f6f9f2 50%, #1f6b3b 50%); }
+.theme-menu-item-swatch-plaintext { background: linear-gradient(135deg, #fcfcfa 50%, #7d7d7d 50%); }
+.theme-menu-item-swatch-braille { background: linear-gradient(135deg, #f0eee9 50%, #4a4640 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;
@@ -9980,4 +9102,685 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='eink'] .markdown-body mark {
   background: var(--mark-bg);
   color: var(--text-primary);
+}
+
+/* ============================================================
+   Cyanotype — Prussian-blue sun-print (DARK)
+   ============================================================ */
+[data-theme='cyanotype'] {
+  --bg-primary: #15324f;
+  --bg-secondary: #102841;
+  --bg-tertiary: #1c3d5e;
+  --bg-editor: #12304b;
+  --text-primary: #e8f1f6;
+  --text-secondary: #bcd3e0;
+  --text-muted: #8ba9bb;
+  --border: #2c5274;
+  --border-subtle: #1f3f5d;
+  --border-strong: #5e89a6;
+  --accent: #7fb2cf;
+  --accent-light: #a3cadf;
+  --accent-lighter: #c8e0ed;
+  --accent-bg: rgba(127, 178, 207, 0.12);
+  --accent-border: rgba(127, 178, 207, 0.35);
+  --accent-gradient: linear-gradient(135deg, #7fb2cf, #a3cadf, #c8e0ed);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(127, 178, 207, 0.16), rgba(200, 224, 237, 0.08));
+  --gutter-bg: #102841;
+  --gutter-hover: #1c3d5e;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --code-bg: #0e2236;
+  --code-text: #cfe4f0;
+  --code-block-bg: #f4f8fb;
+  --blockquote-bg: rgba(127, 178, 207, 0.08);
+  --table-stripe: #102841;
+  --table-border: #2c5274;
+  --table-header-bg: linear-gradient(180deg, #1c3d5e, #16344f);
+  --link-color: #a3cadf;
+  --link-hover: #c8e0ed;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent), var(--border), transparent);
+  --mark-bg: rgba(127, 178, 207, 0.35);
+  --scrollbar-thumb: #3a6385;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(21, 50, 79, 0.85);
+  --glass-border: rgba(200, 224, 237, 0.18);
+  --color-info: #7fb2cf;
+  --color-info-bg: rgba(127, 178, 207, 0.14);
+  --color-success: #7fcfb0;
+  --color-success-bg: rgba(127, 207, 176, 0.12);
+  --color-warning: #d9c27f;
+  --color-warning-bg: rgba(217, 194, 127, 0.14);
+  --color-danger: #e08a8a;
+  --color-danger-bg: rgba(224, 138, 138, 0.14);
+  --color-important: #b29adf;
+  --color-important-bg: rgba(178, 154, 223, 0.14);
+  --icon-markdown: #7fb2cf;
+  --icon-data: #7fcfb0;
+  --icon-config: #d9c27f;
+  --icon-image: #e08a8a;
+  --icon-video: #a3cadf;
+  --icon-default: #5e89a6;
+  --syn-keyword: #a3cadf;
+  --syn-string: #9fd8c4;
+  --syn-title: #c8e0ed;
+  --syn-attr: #d9c27f;
+  --syn-variable: #8fc4dc;
+  --syn-comment: var(--text-muted);
+  --syn-deletion: #e08a8a;
+}
+[data-theme='cyanotype'] .markdown-body,
+[data-theme='cyanotype'] .markdown-body h1,
+[data-theme='cyanotype'] .markdown-body h2,
+[data-theme='cyanotype'] .markdown-body h3,
+[data-theme='cyanotype'] .markdown-body h4 {
+  font-family: 'EB Garamond', Georgia, serif;
+}
+/* corner exposure-burn lighten */
+[data-theme='cyanotype'] #viewer-pane {
+  background:
+    radial-gradient(80% 80% at 100% 0%, rgba(168, 205, 225, 0.22), transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, rgba(168, 205, 225, 0.14), transparent 55%),
+    var(--bg-primary);
+}
+/* chemical streak overlay */
+[data-theme='cyanotype'] #viewer-pane::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.10;
+  background-image: repeating-linear-gradient(8deg, transparent 0 38px, rgba(232, 241, 246, 0.6) 38px 39px, transparent 39px 92px);
+  mix-blend-mode: screen;
+}
+/* bleached light code card needs dark ink syntax */
+[data-theme='cyanotype'] .markdown-body pre.hljs {
+  color: #15324f;
+}
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-keyword,
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-selector-tag,
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-title,
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-name {
+  color: #1d4e74;
+}
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-string,
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-attr,
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-number {
+  color: #2c6e54;
+}
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-comment,
+[data-theme='cyanotype'] .markdown-body pre.hljs .hljs-meta {
+  color: #6b8597;
+}
+
+/* ============================================================
+   Linen — woven bookcloth + gold foil (DARK)
+   ============================================================ */
+[data-theme='linen'] {
+  --bg-primary: #3a4a3f;
+  --bg-secondary: #324036;
+  --bg-tertiary: #43564a;
+  --bg-editor: #37463c;
+  --text-primary: #e7e1d2;
+  --text-secondary: #c4bda9;
+  --text-muted: #9a9784;
+  --border: #52655a;
+  --border-subtle: #3f5247;
+  --border-strong: #7d9384;
+  --accent: #c9a24b;
+  --accent-light: #dab96f;
+  --accent-lighter: #ecd9a6;
+  --accent-bg: rgba(201, 162, 75, 0.12);
+  --accent-border: rgba(201, 162, 75, 0.35);
+  --accent-gradient: linear-gradient(135deg, #c9a24b, #ecd9a6, #c9a24b);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(201, 162, 75, 0.16), rgba(236, 217, 166, 0.08));
+  --gutter-bg: #324036;
+  --gutter-hover: #43564a;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.50);
+  --code-bg: #2c3830;
+  --code-text: #ecd9a6;
+  --code-block-bg: #2f3d34;
+  --blockquote-bg: rgba(201, 162, 75, 0.08);
+  --table-stripe: #324036;
+  --table-border: #52655a;
+  --table-header-bg: linear-gradient(180deg, #43564a, #3a4a3f);
+  --link-color: #dab96f;
+  --link-hover: #ecd9a6;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), #c9a24b, var(--border), transparent);
+  --mark-bg: rgba(201, 162, 75, 0.35);
+  --scrollbar-thumb: #5c7064;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(58, 74, 63, 0.85);
+  --glass-border: rgba(236, 217, 166, 0.18);
+  --viewer-endpaper: #efe9d8;
+  --color-info: #7fa8c4;
+  --color-info-bg: rgba(127, 168, 196, 0.14);
+  --color-success: #8fc49a;
+  --color-success-bg: rgba(143, 196, 154, 0.12);
+  --color-warning: #dab96f;
+  --color-warning-bg: rgba(218, 185, 111, 0.14);
+  --color-danger: #d99a8a;
+  --color-danger-bg: rgba(217, 154, 138, 0.14);
+  --color-important: #b9a0d4;
+  --color-important-bg: rgba(185, 160, 212, 0.14);
+  --icon-markdown: #c9a24b;
+  --icon-data: #8fc49a;
+  --icon-config: #dab96f;
+  --icon-image: #d99a8a;
+  --icon-video: #7fa8c4;
+  --icon-default: #7d9384;
+  --syn-keyword: #ecd9a6;
+  --syn-string: #a8c79a;
+  --syn-title: #dab96f;
+  --syn-attr: #c9a24b;
+  --syn-variable: #cfae6a;
+  --syn-comment: var(--text-muted);
+  --syn-deletion: #d99a8a;
+}
+[data-theme='linen'] .markdown-body {
+  font-family: 'Crimson Pro', 'Lora', Georgia, serif;
+}
+[data-theme='linen'] .markdown-body h1,
+[data-theme='linen'] .markdown-body h2,
+[data-theme='linen'] .markdown-body h3,
+[data-theme='linen'] .markdown-body h4 {
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+}
+/* crosshatch weave + cream inset endpaper viewer-pane */
+[data-theme='linen'] #viewer-pane {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 4px),
+    var(--bg-primary);
+  box-shadow: inset 0 0 0 8px #efe9d8, inset 0 0 0 9px #c9a24b;
+}
+/* gold foil-emboss headings */
+[data-theme='linen'] .markdown-body h1,
+[data-theme='linen'] .markdown-body h2 {
+  color: #ecd9a6;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 #8a6f2c, 0 -1px 1px rgba(255, 247, 214, 0.5);
+}
+
+/* ============================================================
+   Dot Matrix — 9-pin dot printer
+   ============================================================ */
+[data-theme='dotmatrix'] {
+  --bg-primary: #0b0b22;
+  --bg-secondary: #15153a;
+  --bg-tertiary: #23234f;
+  --bg-editor: #0b0b22;
+  --text-primary: #fcfcfc;
+  --text-secondary: #bcc2e8;
+  --text-muted: #8a8fc0;
+  --border: #4848a0;
+  --border-subtle: #2a2a5a;
+  --border-strong: #3cbcfc;
+  --accent: #3cbcfc;
+  --accent-light: #5fd0ff;
+  --accent-lighter: #a8e4ff;
+  --accent-bg: rgba(60, 188, 252, 0.12);
+  --accent-border: rgba(60, 188, 252, 0.40);
+  --accent-gradient: linear-gradient(90deg, #f83800, #fcc000, #00d800, #3cbcfc, #f878f8);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(60, 188, 252, 0.14), rgba(248, 120, 248, 0.10));
+  --gutter-bg: #15153a;
+  --gutter-hover: #23234f;
+  --shadow-sm: 2px 2px 0 #000000;
+  --shadow-md: 4px 4px 0 #000000;
+  --shadow-lg: 6px 6px 0 #000000;
+  --code-bg: #15153a;
+  --code-text: #fcc000;
+  --code-block-bg: #0d0d28;
+  --blockquote-bg: rgba(60, 188, 252, 0.08);
+  --table-stripe: #15153a;
+  --table-border: #4848a0;
+  --table-header-bg: #23234f;
+  --link-color: #3cbcfc;
+  --link-hover: #5fd0ff;
+  --hr-gradient: none;
+  --mark-bg: #fcc000;
+  --scrollbar-thumb: #4848a0;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(11, 11, 34, 0.92);
+  --glass-border: rgba(60, 188, 252, 0.30);
+  --color-info: #3cbcfc;
+  --color-info-bg: rgba(60, 188, 252, 0.12);
+  --color-success: #5fe85f;
+  --color-success-bg: rgba(0, 216, 0, 0.14);
+  --color-warning: #fcc000;
+  --color-warning-bg: rgba(252, 192, 0, 0.14);
+  --color-danger: #ff6a4d;
+  --color-danger-bg: rgba(248, 56, 0, 0.14);
+  --color-important: #f878f8;
+  --color-important-bg: rgba(248, 120, 248, 0.14);
+  --icon-markdown: #3cbcfc;
+  --icon-data: #5fe85f;
+  --icon-config: #fcc000;
+  --icon-image: #f878f8;
+  --icon-video: #ff6a4d;
+  --icon-default: #8a8fc0;
+  --syn-keyword: #f878f8;
+  --syn-string: #5fe85f;
+  --syn-title: #3cbcfc;
+  --syn-attr: #fcc000;
+  --syn-variable: #ff6a4d;
+  --syn-comment: #6a6fa0;
+  --syn-deletion: #ff6a4d;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+}
+[data-theme='dotmatrix'] .markdown-body {
+  font-family: 'DotGothic16', 'Courier Prime', monospace;
+  line-height: 1.9;
+}
+[data-theme='dotmatrix'] .markdown-body h1,
+[data-theme='dotmatrix'] .markdown-body h2,
+[data-theme='dotmatrix'] .markdown-body h3,
+[data-theme='dotmatrix'] .markdown-body h4 {
+  font-family: 'Press Start 2P', 'DotGothic16', monospace;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  text-shadow: 2px 2px 0 #000000;
+}
+[data-theme='dotmatrix'] .markdown-body h1 { font-size: 1.6rem; color: #fcc000; }
+[data-theme='dotmatrix'] .markdown-body h2 { font-size: 1.2rem; color: #3cbcfc; }
+[data-theme='dotmatrix'] .markdown-body h3 { font-size: 1rem; color: #5fe85f; }
+[data-theme='dotmatrix'] .markdown-body h4 { font-size: 0.8rem; color: #f878f8; }
+/* NES screen: faint pixel grid + CRT scanlines */
+[data-theme='dotmatrix'] #viewer-pane {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px),
+    linear-gradient(rgba(60, 188, 252, 0.04) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, rgba(60, 188, 252, 0.04) 1px, transparent 1px) 0 0 / 16px 16px,
+    var(--bg-primary);
+}
+/* pixel-box code / blockquote / table */
+[data-theme='dotmatrix'] .markdown-body pre.hljs,
+[data-theme='dotmatrix'] .markdown-body blockquote,
+[data-theme='dotmatrix'] .markdown-body table {
+  border: 3px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+[data-theme='dotmatrix'] .markdown-body blockquote {
+  background: var(--bg-secondary);
+}
+[data-theme='dotmatrix'] .markdown-body code {
+  border: 2px solid var(--border-subtle);
+  padding: 0 4px;
+}
+[data-theme='dotmatrix'] .markdown-body mark {
+  color: #0b0b22;
+  padding: 0 4px;
+}
+/* crisp pixel-art images */
+[data-theme='dotmatrix'] .markdown-body img {
+  image-rendering: pixelated;
+}
+/* NES menu-cursor bullets */
+[data-theme='dotmatrix'] .markdown-body ul > li::marker {
+  content: '\25BA ';
+  color: var(--accent);
+}
+/* chunky 4-color pixel hr */
+[data-theme='dotmatrix'] .markdown-body hr {
+  border: 0;
+  height: 6px;
+  margin: 2em 0;
+  background: repeating-linear-gradient(90deg, #f83800 0 10px, #fcc000 10px 20px, #00d800 20px 30px, #3cbcfc 30px 40px);
+}
+/* links as pixel-underlined, invert on hover */
+[data-theme='dotmatrix'] .markdown-body a {
+  text-decoration: none;
+  border-bottom: 2px solid var(--accent);
+}
+[data-theme='dotmatrix'] .markdown-body a:hover {
+  background: var(--accent);
+  color: #0b0b22;
+}
+[data-theme='dotmatrix'] ::selection {
+  background: #3cbcfc;
+  color: #0b0b22;
+}
+
+/* ============================================================
+   Ledger — green-bar accounting paper
+   ============================================================ */
+[data-theme='ledger'] {
+  --bg-primary: #f6f9f2;
+  --bg-secondary: #eef4e6;
+  --bg-tertiary: #e2edd6;
+  --bg-editor: #f8faf4;
+  --text-primary: #1c2a1c;
+  --text-secondary: #39483a;
+  --text-muted: #5f6e5c;
+  --border: #c4d4b8;
+  --border-subtle: #dde8d2;
+  --border-strong: #7e9275;
+  --accent: #1f6b3b;
+  --accent-light: #2e8a4f;
+  --accent-lighter: #6bb088;
+  --accent-bg: rgba(31, 107, 59, 0.08);
+  --accent-border: rgba(31, 107, 59, 0.25);
+  --accent-gradient: linear-gradient(135deg, #1f6b3b, #2e8a4f, #6bb088);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(31, 107, 59, 0.12), rgba(107, 176, 136, 0.07));
+  --gutter-bg: #ebf2e2;
+  --gutter-hover: #dce8cf;
+  --shadow-sm: 0 1px 2px rgba(28, 42, 28, 0.06);
+  --shadow-md: 0 3px 10px rgba(28, 42, 28, 0.08);
+  --shadow-lg: 0 8px 24px rgba(28, 42, 28, 0.10);
+  --code-bg: #e6efdc;
+  --code-text: #1a5a32;
+  --code-block-bg: #eef4e6;
+  --blockquote-bg: rgba(31, 107, 59, 0.05);
+  --table-stripe: #e7f0db;
+  --table-border: #c4d4b8;
+  --table-header-bg: linear-gradient(180deg, #e2edd6, #d6e4c7);
+  --link-color: #1a5a32;
+  --link-hover: #1f6b3b;
+  --hr-gradient: linear-gradient(90deg, #b02a1f, #b02a1f);
+  --mark-bg: #dce88a;
+  --scrollbar-thumb: #b8c8ab;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(246, 249, 242, 0.9);
+  --glass-border: rgba(28, 42, 28, 0.10);
+  --color-info: #2f5f8a;
+  --color-info-bg: rgba(47, 95, 138, 0.08);
+  --color-success: #1f6b3b;
+  --color-success-bg: rgba(31, 107, 59, 0.08);
+  --color-warning: #8a6a1c;
+  --color-warning-bg: rgba(138, 106, 28, 0.10);
+  --color-danger: #b02a1f;
+  --color-danger-bg: rgba(176, 42, 31, 0.08);
+  --color-important: #5a4a82;
+  --color-important-bg: rgba(90, 74, 130, 0.08);
+  --icon-markdown: #1f6b3b;
+  --icon-data: #2e8a4f;
+  --icon-config: #8a6a1c;
+  --icon-image: #b02a1f;
+  --icon-video: #2f5f8a;
+  --icon-default: #7e9275;
+  --syn-keyword: #1c2a1c;
+  --syn-string: #39483a;
+  --syn-title: #1c2a1c;
+  --syn-attr: #1f6b3b;
+  --syn-variable: #1f6b3b;
+  --syn-comment: rgba(28, 42, 28, 0.55);
+  --syn-deletion: #b02a1f;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+}
+[data-theme='ledger'] .markdown-body,
+[data-theme='ledger'] .markdown-body h1,
+[data-theme='ledger'] .markdown-body h2,
+[data-theme='ledger'] .markdown-body h3,
+[data-theme='ledger'] .markdown-body h4 {
+  font-family: 'Cousine', 'Courier Prime', monospace;
+}
+/* mint green-bar stripes behind body + tables */
+[data-theme='ledger'] #viewer-pane,
+[data-theme='ledger'] .markdown-body table {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 24px, #e7f0db 24px 48px),
+    var(--bg-primary);
+}
+/* double red top rule */
+[data-theme='ledger'] .markdown-body hr {
+  border: 0;
+  height: 3px;
+  background: none;
+  border-top: 1px solid #b02a1f;
+  border-bottom: 1px solid #b02a1f;
+}
+/* tabular-nums right-aligned numeric cells + hairline column rules */
+[data-theme='ledger'] .markdown-body td,
+[data-theme='ledger'] .markdown-body th {
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid var(--border);
+}
+[data-theme='ledger'] .markdown-body td:last-child {
+  text-align: right;
+}
+
+/* ============================================================
+   Plaintext — raw markdown source look
+   ============================================================ */
+[data-theme='plaintext'] {
+  --bg-primary: #fcfcfa;
+  --bg-secondary: #f4f4f1;
+  --bg-tertiary: #ebebe8;
+  --bg-editor: #fdfdfb;
+  --text-primary: #2d2d2d;
+  --text-secondary: #4a4a4a;
+  --text-muted: #7d7d7d;
+  --border: #d6d6d2;
+  --border-subtle: #e8e8e4;
+  --border-strong: #9a9a96;
+  --accent: #7d7d7d;
+  --accent-light: #9a9a9a;
+  --accent-lighter: #bcbcbc;
+  --accent-bg: rgba(125, 125, 125, 0.06);
+  --accent-border: rgba(125, 125, 125, 0.22);
+  --accent-gradient: linear-gradient(135deg, #7d7d7d, #9a9a9a);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(125, 125, 125, 0.10), rgba(154, 154, 154, 0.05));
+  --gutter-bg: #f1f1ee;
+  --gutter-hover: #e2e2de;
+  --shadow-sm: none;
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.07);
+  --code-bg: #efefec;
+  --code-text: #4a4a4a;
+  --code-block-bg: #f4f4f1;
+  --blockquote-bg: rgba(0, 0, 0, 0.025);
+  --table-stripe: #f4f4f1;
+  --table-border: #d6d6d2;
+  --table-header-bg: transparent;
+  --link-color: #3d3d3d;
+  --link-hover: #000000;
+  --hr-gradient: none;
+  --mark-bg: #ededea;
+  --scrollbar-thumb: #c8c8c4;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(252, 252, 250, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --color-info: #5a5a5a;
+  --color-info-bg: rgba(90, 90, 90, 0.06);
+  --color-success: #4a4a4a;
+  --color-success-bg: rgba(74, 74, 74, 0.06);
+  --color-warning: #6a6a6a;
+  --color-warning-bg: rgba(106, 106, 106, 0.06);
+  --color-danger: #2d2d2d;
+  --color-danger-bg: rgba(45, 45, 45, 0.06);
+  --color-important: #3d3d3d;
+  --color-important-bg: rgba(61, 61, 61, 0.06);
+  --icon-markdown: #4a4a4a;
+  --icon-data: #5a5a5a;
+  --icon-config: #6a6a6a;
+  --icon-image: #7d7d7d;
+  --icon-video: #7d7d7d;
+  --icon-default: #9a9a96;
+  --syn-keyword: #2d2d2d;
+  --syn-string: #5a5a5a;
+  --syn-title: #2d2d2d;
+  --syn-attr: #4a4a4a;
+  --syn-variable: #3d3d3d;
+  --syn-comment: #9a9a96;
+  --syn-deletion: #6a6a6a;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+}
+[data-theme='plaintext'] .markdown-body,
+[data-theme='plaintext'] .markdown-body h1,
+[data-theme='plaintext'] .markdown-body h2,
+[data-theme='plaintext'] .markdown-body h3,
+[data-theme='plaintext'] .markdown-body h4 {
+  font-family: 'JetBrains Mono', monospace;
+}
+/* muted source prefixes */
+[data-theme='plaintext'] .markdown-body h1::before {
+  content: '# ';
+  color: var(--text-muted);
+}
+[data-theme='plaintext'] .markdown-body h2::before {
+  content: '## ';
+  color: var(--text-muted);
+}
+[data-theme='plaintext'] .markdown-body h3::before {
+  content: '### ';
+  color: var(--text-muted);
+}
+[data-theme='plaintext'] .markdown-body blockquote > p::before {
+  content: '> ';
+  color: var(--text-muted);
+}
+/* faint emphasis markers */
+[data-theme='plaintext'] .markdown-body strong::before,
+[data-theme='plaintext'] .markdown-body strong::after {
+  content: '**';
+  color: var(--accent-lighter);
+}
+[data-theme='plaintext'] .markdown-body em::before,
+[data-theme='plaintext'] .markdown-body em::after {
+  content: '_';
+  color: var(--accent-lighter);
+}
+/* literal hr + link punctuation */
+[data-theme='plaintext'] .markdown-body hr {
+  border: 0;
+}
+[data-theme='plaintext'] .markdown-body hr::before {
+  content: '---';
+  color: var(--text-muted);
+}
+[data-theme='plaintext'] .markdown-body a::before {
+  content: '[';
+  color: var(--accent-lighter);
+}
+[data-theme='plaintext'] .markdown-body a::after {
+  content: '](url)';
+  color: var(--accent-lighter);
+}
+
+/* ============================================================
+   Braille — embossed tactile dots
+   ============================================================ */
+[data-theme='braille'] {
+  --bg-primary: #f0eee9;
+  --bg-secondary: #e7e4dd;
+  --bg-tertiary: #dcd8cf;
+  --bg-editor: #f3f1ec;
+  --text-primary: #2a2824;
+  --text-secondary: #494640;
+  --text-muted: #6f6c64;
+  --border: #cdc9bf;
+  --border-subtle: #e0dcd3;
+  --border-strong: #979388;
+  --accent: #4a4640;
+  --accent-light: #6a665e;
+  --accent-lighter: #9a958a;
+  --accent-bg: rgba(74, 70, 64, 0.06);
+  --accent-border: rgba(74, 70, 64, 0.22);
+  --accent-gradient: linear-gradient(135deg, #4a4640, #6a665e, #9a958a);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(74, 70, 64, 0.10), rgba(154, 149, 138, 0.05));
+  --gutter-bg: #eae7e0;
+  --gutter-hover: #dbd7ce;
+  --shadow-sm: 0 1px 2px rgba(42, 40, 36, 0.06);
+  --shadow-md: 0 3px 10px rgba(42, 40, 36, 0.08);
+  --shadow-lg: 0 8px 24px rgba(42, 40, 36, 0.10);
+  --code-bg: #e4e0d7;
+  --code-text: #3a3833;
+  --code-block-bg: #ece9e2;
+  --blockquote-bg: rgba(74, 70, 64, 0.05);
+  --table-stripe: #e7e4dd;
+  --table-border: #cdc9bf;
+  --table-header-bg: linear-gradient(180deg, #dcd8cf, #d2cdc2);
+  --link-color: #3a3833;
+  --link-hover: #000000;
+  --hr-gradient: none;
+  --mark-bg: #ddd8c2;
+  --scrollbar-thumb: #c2bdb2;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(240, 238, 233, 0.9);
+  --glass-border: rgba(42, 40, 36, 0.10);
+  --color-info: #4a4640;
+  --color-info-bg: rgba(74, 70, 64, 0.06);
+  --color-success: #3a3833;
+  --color-success-bg: rgba(58, 56, 51, 0.06);
+  --color-warning: #5a564e;
+  --color-warning-bg: rgba(90, 86, 78, 0.07);
+  --color-danger: #2a2824;
+  --color-danger-bg: rgba(42, 40, 36, 0.06);
+  --color-important: #494640;
+  --color-important-bg: rgba(73, 70, 64, 0.06);
+  --icon-markdown: #4a4640;
+  --icon-data: #5a564e;
+  --icon-config: #6a665e;
+  --icon-image: #7a766c;
+  --icon-video: #7a766c;
+  --icon-default: #979388;
+  --syn-keyword: #2a2824;
+  --syn-string: #5a564e;
+  --syn-title: #2a2824;
+  --syn-attr: #494640;
+  --syn-variable: #3a3833;
+  --syn-comment: #6f6c64;
+  --syn-deletion: #5a564e;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+}
+[data-theme='braille'] .markdown-body,
+[data-theme='braille'] .markdown-body h1,
+[data-theme='braille'] .markdown-body h2,
+[data-theme='braille'] .markdown-body h3,
+[data-theme='braille'] .markdown-body h4 {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+/* braille-cell markers with inset emboss (decorative ::marker/::before content only) */
+[data-theme='braille'] .markdown-body ul > li::marker {
+  content: '⠿ ';
+}
+[data-theme='braille'] .markdown-body input[type=checkbox] {
+  appearance: none;
+}
+[data-theme='braille'] .markdown-body input[type=checkbox]::before {
+  content: '⠿';
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7), 0 -1px 1px rgba(42, 40, 36, 0.3);
+}
+[data-theme='braille'] .markdown-body input[type=checkbox]:checked::before {
+  content: '⠶';
+}
+/* embossed dot hr */
+[data-theme='braille'] .markdown-body hr {
+  border: 0;
+  text-align: center;
+}
+[data-theme='braille'] .markdown-body hr::before {
+  content: '⠿ ⠿ ⠿ ⠿ ⠿ ⠿ ⠿ ⠿ ⠿ ⠿ ⠿ ⠿';
+  letter-spacing: 2px;
+  color: var(--accent-lighter);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7), 0 -1px 1px rgba(42, 40, 36, 0.25);
+}
+/* tactile emboss on headings */
+[data-theme='braille'] .markdown-body h1,
+[data-theme='braille'] .markdown-body h2 {
+  color: var(--accent);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 -1px 1px rgba(42, 40, 36, 0.3);
 }
