@@ -7,7 +7,7 @@
   --bg-editor: #fafbfe;
   --text-primary: #1a1c2e;
   --text-secondary: #555872;
-  --text-muted: #6c6f90;
+  --text-muted: #5f6285;
   --border: #dfe1ee;
   --border-subtle: #eceef5;
   --border-strong: #888888;
@@ -24,10 +24,10 @@
   --shadow-md: 0 4px 16px rgba(99, 102, 241, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 12px 40px rgba(99, 102, 241, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04);
   --code-bg: #f0f1f8;
-  --code-text: #be185d;
+  --code-text: #a01050;
   --code-block-bg: #f5f6fb;
   --blockquote-border: var(--accent-gradient);
-  --blockquote-bg: rgba(99, 102, 241, 0.03);
+  --blockquote-bg: rgba(99, 102, 241, 0.05);
   --table-stripe: #f8f9fd;
   --table-border: #e2e4ef;
   --table-header-bg: linear-gradient(180deg, #f0f1f8, #eaecf5);
@@ -91,7 +91,7 @@
   --bg-editor: #0f1019;
   --text-primary: #e8eaf4;
   --text-secondary: #9295b0;
-  --text-muted: #7a7d96;
+  --text-muted: #888ba6;
   --border: #232640;
   --border-subtle: #1c1f33;
   --border-strong: #666b8a;
@@ -107,10 +107,11 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
-  --code-bg: #181b2a;
+  --code-bg: #1e2235;
   --code-text: #f472b6;
   --code-block-bg: #151828;
-  --blockquote-bg: rgba(129, 140, 248, 0.04);
+  --blockquote-border: var(--accent);
+  --blockquote-bg: rgba(129, 140, 248, 0.07);
   --table-stripe: #13151f;
   --table-border: #232640;
   --table-header-bg: linear-gradient(180deg, #1a1d2b, #1e2135);
@@ -150,7 +151,7 @@
   --bg-editor: #f7f0de;
   --text-primary: #3e2f1c;
   --text-secondary: #5b4a32;
-  --text-muted: #766443;
+  --text-muted: #6b5a3a;
   --border: #cbb994;
   --border-subtle: #dccca5;
   --border-strong: #8b7a5c;
@@ -166,7 +167,7 @@
   --shadow-sm: 0 1px 3px rgba(91, 74, 50, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 16px rgba(91, 74, 50, 0.10), 0 2px 6px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 12px 40px rgba(91, 74, 50, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
-  --code-bg: #ede1c4;
+  --code-bg: #e6d8b6;
   --code-text: #9b2c2c;
   --code-block-bg: #eee2c4;
   --blockquote-border: var(--accent-gradient);
@@ -318,9 +319,9 @@
 
 /* Sakura — soft pink palette with plum ink, no floral decoration */
 [data-theme='sakura'] {
-  --bg-primary: #fff5f7;
-  --bg-secondary: #ffe8ee;
-  --bg-tertiary: #fcd7e0;
+  --bg-primary: #fff7f9;
+  --bg-secondary: #fdeef2;
+  --bg-tertiary: #f7dde4;
   --bg-editor: #fff9fb;
   --text-primary: #5b1a3e;
   --text-secondary: #823560;
@@ -979,7 +980,7 @@
   --bg-editor: #ede0c2;
   --text-primary: #2b1a08;
   --text-secondary: #3f2912;
-  --text-muted: #6a5a30;
+  --text-muted: #5e4f29;
   --border: #b89a5c;
   --border-subtle: #c8af72;
   --border-strong: #6e5a35;
@@ -1004,7 +1005,7 @@
   --table-border: #6e5a35;
   --table-header-bg: linear-gradient(180deg, #c19a35, #ad8a2a);
   --link-color: #9b1c1c;
-  --link-hover: #c19a35;
+  --link-hover: #7a5a14;
   --hr-gradient: linear-gradient(90deg, transparent, #9b1c1c, #c19a35, #9b1c1c, transparent);
   --mark-bg: #c19a35;
   --scrollbar-thumb: #a08550;
@@ -1094,7 +1095,7 @@
   --bg-editor: #0a162e;
   --text-primary: #eaf3ff;
   --text-secondary: #b8c9e6;
-  --text-muted: #8199c0;
+  --text-muted: #93a9cc;
   --border: #284978;
   --border-subtle: #1a2e58;
   --border-strong: #5fcfff;
@@ -1149,7 +1150,7 @@
   --bg-secondary: #eee8d5;
   --bg-tertiary: #e4dcc2;
   --bg-editor: #f5eecf;
-  --text-primary: #586e75;
+  --text-primary: #4a5e64;
   --text-secondary: #586e75;
   --text-muted: #5f7273;
   --border: #d9d2b8;
@@ -1185,9 +1186,9 @@
   --glass-border: rgba(101, 123, 131, 0.18);
   --color-info: #268bd2;
   --color-info-bg: rgba(38, 139, 210, 0.10);
-  --color-success: #859900;
+  --color-success: #5f6e00;
   --color-success-bg: rgba(133, 153, 0, 0.10);
-  --color-warning: #b58900;
+  --color-warning: #876500;
   --color-warning-bg: rgba(181, 137, 0, 0.10);
   --color-danger: #dc322f;
   --color-danger-bg: rgba(220, 50, 47, 0.10);
@@ -1264,7 +1265,7 @@
   --bg-tertiary: #1e1e2c;
   --bg-editor: #07070c;
   --text-primary: #f5f5fa;
-  --text-secondary: #b5b5c8;
+  --text-secondary: #c2c2d4;
   --text-muted: #8585a0;
   --border: #28283a;
   --border-subtle: #1a1a26;
@@ -1322,7 +1323,7 @@
   --bg-editor: rgba(0, 0, 0, 0.32);
   --text-primary: #f8f7fc;
   --text-secondary: #d4cfe5;
-  --text-muted: #a39ec0;
+  --text-muted: #b3aecb;
   --border: rgba(255, 255, 255, 0.16);
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.35);
@@ -1456,6 +1457,11 @@
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--accent-light);
+}
+[data-theme='blueprint'] .markdown-body h3::before {
+  content: '// ';
+  color: var(--accent);
 }
 [data-theme='blueprint'] .markdown-body h1 {
   border-bottom: 2px solid var(--accent);
@@ -1489,7 +1495,7 @@
   padding-bottom: 0.3em;
 }
 [data-theme='solarized'] .markdown-body code {
-  color: #cb4b16;
+  color: #9a3a0c;
   background: #eee8d5;
   padding: 0.1em 0.35em;
   border-radius: 3px;
@@ -1518,6 +1524,10 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+}
+[data-theme='tokyo'] .markdown-body h2 {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.5em;
 }
 [data-theme='tokyo'] .markdown-body code {
   color: #9ece6a;
@@ -1562,6 +1572,7 @@
     radial-gradient(ellipse 40% 30% at 12% 78%, rgba(56, 189, 248, 0.18), transparent 70%);
   filter: blur(60px);
   animation: aurora-drift 28s ease-in-out infinite;
+  will-change: transform;
 }
 [data-theme='aurora'] body::after {
   content: '';
@@ -1576,9 +1587,9 @@
 [data-theme='aurora'] header,
 [data-theme='aurora'] #workspace { position: relative; z-index: 1; }
 [data-theme='aurora'] #viewer-pane {
-  background-color: rgba(10, 10, 15, 0.72);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  background-color: rgba(10, 10, 15, 0.80);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
 }
 [data-theme='aurora'] .markdown-body h1 {
   background: linear-gradient(135deg, #a78bfa 0%, #ec4899 50%, #f59e0b 100%);
@@ -1615,7 +1626,7 @@
 [data-theme='glass'] #viewer-pane,
 [data-theme='glass'] #sidebar,
 [data-theme='glass'] header {
-  background-color: rgba(20, 16, 38, 0.45);
+  background-color: rgba(20, 16, 38, 0.58);
   backdrop-filter: blur(40px) saturate(1.8);
   -webkit-backdrop-filter: blur(40px) saturate(1.8);
 }
@@ -1635,8 +1646,8 @@
 }
 [data-theme='glass'] .markdown-body table {
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -1645,12 +1656,10 @@
 [data-theme='glass'] .markdown-body h3 {
   font-weight: 600;
   letter-spacing: -0.01em;
-  text-shadow: 0 1px 20px rgba(255, 255, 255, 0.20);
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.14);
 }
 [data-theme='glass'] .markdown-body code {
   background: rgba(255, 255, 255, 0.10);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
 }
@@ -1678,7 +1687,7 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   animation: holo-spin 8s linear infinite;
 }
@@ -1702,7 +1711,8 @@
   background:
     linear-gradient(var(--bg-editor), var(--bg-editor)) padding-box,
     conic-gradient(from var(--holo-angle, 0deg), #ff66cc, #ffe066, #66ffcc, #66c8ff, #c466ff, #ff66cc) border-box;
-  animation: holo-spin 10s linear infinite;
+  animation: holo-spin 14s linear infinite;
+  will-change: --holo-angle;
 }
 [data-theme='holo'] .markdown-body code {
   background: linear-gradient(135deg, rgba(255, 102, 204, 0.10), rgba(102, 200, 255, 0.10));
@@ -1715,7 +1725,7 @@
   background: linear-gradient(90deg, rgba(255, 102, 204, 0.06), transparent);
 }
 [data-theme='holo'] .markdown-body a {
-  background: linear-gradient(90deg, #ff66cc, #66c8ff);
+  background: linear-gradient(90deg, #ff8ad6, #8ad4ff);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1797,7 +1807,7 @@
   text-decoration: underline dotted;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  text-decoration-color: var(--accent-light);
+  text-decoration-color: var(--accent);
 }
 [data-theme='paper'] .markdown-body mark {
   background: linear-gradient(transparent 55%, rgba(246, 229, 141, 0.75) 55%);
@@ -1862,7 +1872,7 @@
 /* Whiteboard — marker-on-board feel */
 [data-theme='whiteboard'] body,
 [data-theme='whiteboard'] .markdown-body {
-  font-family: 'Architects Daughter', 'Kalam', 'Caveat', 'Comic Sans MS', cursive;
+  font-family: 'Architects Daughter', 'Kalam', 'Caveat', 'Comic Sans MS', 'Klee One', cursive;
   letter-spacing: 0.01em;
 }
 [data-theme='whiteboard'] .markdown-body h1,
@@ -1904,6 +1914,8 @@
 [data-theme='whiteboard'] .markdown-body blockquote {
   border-left: 6px solid #15803d;
   background: rgba(21, 128, 61, 0.05);
+  transform: rotate(-0.3deg);
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.08);
 }
 [data-theme='whiteboard'] .markdown-body a {
   text-decoration: underline wavy #1e40af;
@@ -1925,6 +1937,8 @@
 }
 [data-theme='whiteboard'] .markdown-body table {
   border: 2px solid #0a0a0a;
+  transform: rotate(-0.3deg);
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.08);
 }
 [data-theme='whiteboard'] .markdown-body th,
 [data-theme='whiteboard'] .markdown-body td {
@@ -1939,14 +1953,25 @@
 [data-theme='handwritten'] .markdown-body {
   font-family: 'Kalam', 'Caveat', 'Klee One', 'Comic Sans MS', cursive;
 }
+[data-theme='handwritten'] .markdown-body {
+  line-height: 32px;
+}
 [data-theme='handwritten'] #viewer-pane,
 [data-theme='handwritten'] #viewer.markdown-body {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 31px,
-    rgba(30, 58, 138, 0.14) 32px
-  );
+  background-image:
+    linear-gradient(
+      to right,
+      transparent calc(3em - 1px),
+      rgba(220, 38, 38, 0.35) calc(3em - 1px),
+      rgba(220, 38, 38, 0.35) 3em,
+      transparent 3em
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 31px,
+      rgba(30, 58, 138, 0.14) 32px
+    );
   background-attachment: local;
 }
 [data-theme='handwritten'] .markdown-body h1,
@@ -2241,6 +2266,7 @@
   background: var(--accent);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
   transform: rotate(-3deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
 }
 [data-theme='origami'] .markdown-body h2 {
   border-bottom: 1px dashed var(--border);
@@ -2260,6 +2286,7 @@
 [data-theme='origami'] #viewer-pane {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0, transparent 12px),
+    linear-gradient(90deg, transparent 49.5%, rgba(60, 50, 30, 0.05) 50%, transparent 50.5%),
     var(--bg-primary);
 }
 [data-theme='origami'] .markdown-body img {
@@ -2299,12 +2326,17 @@
   color: var(--bg-primary);
   padding: 0.15em 0.4em;
   display: inline-block;
+  margin-top: 1.6em;
 }
 [data-theme='brutalist'] .markdown-body h3 {
   font-size: clamp(1.2rem, 3vw, 1.8rem);
   text-decoration: underline;
   text-decoration-thickness: 4px;
   text-underline-offset: 0.15em;
+}
+[data-theme='brutalist'] .markdown-body h4 {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
 }
 [data-theme='brutalist'] .markdown-body a {
   color: var(--link-color);
@@ -2314,8 +2346,9 @@
   font-weight: 700;
 }
 [data-theme='brutalist'] .markdown-body a:hover {
-  background: var(--mark-bg);
-  color: var(--text-primary);
+  background: #fff200;
+  color: #000;
+  text-decoration: underline;
 }
 [data-theme='brutalist'] .markdown-body mark {
   background: var(--mark-bg);
@@ -2330,6 +2363,7 @@
   padding: 1em 1.2em;
   font-weight: 600;
   font-size: 1.1em;
+  box-shadow: var(--shadow-sm);
 }
 [data-theme='brutalist'] .markdown-body code {
   background: var(--text-primary);
@@ -2343,6 +2377,7 @@
 }
 [data-theme='brutalist'] .markdown-body table {
   border: 3px solid var(--text-primary);
+  box-shadow: var(--shadow-sm);
 }
 [data-theme='brutalist'] .markdown-body th {
   background: var(--text-primary);
@@ -2401,6 +2436,8 @@
   font-variant: small-caps;
   letter-spacing: 0.03em;
   font-size: 1.4em;
+  border-bottom: 1px dotted var(--border);
+  padding-bottom: 0.15em;
 }
 /* Drop cap on the first paragraph after h1 */
 [data-theme='newspaper'] .markdown-body blockquote {
@@ -2857,7 +2894,7 @@
   background-size: 100vw 100vh;
   background-repeat: no-repeat;
   z-index: 0;
-  opacity: 0.85;
+  opacity: 0.65;
 }
 [data-theme='galaxy'] #app {
   position: relative;
@@ -2902,7 +2939,7 @@
 }
 [data-theme='galaxy'] .markdown-body code {
   background: var(--code-bg);
-  text-shadow: 0 0 6px rgba(110, 224, 255, 0.4);
+  text-shadow: 0 0 3px rgba(110, 224, 255, 0.25);
 }
 
 /* ===========================================================================
@@ -3002,6 +3039,13 @@
   color: var(--accent);
   font-weight: 700;
 }
+[data-theme='spotlight'] .markdown-body h2 {
+  color: var(--accent-light);
+}
+[data-theme='spotlight'] .markdown-body h3 {
+  color: var(--text-primary);
+  font-weight: 600;
+}
 [data-theme='spotlight'] .markdown-body h1 {
   border-bottom: 1px solid var(--accent-border);
   padding-bottom: 0.25em;
@@ -3042,7 +3086,7 @@
 [data-theme='matrix'] .markdown-body {
   font-family: 'JetBrains Mono', 'Courier Prime', 'Courier New', ui-monospace, monospace;
   letter-spacing: 0.02em;
-  text-shadow: 0 0 2px rgba(0, 255, 65, 0.5);
+  text-shadow: 0 0 1px rgba(0, 255, 65, 0.35);
 }
 [data-theme='matrix'] #viewer-pane {
   background-image:
@@ -3272,7 +3316,7 @@
   text-decoration-color: var(--accent-light);
 }
 [data-theme='sakura'] .markdown-body mark {
-  background: linear-gradient(transparent 55%, rgba(244, 143, 177, 0.55) 55%);
+  background: linear-gradient(transparent 55%, rgba(233, 30, 99, 0.30) 55%);
   padding: 0 2px;
 }
 [data-theme='sakura'] .markdown-body blockquote {
@@ -3386,6 +3430,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--mo-slow) ease, color var(--mo-slow) ease;
+}
+
+/* Theme-agnostic focus ring for keyboard navigation (highcontrast overrides below) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 body.dragging::after {
@@ -4172,6 +4228,45 @@ body.dragging::after {
   --syn-deletion: #ef4444;
 }
 
+/* Terminal — phosphor-green identity palette */
+[data-theme='terminal'] {
+  --syn-keyword: #7dff9e;
+  --syn-string: #ffcc00;
+  --syn-title: #aaffc0;
+  --syn-comment: #33a352;
+  --syn-variable: #88ffaa;
+  --syn-attr: #7dff9e;
+}
+
+/* Matrix — code-rain green with cyan accents */
+[data-theme='matrix'] {
+  --syn-keyword: #39ff14;
+  --syn-string: #00d9ff;
+  --syn-title: #6aff9a;
+  --syn-comment: #00aa2a;
+  --syn-variable: #99efff;
+  --syn-attr: #39ff14;
+}
+
+/* Cyberpunk — neon magenta / cyan / lime */
+[data-theme='cyberpunk'] {
+  --syn-keyword: #ff2d95;
+  --syn-string: #00ff9c;
+  --syn-title: #05d9e8;
+  --syn-attr: #f9f871;
+  --syn-variable: #c724ff;
+}
+
+/* Hackerman — amber-gold on black */
+[data-theme='hackerman'] {
+  --syn-keyword: #ffd700;
+  --syn-string: #00ff88;
+  --syn-title: #ffcc66;
+  --syn-comment: #b88200;
+  --syn-variable: #4dffaa;
+  --syn-attr: #ffd700;
+}
+
 /* Parchment / newsprint — dark inks on a warm mid-tone code surface */
 [data-theme='paper'],
 [data-theme='newspaper'],
@@ -4204,6 +4299,15 @@ body.dragging::after {
   --syn-variable: #b51d1a;
   --syn-deletion: #b51d1a;
   --syn-comment: #556668;
+}
+
+/* Sumi — ink-gradation palette; darker ink tokens only (tan #888279 fails AA on code) */
+[data-theme='sumi'] {
+  --syn-keyword: var(--sumi-sho);
+  --syn-string: var(--sumi-ju);
+  --syn-title: var(--sumi-sho);
+  --syn-variable: var(--sumi-ju);
+  --syn-comment: var(--sumi-ju);
 }
 
 /* Comment ink overrides where the code surface differs enough from the page bg
@@ -9926,9 +10030,15 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --syn-comment: #7d8a6e;
   --syn-deletion: #d99488;
 }
-[data-theme='forest'] .markdown-body h1,
 [data-theme='forest'] .markdown-body h2 {
   color: var(--accent-light);
+}
+[data-theme='forest'] .markdown-body h1 {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 [data-theme='forest'] .markdown-body h2 {
   border-bottom: 1px solid var(--border);
@@ -9954,7 +10064,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --text-primary: #0a0a0a;
   --text-secondary: #26282e;
   --text-muted: #3a3d45;
-  --border: #9a9da8;
+  --border: #767986;
   --border-subtle: #c4c7d0;
   --border-strong: #3a3d45;
   --accent: #0a3aa8;
@@ -10102,12 +10212,23 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --syn-comment: #6f939b;
   --syn-deletion: #f87171;
 }
+/* Subtle static depth gradient — no animation */
+[data-theme='ocean'] body {
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(79, 214, 200, 0.06), transparent 60%);
+}
 [data-theme='ocean'] .markdown-body h1,
 [data-theme='ocean'] .markdown-body h2,
 [data-theme='ocean'] .markdown-body h3,
 [data-theme='ocean'] .markdown-body h4 {
   color: #c5ece8;
   letter-spacing: -0.01em;
+}
+[data-theme='ocean'] .markdown-body h1 {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 [data-theme='ocean'] .markdown-body h2 {
   border-bottom-color: var(--border);
@@ -10158,7 +10279,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --link-color: #2e2e2c;
   --link-hover: #000000;
   --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--border-strong), var(--border), transparent);
-  --mark-bg: #dcdcd5;
+  --mark-bg: #cfcfc6;
   --scrollbar-thumb: #c4c4be;
   --scrollbar-track: transparent;
   --glass-bg: rgba(247, 247, 245, 0.88);
@@ -10208,7 +10329,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='eink'] .markdown-body a {
   color: var(--link-color);
   text-decoration: underline;
-  text-decoration-color: var(--border-strong);
+  text-decoration-color: var(--accent);
   text-underline-offset: 2px;
 }
 [data-theme='eink'] .markdown-body a:hover {
