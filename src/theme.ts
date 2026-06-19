@@ -22,7 +22,11 @@ export type Theme =
   | 'tokyo'
   | 'aurora'
   | 'glass'
-  | 'holo';
+  | 'holo'
+  | 'forest'
+  | 'highcontrast'
+  | 'ocean'
+  | 'eink';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -49,6 +53,10 @@ export const THEMES: readonly Theme[] = [
   'aurora',
   'glass',
   'holo',
+  'forest',
+  'highcontrast',
+  'ocean',
+  'eink',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -76,6 +84,10 @@ export const THEME_LABELS: Record<Theme, string> = {
   aurora: 'Aurora',
   glass: 'Liquid Glass',
   holo: 'Holographic',
+  forest: 'Forest',
+  highcontrast: 'High Contrast',
+  ocean: 'Ocean',
+  eink: 'E-Ink',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';
