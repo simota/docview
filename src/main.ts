@@ -1,4 +1,5 @@
 import { renderMarkdown, renderMermaidDiagrams, renderExternalDiagrams, updateMermaidTheme } from './markdown';
+import { isMarpMarkdown, renderMarpDeck } from './marp';
 import { initTheme, setTheme, type Theme, THEMES } from './theme';
 import { FileTree, initSidebarResize } from './filetree';
 import { TableOfContents } from './toc';
@@ -73,6 +74,7 @@ const btnCollapseCode = document.getElementById('btn-collapse-code') as HTMLButt
 const btnSearch = document.getElementById('btn-search') as HTMLButtonElement;
 const btnPrint = document.getElementById('btn-print') as HTMLButtonElement;
 const btnExport = document.getElementById('btn-export') as HTMLButtonElement;
+const btnSlides = document.getElementById('btn-slides') as HTMLButtonElement;
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
 const sidebar = document.getElementById('sidebar') as HTMLElement;
 const breadcrumb = document.getElementById('breadcrumb') as HTMLElement;
@@ -812,6 +814,8 @@ function renderContent(content: string, path: string, target: HTMLElement = view
   const displayContent = secretSafe ? maskSecrets(content) : content;
   document.documentElement.classList.toggle('secret-safe-mode', secretSafe);
 
+  if (target === viewer) refreshSlidesButton(null);
+
   switch (type) {
     case 'markdown': {
       const mdExt = (path.split('.').pop() || 'md').toUpperCase();
@@ -835,6 +839,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       }
       interceptRelativeLinks(path, target, pane);
       addHeadingCopyButtons(target, path);
+      if (target === viewer) refreshSlidesButton(displayContent);
       break;
     }
 
@@ -1128,6 +1133,94 @@ function enterSlideMode() {
   document.addEventListener('keydown', keyHandler);
 }
 
+// --- Marp slides ---
+// A markdown file whose front matter declares `marp: true` is presented as real
+// Marp slides (themes + directives, via @marp-core) instead of the simple <hr>
+// split used by enterSlideMode. The toolbar "Slides" button is shown only while
+// such a file is open in the main viewer.
+let currentSlideSource: string | null = null;
+
+function refreshSlidesButton(source: string | null) {
+  currentSlideSource = source && isMarpMarkdown(source) ? source : null;
+  btnSlides.style.display = currentSlideSource ? '' : 'none';
+}
+
+async function enterMarpSlideMode(source: string) {
+  let deck: Awaited<ReturnType<typeof renderMarpDeck>>;
+  try {
+    deck = await renderMarpDeck(source);
+  } catch {
+    showCopyToast('Marp スライドの生成に失敗しました');
+    return;
+  }
+  if (deck.slideCount === 0) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'marp-slide-overlay';
+
+  const style = document.createElement('style');
+  style.textContent = deck.css;
+  overlay.appendChild(style);
+
+  const stage = document.createElement('div');
+  stage.className = 'marp-slide-stage';
+  stage.innerHTML = deck.html;
+  overlay.appendChild(stage);
+
+  const slides = Array.from(stage.querySelectorAll<HTMLElement>('.marpit > svg[data-marpit-svg]'));
+
+  const nav = document.createElement('div');
+  nav.className = 'marp-slide-nav';
+  nav.innerHTML = `
+    <span class="slide-counter"></span>
+    <div class="slide-buttons">
+      <button class="slide-btn" data-act="prev">&#8592; Prev</button>
+      <button class="slide-btn" data-act="next">Next &#8594;</button>
+      <button class="slide-btn slide-exit" data-act="exit">Exit (Esc)</button>
+    </div>`;
+  overlay.appendChild(nav);
+
+  const counter = nav.querySelector('.slide-counter') as HTMLElement;
+  const prevBtn = nav.querySelector('[data-act="prev"]') as HTMLButtonElement;
+  const nextBtn = nav.querySelector('[data-act="next"]') as HTMLButtonElement;
+  let idx = 0;
+
+  function show(i: number) {
+    idx = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, n) => { s.style.display = n === idx ? 'block' : 'none'; });
+    counter.textContent = `${idx + 1} / ${slides.length}`;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === slides.length - 1;
+  }
+
+  function close() {
+    overlay.remove();
+    document.removeEventListener('keydown', keyHandler);
+    document.body.classList.remove('marp-slide-open');
+  }
+
+  function keyHandler(e: KeyboardEvent) {
+    if (!document.body.contains(overlay)) { document.removeEventListener('keydown', keyHandler); return; }
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(idx + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(idx - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); close(); }
+  }
+
+  nav.addEventListener('click', (e) => {
+    const act = (e.target as HTMLElement).closest('[data-act]')?.getAttribute('data-act');
+    if (act === 'prev') show(idx - 1);
+    else if (act === 'next') show(idx + 1);
+    else if (act === 'exit') close();
+  });
+
+  document.body.appendChild(overlay);
+  document.body.classList.add('marp-slide-open');
+  document.addEventListener('keydown', keyHandler);
+  show(0);
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -1158,6 +1251,7 @@ async function loadAlbumView(albumPath: string, recursive = false): Promise<void
   currentFilePath = null;
   _currentAlbumPath = albumPath;
   _currentAlbumRecursive = recursive;
+  refreshSlidesButton(null);
   document.title = `Album: ${albumPath} — DocView`;
   updateBreadcrumb(`Album: ${albumPath}`);
   toc.clear();
@@ -1308,6 +1402,7 @@ async function renderCompare(paths: string[], opts: RenderCompareOptions = {}): 
   document.title = `Compare: ${paths.length} images — DocView`;
   updateBreadcrumb(`Compare: ${paths.length} images`);
   toc.clear();
+  refreshSlidesButton(null);
 
   // Build the compare pane overlay over the viewer area
   const pane = document.createElement('div');
@@ -1508,6 +1603,7 @@ function showWelcome() {
   leaveCompareViewForNavigation();
   currentFilePath = null;
   clearAlbumTracking();
+  refreshSlidesButton(null);
   const recent = getRecent().slice(0, 5);
   let recentSection = '';
   if (recent.length > 0) {
@@ -1943,10 +2039,11 @@ function handleKeyboard(e: KeyboardEvent) {
     e.preventDefault();
     toggleWordWrap();
   }
-  // Slide mode (#9)
+  // Slide mode (#9) — Marp files present via @marp-core, others via <hr> split
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
     e.preventDefault();
-    enterSlideMode();
+    if (currentSlideSource) void enterMarpSlideMode(currentSlideSource);
+    else enterSlideMode();
   }
   // Split view
   if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
@@ -2418,6 +2515,9 @@ btnSidebar.addEventListener('click', toggleSidebar);
 btnToc.addEventListener('click', toggleToc);
 btnSearch.addEventListener('click', () => searchModal.open('files'));
 btnPrint.addEventListener('click', () => window.print()); // #12
+btnSlides.addEventListener('click', () => {
+  if (currentSlideSource) void enterMarpSlideMode(currentSlideSource);
+});
 btnExport.addEventListener('click', async () => {
   btnExport.disabled = true;
   btnExport.classList.add('toolbar-btn-active');

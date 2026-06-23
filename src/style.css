@@ -6198,6 +6198,47 @@ mark.find-current {
   border-color: var(--border);
 }
 
+/* --- Marp slide presenter (faithful @marp-core rendering) --- */
+.marp-slide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+body.marp-slide-open {
+  overflow: hidden;
+}
+
+.marp-slide-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Override Marp's default svg sizing (height:100vh;width:100vw) so each slide
+   fits the stage above the nav bar; the SVG viewBox keeps the slide aspect
+   ratio and letterboxes against the overlay background. */
+.marp-slide-overlay .marpit,
+.marp-slide-overlay .marpit > svg[data-marpit-svg] {
+  width: 100%;
+  height: 100%;
+}
+
+.marp-slide-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
 @media print {
   /* ===== Hide UI chrome ===== */
   #toolbar, #sidebar, #toc-sidebar, .search-overlay,

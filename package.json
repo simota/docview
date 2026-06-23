@@ -1,8 +1,8 @@
 {
   "name": "docview",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "type": "module",
-  "description": "Beautiful document viewer for Markdown, YAML, JSON, CSV, config files, and images with Mermaid diagram support",
+  "description": "Beautiful document viewer for Markdown, YAML, JSON, CSV, config files, and images with Mermaid diagram and Marp slide support",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -39,6 +39,8 @@
     "csv",
     "viewer",
     "mermaid",
+    "marp",
+    "slides",
     "document",
     "cli"
   ],
@@ -51,6 +53,7 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
+    "@marp-team/marp-core": "^4.3.0",
     "chokidar": "^5.0.0",
     "cron-parser": "^5.5.0",
     "cronstrue": "^3.14.0",

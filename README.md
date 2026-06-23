@@ -39,6 +39,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 ## Features
 
 - **Markdown rendering** — full CommonMark support with GitHub Flavored Markdown, footnotes, definition lists, subscript/superscript, emoji, and front matter
+- **Marp slides** — Markdown files with `marp: true` front matter are presented as faithful Marp slides (default / gaia / uncover themes, `paginate` / `header` / `footer` / `_class` directives) via the toolbar **Slides** button or `Cmd/Ctrl + Shift + S`
 - **Mermaid diagrams** — flowcharts, sequence diagrams, ER diagrams, and more rendered inline
 - **KaTeX math** — inline and block LaTeX math expressions
 - **GitHub Alerts** — `[!NOTE]`, `[!WARNING]`, `[!TIP]`, `[!IMPORTANT]`, `[!CAUTION]` callout blocks
@@ -129,6 +130,7 @@ docview ./docs --no-open
 | `Cmd/Ctrl + B`    | Toggle sidebar                      |
 | `Cmd/Ctrl + E`    | Toggle table of contents            |
 | `Cmd/Ctrl + Shift + E` | Toggle theme (dark / light)   |
+| `Cmd/Ctrl + Shift + S` | Present as slides (Marp deck for `marp: true` files) |
 | `?`               | Show keyboard shortcut help         |
 | `↑` / `↓`         | Navigate file list / search results |
 
@@ -175,6 +177,7 @@ fixtures/**        # everything under fixtures/
 - **[TypeScript](https://www.typescriptlang.org/)** — type-safe frontend code
 - **[markdown-it](https://github.com/markdown-it/markdown-it)** — Markdown parser with plugin ecosystem
 - **[Mermaid](https://mermaid.js.org/)** — diagram and chart rendering
+- **[Marp Core](https://marp.app/)** — Markdown-driven slide rendering
 - **[KaTeX](https://katex.org/)** — fast LaTeX math rendering
 - **[highlight.js](https://highlightjs.org/)** — syntax highlighting for code blocks and config files
 - **[chokidar](https://github.com/paulmillr/chokidar)** — file system watcher for live reload

@@ -104,6 +104,12 @@ export default async function globalSetup() {
   // Slides fixture for Cmd+Shift+S regression test.
   write('slides.md', '# Slide 1\n\nfirst slide\n\n---\n\n# Slide 2\n\nsecond slide\n');
 
+  // Marp deck fixture: front matter `marp: true` enables the faithful slide presenter.
+  write(
+    'marp-deck.md',
+    '---\nmarp: true\ntheme: gaia\npaginate: true\n---\n\n# Marp Title\n\nintro slide\n\n---\n\n## Second slide\n\n- a\n- b\n\n---\n\n## Third slide\n\nthe end\n',
+  );
+
   write('diagrams.md', `# Diagram gallery
 
 \`\`\`mermaid
