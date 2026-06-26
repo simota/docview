@@ -60,6 +60,8 @@ export interface FileTreeActions {
   notify?: (msg: string) => void;
   /** Open a file in the split (right) pane. */
   openInSplit?: (path: string) => void;
+  /** Open a file with the OS default application through the local server. */
+  openInApp?: (path: string) => void;
   /** Resolve a tree-relative path to an absolute filesystem path, or null. */
   absPath?: (relPath: string) => string | null;
 }
@@ -74,6 +76,7 @@ const SVG_CODE = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" str
 const SVG_MARKUP = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 1.5,7 4,10"/><polyline points="10,4 12.5,7 10,10"/><line x1="5.5" y1="11" x2="8.5" y2="3"/></svg>`;
 const SVG_IMAGE = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2.5" width="11" height="9" rx="1"/><circle cx="4.5" cy="5.5" r="1"/><polyline points="1.5,9.5 5,6.5 7.5,8.5 9.5,6.5 12.5,9.5"/></svg>`;
 const SVG_VIDEO = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="3" width="11" height="8" rx="1"/><polygon points="6,5.5 6,8.5 9,7" fill="currentColor" stroke="none"/></svg>`;
+const SVG_OFFICE = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 1.5h5l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z"/><polyline points="8,1.5 8,4.5 11,4.5"/><line x1="4" y1="7" x2="10" y2="7"/><line x1="4" y1="9.5" x2="8.5" y2="9.5"/></svg>`;
 const SVG_DEFAULT = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 1.5h5l3 3v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z"/><polyline points="8,1.5 8,4.5 11,4.5"/></svg>`;
 
 const EXT_MAP: Record<string, { category: string; svg: string }> = {
@@ -113,6 +116,13 @@ const EXT_MAP: Record<string, { category: string; svg: string }> = {
   webm:       { category: 'video',    svg: SVG_VIDEO },
   ogv:        { category: 'video',    svg: SVG_VIDEO },
   mov:        { category: 'video',    svg: SVG_VIDEO },
+  xls:        { category: 'data',     svg: SVG_OFFICE },
+  xlsx:       { category: 'data',     svg: SVG_OFFICE },
+  ppt:        { category: 'data',     svg: SVG_OFFICE },
+  pptx:       { category: 'data',     svg: SVG_OFFICE },
+  numbers:    { category: 'data',     svg: SVG_OFFICE },
+  pages:      { category: 'data',     svg: SVG_OFFICE },
+  key:        { category: 'data',     svg: SVG_OFFICE },
 };
 
 export function fileIcon(name: string): string {
@@ -285,6 +295,9 @@ export class FileTree {
     ];
     if (type === 'file' && this.actions.openInSplit) {
       entries.push({ label: '分割ビューで開く', run: () => this.actions.openInSplit!(path) });
+    }
+    if (type === 'file' && this.actions.openInApp) {
+      entries.push({ label: 'アプリで開く', run: () => this.actions.openInApp!(path) });
     }
 
     const menu = document.createElement('div');

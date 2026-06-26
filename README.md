@@ -49,6 +49,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **Crontab preview** — parses crontab files into a table with human-readable schedule descriptions (Japanese / English toggle), a 24-hour timeline visualizing each job's daily run hours, a file-wide day-of-week × hour heatmap, an execution-frequency ranking, same-minute collision warnings, and the next execution times for each job (JST / UTC toggle)
 - **Config file highlighting** — syntax highlighting for TOML, INI, `.env`, `.conf`, and similar formats
 - **Image display** — renders PNG, JPEG, GIF, SVG, WebP, BMP, and ICO files directly in the browser
+- **Office / iWork file handling** — lists Excel, PowerPoint, Numbers, Pages, and Keynote files, opens them in the OS default app from the local server, and keeps a download fallback for normal files. Browser WebViews cannot directly preview these formats without a conversion or app runtime
 - **File tree with auto-reload** — sidebar listing of all files in the served directory; changes are detected and reloaded automatically via file watching. Right-click an item for a context menu (copy path / file name / absolute path, open in split view)
 - **Dark / light theme** — toggle between themes; preference is persisted
 - **Table of contents** — auto-generated TOC sidebar from heading structure
@@ -64,6 +65,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 | Config    | `.toml` `.ini` `.conf` `.env` `.cfg` `.properties` |
 | Crontab   | `.cron` `.crontab` (and files named `crontab`)     |
 | Images    | `.png` `.jpg` `.jpeg` `.gif` `.svg` `.webp` `.bmp` `.ico` |
+| Office / iWork | `.xls` `.xlsx` `.ppt` `.pptx` `.numbers` `.pages` `.key` (listed, open in default app / download fallback for normal files; no direct WebView preview) |
 
 ## Installation (optional)
 

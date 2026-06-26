@@ -368,6 +368,8 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.mmd', '.mermaid',
   // Data
   '.json', '.jsonl', '.ndjson', '.yaml', '.yml', '.csv', '.tsv',
+  // Office / iWork documents (listed and served as binary; browser preview is handled by the frontend)
+  '.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key',
   // Config
   '.toml', '.ini', '.conf', '.env', '.cfg', '.properties',
   // Logs
@@ -395,6 +397,7 @@ function isSupportedFilename(name) {
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
+const OFFICE_EXTENSIONS = new Set(['.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key']);
 const SEARCH_CONTEXT_LINES = 20;
 const REDACTED = '[REDACTED]';
 const SECRET_KEY_VALUE_RE =
@@ -647,6 +650,16 @@ const VIDEO_MIME = {
   '.mov': 'video/quicktime',
 };
 
+const OFFICE_MIME = {
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.numbers': 'application/vnd.apple.numbers',
+  '.pages': 'application/vnd.apple.pages',
+  '.key': 'application/vnd.apple.keynote',
+};
+
 const TEXT_MIME = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -724,6 +737,30 @@ async function serveRawFile(req, res, filePath) {
       return;
     }
 
+    if (OFFICE_EXTENSIONS.has(ext)) {
+      if (fileStat.isDirectory()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Cannot stream package directory: ${filePath}` }));
+        return;
+      }
+      const mime = OFFICE_MIME[ext] || 'application/octet-stream';
+      res.writeHead(200, {
+        'Content-Type': mime,
+        'Content-Length': String(fileStat.size),
+        'Cache-Control': 'no-store',
+        'X-File-Mtime': mtime,
+      });
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
+      const stream = createReadStream(resolved);
+      stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+      res.on('close', () => stream.destroy());
+      stream.pipe(res);
+      return;
+    }
+
     const content = await readFileText(resolved);
     res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
     res.end(content);
@@ -762,6 +799,68 @@ function parseRange(header, total) {
   if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
   if (start < 0 || start > end || start >= total) return null;
   return { start, end };
+}
+
+async function readJsonRequestBody(req, maxBytes = 16 * 1024) {
+  let body = '';
+  for await (const chunk of req) {
+    body += chunk;
+    if (body.length > maxBytes) {
+      const err = new Error('Request body too large');
+      err.status = 413;
+      throw err;
+    }
+  }
+  try {
+    return JSON.parse(body || '{}');
+  } catch {
+    const err = new Error('Invalid JSON');
+    err.status = 400;
+    throw err;
+  }
+}
+
+function getOpenCommand(filePath) {
+  if (process.platform === 'darwin') return { command: 'open', args: [filePath] };
+  if (process.platform === 'win32') return { command: 'explorer.exe', args: [filePath] };
+  if (process.platform === 'linux') return { command: 'xdg-open', args: [filePath] };
+  return null;
+}
+
+function launchDefaultApp(filePath) {
+  const spec = getOpenCommand(filePath);
+  if (!spec) {
+    const err = new Error(`Opening files is not supported on ${process.platform}`);
+    err.status = 501;
+    throw err;
+  }
+  const child = spawn(spec.command, spec.args, {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+  child.unref();
+  return spec;
+}
+
+function isTrustedLocalHostname(hostname) {
+  const lower = (hostname || '').toLowerCase();
+  return lower === 'localhost' || lower === '127.0.0.1' || lower === '::1' || lower === '[::1]';
+}
+
+function isTrustedOpenRequest(req) {
+  const origin = req.headers.origin;
+  if (!origin) return false;
+  const host = req.headers.host;
+  if (!host) return false;
+  const fetchSite = String(req.headers['sec-fetch-site'] || '').toLowerCase();
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false;
+  try {
+    const originUrl = new URL(origin);
+    return originUrl.host === host && isTrustedLocalHostname(originUrl.hostname);
+  } catch {
+    return false;
+  }
 }
 
 // --- Minimal ZIP writer (STORE method, no external deps) ---
@@ -862,6 +961,20 @@ async function buildTree(dir, base = dir) {
     const relPath = relative(base, fullPath).replace(/\\/g, '/');
 
     if (entry.isDirectory()) {
+      if (isSupportedFilename(entry.name) && OFFICE_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+        if (shouldSkipFile(entry.name, relPath)) continue;
+        let size;
+        let mtime;
+        try {
+          const st = await stat(fullPath);
+          size = st.size;
+          mtime = st.mtime.toISOString();
+        } catch {
+          // Directory package disappeared between readdir and stat — skip metadata
+        }
+        items.push({ name: entry.name, path: relPath, type: 'file', size, mtime });
+        continue;
+      }
       // Skip built-in/ignored/hidden dirs but allow hidden files (e.g. .env).
       if (shouldSkipDir(entry.name, relPath)) continue;
       const children = await buildTree(fullPath, base);
@@ -1115,9 +1228,10 @@ const server = createServer(async (req, res) => {
         size: fileStat.size,
         mtime: fileStat.mtime.toISOString(),
         ext,
+        isDirectory: fileStat.isDirectory(),
       };
       // For text files > 0 bytes, estimate line count from a sample
-      if (!IMAGE_EXTENSIONS.has(ext) && fileStat.size > 0) {
+      if (fileStat.isFile() && !IMAGE_EXTENSIONS.has(ext) && !VIDEO_EXTENSIONS.has(ext) && !OFFICE_EXTENSIONS.has(ext) && fileStat.size > 0) {
         meta.lines = await estimateLineCount(resolved, fileStat.size);
       }
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1219,6 +1333,27 @@ const server = createServer(async (req, res) => {
           res.on('close', () => stream.destroy());
           stream.pipe(res);
         }
+      } else if (OFFICE_EXTENSIONS.has(ext)) {
+        if (fileStat.isDirectory()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Cannot stream package directory: ${filePath}` }));
+          return;
+        }
+        const mime = OFFICE_MIME[ext] || 'application/octet-stream';
+        res.writeHead(200, {
+          'Content-Type': mime,
+          'Content-Length': String(fileStat.size),
+          'Cache-Control': 'no-store',
+          'X-File-Mtime': mtime,
+        });
+        if (req.method === 'HEAD') {
+          res.end();
+          return;
+        }
+        const stream = createReadStream(resolved);
+        stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+        res.on('close', () => stream.destroy());
+        stream.pipe(res);
       } else if (hasRange) {
         // Streaming line-range read — never loads the full file into memory
         const offset = Math.max(0, parseInt(offsetParam || '0', 10) || 0);
@@ -1261,6 +1396,12 @@ const server = createServer(async (req, res) => {
     if (!resolved) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Access denied' }));
+      return;
+    }
+    const ext = extname(resolved).toLowerCase();
+    if (IMAGE_EXTENSIONS.has(ext) || VIDEO_EXTENSIONS.has(ext) || OFFICE_EXTENSIONS.has(ext)) {
+      res.writeHead(415, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Search is not supported for binary file type: ${ext}` }));
       return;
     }
     try {
@@ -1348,6 +1489,74 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/open') {
+    if (!isTrustedOpenRequest(req)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Only same-origin localhost open requests are allowed' }));
+      return;
+    }
+
+    let data;
+    try {
+      data = await readJsonRequestBody(req);
+    } catch (err) {
+      res.writeHead(err.status || 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message || 'Invalid request body' }));
+      return;
+    }
+
+    const reqPath = typeof data?.path === 'string' ? data.path : '';
+    if (!reqPath) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing path' }));
+      return;
+    }
+
+    const resolved = await safePath(reqPath);
+    if (!resolved) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Access denied' }));
+      return;
+    }
+
+    try {
+      const s = await stat(resolved);
+      const ext = extname(resolved).toLowerCase();
+      const isSupportedPackageDir = s.isDirectory() && OFFICE_EXTENSIONS.has(ext);
+      if (!s.isFile() && !isSupportedPackageDir) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Not a file: ${reqPath}` }));
+        return;
+      }
+      if (!isSupportedFilename(basename(resolved))) {
+        res.writeHead(415, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Unsupported file type: ${reqPath}` }));
+        return;
+      }
+
+      const spec = getOpenCommand(resolved);
+      if (!spec) {
+        res.writeHead(501, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Opening files is not supported on ${process.platform}` }));
+        return;
+      }
+
+      if (!data?.dryRun) launchDefaultApp(resolved);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({
+        ok: true,
+        path: reqPath,
+        platform: process.platform,
+        opener: spec.command,
+        dryRun: Boolean(data?.dryRun),
+      }));
+    } catch (err) {
+      res.writeHead(err.status || 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message || 'Failed to open file' }));
+    }
+    return;
+  }
+
   if (url.pathname === '/api/search') {
     const query = url.searchParams.get('q');
     if (!query) {
@@ -1397,7 +1606,7 @@ const server = createServer(async (req, res) => {
         } else {
           if (shouldSkipFile(entry.name, relPath)) continue;
           const ext = extname(entry.name).toLowerCase();
-          if (isSupportedFilename(entry.name) && !IMAGE_EXTENSIONS.has(ext)) {
+          if (isSupportedFilename(entry.name) && !IMAGE_EXTENSIONS.has(ext) && !VIDEO_EXTENSIONS.has(ext) && !OFFICE_EXTENSIONS.has(ext)) {
             try {
               const content = await readFileText(fullPath);
               const lines = content.split('\n');

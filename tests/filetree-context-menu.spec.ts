@@ -24,6 +24,7 @@ test.describe('File tree right-click context menu', () => {
     await expect(menu.locator('.filetree-context-item', { hasText: 'ファイル名をコピー' })).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: '絶対パスをコピー' })).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: '分割ビューで開く' })).toBeVisible();
+    await expect(menu.locator('.filetree-context-item', { hasText: 'アプリで開く' })).toBeVisible();
   });
 
   test('"パスをコピー" copies the relative path', async ({ page }) => {
@@ -68,7 +69,26 @@ test.describe('File tree right-click context menu', () => {
     await expect(page.locator('#viewer-right')).toContainText('Hello DocView');
   });
 
-  test('directory menu omits "分割ビューで開く"', async ({ page }) => {
+  test('"アプリで開く" posts to the local open endpoint', async ({ page }) => {
+    await page.route('**/api/open', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toEqual({ path: 'README.md' });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, dryRun: false }),
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item[data-path]');
+    await rightClick(page.locator('.filetree-item[data-path="README.md"]'));
+    await page.locator('.filetree-context-item', { hasText: 'アプリで開く' }).click();
+
+    await expect(page.locator('#copy-toast')).toContainText('アプリで開きました');
+  });
+
+  test('directory menu omits file-only actions', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.filetree-item[data-type="dir"]');
     await rightClick(page.locator('.filetree-item[data-type="dir"]').first());
@@ -77,6 +97,7 @@ test.describe('File tree right-click context menu', () => {
     await expect(menu).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: /^パスをコピー$/ })).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: '分割ビューで開く' })).toHaveCount(0);
+    await expect(menu.locator('.filetree-context-item', { hasText: 'アプリで開く' })).toHaveCount(0);
   });
 
   test('menu closes on outside click and Escape', async ({ page }) => {

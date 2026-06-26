@@ -208,6 +208,18 @@ flowchart TD
     '</body>',
     '</html>',
   ].join('\n'));
+
+  // Office fixtures: minimal binary placeholders. DocView lists and serves
+  // these files, but intentionally does not parse or preview Office formats.
+  writeFileSync('/tmp/md-test-docs/budget.xlsx', Buffer.from('PK\x03\x04docview-xlsx-fixture', 'binary'));
+  writeFileSync('/tmp/md-test-docs/legacy.xls', Buffer.from('docview-xls-fixture', 'utf-8'));
+  writeFileSync('/tmp/md-test-docs/deck.pptx', Buffer.from('PK\x03\x04docview-pptx-fixture', 'binary'));
+  writeFileSync('/tmp/md-test-docs/slides.ppt', Buffer.from('docview-ppt-fixture', 'utf-8'));
+  writeFileSync('/tmp/md-test-docs/ledger.numbers', Buffer.from('PK\x03\x04docview-numbers-fixture', 'binary'));
+  writeFileSync('/tmp/md-test-docs/report.pages', Buffer.from('PK\x03\x04docview-pages-fixture', 'binary'));
+  mkdirSync('/tmp/md-test-docs/keynote.key', { recursive: true });
+  writeFileSync('/tmp/md-test-docs/keynote.key/index.apxl', 'docview-keynote-package-fixture');
+
   write('html-assets/relative.html', [
     '<!doctype html>',
     '<html lang="en">',

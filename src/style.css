@@ -3665,6 +3665,111 @@ body.dragging::after {
   color: var(--text-primary);
 }
 
+/* ===== Office files ===== */
+.office-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 320px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.office-preview__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.office-preview h2 {
+  margin: 4px 0 0;
+  color: var(--text-primary);
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.office-preview p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.office-preview__detail {
+  max-width: 620px;
+  font-size: 13px;
+}
+
+.office-preview__meta {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 620px);
+  margin: 8px 0 0;
+  text-align: left;
+}
+
+.office-preview__meta div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.office-preview__meta dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.office-preview__meta dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.office-preview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.office-preview-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-interactive);
+}
+
+.office-preview-action:hover {
+  border-color: var(--accent);
+}
+
 /* ===== Breadcrumb (#3) ===== */
 .breadcrumb {
   display: flex;

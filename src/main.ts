@@ -166,11 +166,12 @@ const JSONL_EXT = new Set(['.jsonl', '.ndjson']);
 const CONFIG_EXT = new Set(['.toml', '.ini', '.conf', '.env', '.cfg', '.properties']);
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXT = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
+const OFFICE_EXT = new Set(['.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key']);
 const LOG_EXT = new Set(['.log']);
 const CRON_EXT = new Set(['.cron', '.crontab']);
 const HTML_EXT = new Set(['.html', '.htm']);
 
-type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'html' | 'unknown';
+type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'office' | 'html' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
@@ -196,6 +197,7 @@ function detectFileType(path: string): FileType {
   if (CRON_EXT.has(ext) || isCrontabFile(path)) return 'cron';
   if (IMAGE_EXT.has(ext)) return 'image';
   if (VIDEO_EXT.has(ext)) return 'video';
+  if (OFFICE_EXT.has(ext)) return 'office';
   if (HTML_EXT.has(ext)) return 'html';
   return 'unknown';
 }
@@ -978,6 +980,10 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       break;
     }
 
+    case 'office':
+      void renderOfficeUnsupported(path, target);
+      break;
+
     case 'config':
       renderHighlighted(content, path, target);
       if (target === viewer) toc.clear();
@@ -1017,6 +1023,84 @@ function renderHighlighted(content: string, path: string, target: HTMLElement = 
     return `<span class="line-row" data-line="${n}"><span class="line-num" data-line="${n}" role="button" tabindex="0" title="Click to copy link to line ${n} (Shift+Click for range)">${n}</span><span class="line-content">${line}</span></span>`;
   }).join('\n');
   target.innerHTML = `<div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs has-line-nums"><code>${numbered}</code></pre></div>`;
+}
+
+function formatFileSize(size: number | null | undefined): string {
+  if (typeof size !== 'number' || !Number.isFinite(size) || size < 0) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`;
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+  return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function officeKind(path: string): 'Excel' | 'PowerPoint' | 'Numbers' | 'Pages' | 'Keynote' | 'Office' {
+  const ext = getExt(path);
+  if (ext === '.xls' || ext === '.xlsx') return 'Excel';
+  if (ext === '.ppt' || ext === '.pptx') return 'PowerPoint';
+  if (ext === '.numbers') return 'Numbers';
+  if (ext === '.pages') return 'Pages';
+  if (ext === '.key') return 'Keynote';
+  return 'Office';
+}
+
+async function renderOfficeUnsupported(path: string, target: HTMLElement = viewer, options: { localFile?: File; remote?: boolean } = {}) {
+  const pane = getPaneIdForTarget(target) ?? 'left';
+  const kind = officeKind(path);
+  const ext = getExt(path).replace('.', '').toUpperCase();
+  let sizeText = '';
+  let mtime: string | null = null;
+  let isDirectory = false;
+
+  if (options.localFile) {
+    sizeText = formatFileSize(options.localFile.size);
+  } else if (!options.remote) {
+    try {
+      const metaRes = await fetch(`/api/file/meta?path=${encodeURIComponent(path)}`);
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        sizeText = formatFileSize(meta.size);
+        mtime = meta.mtime ?? null;
+        isDirectory = Boolean(meta.isDirectory);
+      }
+    } catch { /* ignore */ }
+  }
+
+  if (target === viewer) updateBreadcrumb(path, mtime);
+
+  const canOpenInApp = !options.remote && !options.localFile;
+  const downloadUrl = options.remote || options.localFile || isDirectory
+    ? ''
+    : `/api/raw/${encodeURIComponent(path)}`;
+  const openAction = canOpenInApp
+    ? '<button class="office-preview-action office-preview-open-app" type="button">アプリで開く</button>'
+    : '';
+  const downloadAction = downloadUrl
+    ? `<a class="office-preview-action" href="${downloadUrl}" download="${escapeHtml(path.split('/').pop() || path)}">ダウンロード</a>`
+    : '';
+  const actions = openAction || downloadAction
+    ? `<div class="office-preview__actions">
+        ${openAction}
+        ${downloadAction}
+      </div>`
+    : '';
+
+  target.innerHTML = `
+    <div class="office-preview" role="region" aria-label="${kind} preview unavailable">
+      <div class="office-preview__badge">${escapeHtml(ext || kind)}</div>
+      <h2>${escapeHtml(kind)} ファイル</h2>
+      <p>このブラウザ内の WebView では ${escapeHtml(kind)} ファイルを直接プレビューできません。</p>
+      <p class="office-preview__detail">Office / iWork ファイルは独自のバイナリ形式またはパッケージ形式で、DocView は外部変換サービスや Office 実行環境を使わずにローカル表示します。</p>
+      <dl class="office-preview__meta">
+        <div><dt>File</dt><dd>${escapeHtml(path)}</dd></div>
+        ${sizeText ? `<div><dt>Size</dt><dd>${escapeHtml(sizeText)}</dd></div>` : ''}
+      </dl>
+      ${actions}
+    </div>`;
+  target.querySelector<HTMLButtonElement>('.office-preview-open-app')?.addEventListener('click', () => {
+    void openInApp(path);
+  });
+  if (target === viewer) toc.clear();
+  setPendingLineJump(pane, null);
 }
 
 async function renderVideo(path: string) {
@@ -1704,6 +1788,13 @@ async function loadServerFile(path: string) {
     return;
   }
 
+  if (type === 'office') {
+    await renderOfficeUnsupported(path);
+    fileTree?.setActive(path);
+    setPaneProgress('left', 0);
+    return;
+  }
+
   // Show loading skeleton for feedback
   viewer.innerHTML = `<div class="loading-skeleton">${'<div class="skel-line"></div>'.repeat(6)}</div>`;
 
@@ -1795,6 +1886,11 @@ async function loadRemoteUrl(rawUrl: string) {
       return;
     }
 
+    if (type === 'office') {
+      await renderOfficeUnsupported(displayName, viewer, { remote: true });
+      return;
+    }
+
     const content = await res.text();
     renderContent(content, displayName);
     const mtime = res.headers.get('X-File-Mtime');
@@ -1860,6 +1956,11 @@ function loadLocalFile(file: File) {
     const url = URL.createObjectURL(file);
     viewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(file.name)}" /><p class="image-caption">${escapeHtml(file.name)}</p></div>`;
     toc.clear();
+    return;
+  }
+
+  if (type === 'office') {
+    void renderOfficeUnsupported(file.name, viewer, { localFile: file });
     return;
   }
 
@@ -2117,6 +2218,25 @@ function openInSplit(path: string) {
   void loadIntoSplit(path);
 }
 
+/** Open a served file with the OS default application. */
+async function openInApp(path: string) {
+  try {
+    const res = await fetch('/api/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      showCopyToast(`アプリで開けません: ${detail.error ?? res.status}`);
+      return;
+    }
+    showCopyToast('アプリで開きました');
+  } catch {
+    showCopyToast('アプリで開けません');
+  }
+}
+
 // --- Custom CSS (#13) ---
 async function loadCustomCSS() {
   try {
@@ -2333,6 +2453,12 @@ async function loadIntoSplit(path: string) {
     return;
   }
 
+  if (type === 'office') {
+    await renderOfficeUnsupported(path, splitViewer);
+    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
+    return;
+  }
+
   try {
     const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
     if (!res.ok) return;
@@ -2370,6 +2496,7 @@ async function init() {
       {
         notify: (msg) => showCopyToast(msg),
         openInSplit,
+        openInApp,
         absPath: (rel) => (serverRootPath ? `${serverRootPath.replace(/\/$/, '')}/${rel}` : null),
       },
     );
