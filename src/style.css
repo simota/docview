@@ -10166,7 +10166,9 @@ tr:hover .imp-copy {
 }
 .imp-c2pa-verified { color: var(--color-success); font-weight: 600; }
 .imp-c2pa-invalid  { color: var(--color-danger);  font-weight: 600; }
-.imp-c2pa-assertions {
+.imp-c2pa-warn     { color: var(--color-warning); font-weight: 600; }
+.imp-c2pa-assertions,
+.imp-c2pa-status {
   font-size: 10px;
   color: var(--text-muted);
   margin-top: 4px;
