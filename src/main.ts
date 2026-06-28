@@ -2237,6 +2237,25 @@ async function openInApp(path: string) {
   }
 }
 
+/** Open a folder in the OS file manager (Finder/Explorer/…) through the local server. */
+async function revealInOS(folderPath: string) {
+  try {
+    const res = await fetch('/api/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: folderPath }),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      showCopyToast(`フォルダを開けません: ${detail.error ?? res.status}`);
+      return;
+    }
+    showCopyToast('フォルダを開きました');
+  } catch {
+    showCopyToast('フォルダを開けません');
+  }
+}
+
 // --- Custom CSS (#13) ---
 async function loadCustomCSS() {
   try {
@@ -2497,6 +2516,7 @@ async function init() {
         notify: (msg) => showCopyToast(msg),
         openInSplit,
         openInApp,
+        revealInOS,
         absPath: (rel) => (serverRootPath ? `${serverRootPath.replace(/\/$/, '')}/${rel}` : null),
       },
     );

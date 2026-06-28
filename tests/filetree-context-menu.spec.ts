@@ -25,6 +25,7 @@ test.describe('File tree right-click context menu', () => {
     await expect(menu.locator('.filetree-context-item', { hasText: '絶対パスをコピー' })).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: '分割ビューで開く' })).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: 'アプリで開く' })).toBeVisible();
+    await expect(menu.locator('.filetree-context-item', { hasText: '親フォルダを開く' })).toBeVisible();
   });
 
   test('"パスをコピー" copies the relative path', async ({ page }) => {
@@ -98,6 +99,50 @@ test.describe('File tree right-click context menu', () => {
     await expect(menu.locator('.filetree-context-item', { hasText: /^パスをコピー$/ })).toBeVisible();
     await expect(menu.locator('.filetree-context-item', { hasText: '分割ビューで開く' })).toHaveCount(0);
     await expect(menu.locator('.filetree-context-item', { hasText: 'アプリで開く' })).toHaveCount(0);
+    await expect(menu.locator('.filetree-context-item', { hasText: /^フォルダを開く$/ })).toBeVisible();
+  });
+
+  test('"親フォルダを開く" reveals a file\'s parent folder via the reveal endpoint', async ({ page }) => {
+    let posted: unknown;
+    await page.route('**/api/reveal', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      posted = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, dryRun: false }),
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item[data-path]');
+    // Expand subdir to reach the nested file, then reveal its parent folder.
+    await page.locator('.filetree-item[data-path="subdir"]').click();
+    await rightClick(page.locator('.filetree-item[data-path="subdir/README.md"]'));
+    await page.locator('.filetree-context-item', { hasText: '親フォルダを開く' }).click();
+
+    expect(posted).toEqual({ path: 'subdir' });
+    await expect(page.locator('#copy-toast')).toContainText('フォルダを開きました');
+  });
+
+  test('"フォルダを開く" reveals the directory itself via the reveal endpoint', async ({ page }) => {
+    let posted: unknown;
+    await page.route('**/api/reveal', async (route) => {
+      posted = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item[data-path="subdir"]');
+    await rightClick(page.locator('.filetree-item[data-path="subdir"]'));
+    await page.locator('.filetree-context-item', { hasText: /^フォルダを開く$/ }).click();
+
+    expect(posted).toEqual({ path: 'subdir' });
+    await expect(page.locator('#copy-toast')).toContainText('フォルダを開きました');
   });
 
   test('menu closes on outside click and Escape', async ({ page }) => {

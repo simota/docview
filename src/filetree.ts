@@ -62,6 +62,8 @@ export interface FileTreeActions {
   openInSplit?: (path: string) => void;
   /** Open a file with the OS default application through the local server. */
   openInApp?: (path: string) => void;
+  /** Open a folder in the OS file manager (Finder/Explorer) through the local server. */
+  revealInOS?: (folderPath: string) => void;
   /** Resolve a tree-relative path to an absolute filesystem path, or null. */
   absPath?: (relPath: string) => string | null;
 }
@@ -298,6 +300,15 @@ export class FileTree {
     }
     if (type === 'file' && this.actions.openInApp) {
       entries.push({ label: 'アプリで開く', run: () => this.actions.openInApp!(path) });
+    }
+    if (this.actions.revealInOS) {
+      if (type === 'file') {
+        // Parent folder of the file ('' when the file sits at the served root).
+        const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+        entries.push({ label: '親フォルダを開く', run: () => this.actions.revealInOS!(parent) });
+      } else {
+        entries.push({ label: 'フォルダを開く', run: () => this.actions.revealInOS!(path) });
+      }
     }
 
     const menu = document.createElement('div');

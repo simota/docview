@@ -1557,6 +1557,62 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/reveal') {
+    if (!isTrustedOpenRequest(req)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Only same-origin localhost reveal requests are allowed' }));
+      return;
+    }
+
+    let data;
+    try {
+      data = await readJsonRequestBody(req);
+    } catch (err) {
+      res.writeHead(err.status || 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message || 'Invalid request body' }));
+      return;
+    }
+
+    // `path` is a directory relative to the served root; '' means the root itself.
+    const reqPath = typeof data?.path === 'string' ? data.path : '';
+    const resolved = await safePath(reqPath);
+    if (!resolved) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Access denied' }));
+      return;
+    }
+
+    try {
+      const s = await stat(resolved);
+      if (!s.isDirectory()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Not a directory: ${reqPath}` }));
+        return;
+      }
+
+      const spec = getOpenCommand(resolved);
+      if (!spec) {
+        res.writeHead(501, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Opening folders is not supported on ${process.platform}` }));
+        return;
+      }
+
+      if (!data?.dryRun) launchDefaultApp(resolved);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({
+        ok: true,
+        path: reqPath,
+        platform: process.platform,
+        opener: spec.command,
+        dryRun: Boolean(data?.dryRun),
+      }));
+    } catch (err) {
+      res.writeHead(err.status || 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message || 'Failed to open folder' }));
+    }
+    return;
+  }
+
   if (url.pathname === '/api/search') {
     const query = url.searchParams.get('q');
     if (!query) {
@@ -2152,7 +2208,7 @@ const TIPS = [
   'Drop a ".docview.css" in the served directory to inject custom styles.',
   'Drop a ".docviewignore" (gitignore-style) to hide files; build dirs are skipped automatically.',
   'HTML files render in a sandboxed iframe — toggle "スクリプト" to allow their JS.',
-  'Right-click a file in the tree to copy its path / name / absolute path or open it in split view.',
+  'Right-click a file in the tree to copy its path / name, open it in split view, or reveal its parent folder.',
   'Large CSV / JSONL / log files stream in chunks — search still hits every row.',
   'Mermaid, KaTeX math, footnotes, and GitHub Alerts all render inline in Markdown.',
   'JSON / YAML files show as an interactive tree — toggle Source to see the raw text.',
