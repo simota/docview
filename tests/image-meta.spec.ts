@@ -100,6 +100,15 @@ writeFileSync(join(DIR, 'img-meta-fixtures', 'ai-sd.png'), makePngWithText('para
 writeFileSync(join(DIR, 'img-meta-fixtures', 'corrupt.png'), CORRUPT_PNG);
 writeFileSync(join(DIR, 'img-meta-fixtures', 'dim.svg'), TINY_SVG);
 writeFileSync(join(DIR, 'img-meta-fixtures', 'plain.txt'), TEXT_FILE);
+// C2PA-bearing PNG: valid PNG header + appended JUMBF/C2PA signature bytes incl.
+// trainedAlgorithmicMedia + an AI generator (gpt-image). c2pa-node cannot fully parse
+// this synthetic blob (parsed=false), so it exercises the byte-scan detection path
+// — the exact case that previously mis-reported "✗ 検証失敗" and missed the AI flag.
+const C2PA_AI_PNG = Buffer.concat([
+  TINY_PNG,
+  Buffer.from('jumbf urn:c2pa:test c2pa.assertions c2pa.actions digitalSourceType trainedAlgorithmicMedia claim_generator gpt-image openai', 'latin1'),
+]);
+writeFileSync(join(DIR, 'img-meta-fixtures', 'c2pa-ai.png'), C2PA_AI_PNG);
 
 // ---------------------------------------------------------------------------
 // API テスト（Playwright request fixture）
@@ -120,6 +129,21 @@ test.describe('GET /api/image/meta — API', () => {
     expect('gps' in body).toBe(true);
     expect('ai' in body).toBe(true);
     expect('raw' in body).toBe(true);
+  });
+
+  // C2PA byte-scan detection: present-but-unparseable C2PA must be DETECTED (not missed),
+  // shown as unparsed (not "改ざん検証失敗"), and trainedAlgorithmicMedia/AI-generator must
+  // set isLikelyAiGenerated. Regression guard for the gpt-image "missing data box" bug.
+  test('C2PA byte-scan: detects unparseable C2PA + AI provenance', async ({ request }) => {
+    const resp = await request.get(`${BASE}/api/image/meta?path=img-meta-fixtures/c2pa-ai.png`);
+    expect(resp.status()).toBe(200);
+    const { ai } = await resp.json();
+    expect(ai.c2pa).not.toBeNull();
+    expect(ai.c2pa.detected).toBe(true);
+    // c2pa-node cannot parse the synthetic blob → unparsed, NOT a tampering "failed"
+    expect(ai.c2pa.verifyState).toBe('unparsed');
+    // trainedAlgorithmicMedia + gpt-image in the bytes → AI flag must be set
+    expect(ai.isLikelyAiGenerated).toBe(true);
   });
 
   // AC-2a: path パラメータなし → 400

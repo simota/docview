@@ -12,7 +12,7 @@ import jschardet from 'jschardet';
 import {
   parseDimensions, buildDimensions, parsePngTextChunksFromFile,
   extractExif, extractPngColorInfo, detectAiProvenance,
-  readC2pa, humanSize,
+  readC2pa, detectC2paFromBytes, humanSize,
 } from './lib/image-meta.mjs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -1327,16 +1327,21 @@ const server = createServer(async (req, res) => {
       } catch { /* best-effort */ }
     }
 
-    // C2PA (FR-9c, NFR-5) — FileAsset(path) でディスクから検証（NFR-2）
+    // C2PA (FR-9c, NFR-5) — 存在/AI由来はバイト走査で確実に検出（c2pa-nodeの完全パースは
+    // 実画像でよく失敗するため）、暗号検証は readC2pa が成功した時のみ best-effort で付与。
     let c2paResult = null;
     try {
       c2paResult = await readC2pa(resolved, mime);
     } catch { /* best-effort — c2pa縮退 */ }
+    let c2paBytes = null;
+    try {
+      c2paBytes = await detectC2paFromBytes(resolved);
+    } catch { /* best-effort */ }
 
     // AI provenance (FR-9)
     let ai = null;
     try {
-      ai = detectAiProvenance(pngChunks, rawExif, c2paResult);
+      ai = detectAiProvenance(pngChunks, rawExif, c2paResult, c2paBytes);
     } catch { /* best-effort */ }
 
     // raw (FR-10) — merge PNG text chunks + EXIF tags

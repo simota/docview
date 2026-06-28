@@ -52,10 +52,10 @@ interface ImageMetaAi {
   isLikelyAiGenerated: boolean;
   indicators: AiIndicator[];
   c2pa: {
-    verified: boolean;          // 改ざん検出なし（integrity）
-    signerTrusted?: boolean;    // 発行者がトラストリスト内か
+    detected: boolean;          // C2PA/JUMBF をバイト走査で検出
+    parsed: boolean;            // c2pa-node が完全パースできたか
+    verifyState: 'verified' | 'untrusted' | 'failed' | 'unparsed';
     statusCodes?: string[];     // c2pa validation_status のコード一覧
-    failureCodes?: string[];    // 改ざん系の失敗コード
     issuer: string | null;
     claimGenerator: string | null;
     assertions: string[];
@@ -184,29 +184,28 @@ function buildAiSection(ai: ImageMetaAi | null): string {
 
   if (ai.c2pa) {
     const c = ai.c2pa;
-    // 3状態: 改ざん検出=失敗 / 改ざんなしだが発行者未検証=警告 / 検証済み
+    // 4状態: 検証済み / 発行者未検証 / 検証失敗(改ざん) / 検出のみ(パース不可)
     let verifiedText: string;
     let verifiedClass: string;
-    if (!c.verified) {
-      verifiedText = '✗ 検証失敗（改ざんの可能性）';
-      verifiedClass = 'imp-c2pa-invalid';
-    } else if (c.signerTrusted === false) {
-      verifiedText = '⚠ 改ざんなし・発行者は未検証（トラストリスト外）';
-      verifiedClass = 'imp-c2pa-warn';
-    } else {
-      verifiedText = '✓ 検証済み';
-      verifiedClass = 'imp-c2pa-verified';
+    switch (c.verifyState) {
+      case 'verified':
+        verifiedText = '✓ 検証済み'; verifiedClass = 'imp-c2pa-verified'; break;
+      case 'untrusted':
+        verifiedText = '⚠ 改ざんなし・発行者は未検証（トラストリスト外）'; verifiedClass = 'imp-c2pa-warn'; break;
+      case 'failed':
+        verifiedText = '✗ 検証失敗（改ざんの可能性）'; verifiedClass = 'imp-c2pa-invalid'; break;
+      default: // 'unparsed' — C2PA は存在するが本ツールでは詳細検証不可
+        verifiedText = 'ℹ C2PA 検出（来歴情報あり・本ツールでは詳細検証不可）'; verifiedClass = 'imp-c2pa-warn'; break;
     }
     html += `<div class="imp-c2pa">
       <div class="imp-c2pa-title">C2PA Content Credentials</div>
       <table class="imp-table">
-        <tr><td class="imp-key">検証状態</td><td class="imp-val ${verifiedClass}">${sanitize(verifiedText)}</td><td class="imp-copy-cell"></td></tr>
+        <tr><td class="imp-key">状態</td><td class="imp-val ${verifiedClass}">${sanitize(verifiedText)}</td><td class="imp-copy-cell"></td></tr>
         ${row('発行者', c.issuer)}
         ${row('生成ツール', c.claimGenerator)}
       </table>`;
-    const codes = c.failureCodes && c.failureCodes.length > 0 ? c.failureCodes : c.statusCodes;
-    if (codes && codes.length > 0) {
-      html += `<div class="imp-c2pa-status">検証コード: ${codes.map(sanitize).join(', ')}</div>`;
+    if (c.statusCodes && c.statusCodes.length > 0) {
+      html += `<div class="imp-c2pa-status">検証コード: ${c.statusCodes.map(sanitize).join(', ')}</div>`;
     }
     if (c.assertions.length > 0) {
       html += `<div class="imp-c2pa-assertions">アサーション: ${c.assertions.map(sanitize).join(', ')}</div>`;
