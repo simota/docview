@@ -14,6 +14,7 @@ import { renderLogTable, initLaravelSort } from './log-viewer';
 import { renderCronTable, initCronToggles } from './cron-viewer';
 import { ChunkedTable } from './chunked-table';
 import { FindBar } from './find-bar';
+import { ImageMetaPanel } from './image-meta-panel';
 import { HelpModal } from './help-modal';
 import { UrlBar } from './url-bar';
 import { isSecretSafeModeEnabled, maskSecretValue, maskSecrets } from './secret-mask';
@@ -63,6 +64,7 @@ let syncCompareZoom = false;
 // --- DOM refs ---
 const viewer = document.getElementById('viewer') as HTMLDivElement;
 const viewerPane = document.getElementById('viewer-pane') as HTMLDivElement;
+const imageMetaPanel = new ImageMetaPanel(viewer);
 const workspace = document.getElementById('workspace') as HTMLElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
 const btnHelp = document.getElementById('btn-help') as HTMLButtonElement;
@@ -1141,11 +1143,13 @@ async function renderImage(path: string) {
         svgEl.style.maxHeight = '85vh';
       }
       initImageZoom(viewer);
+      imageMetaPanel.mount(path);
     } catch { /* ignore */ }
     return;
   }
   viewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /><p class="image-caption">${escapeHtml(path)}</p></div>`;
   initImageZoom(viewer);
+  imageMetaPanel.mount(path);
 }
 
 // Relative images in Markdown (#5)
@@ -1743,6 +1747,7 @@ function fileTypeToChunkKind(type: FileType): 'csv' | 'jsonl' | 'log' | null {
 async function loadServerFile(path: string) {
   leaveCompareViewForNavigation();
   clearAlbumTracking();
+  imageMetaPanel.destroy(); // tear down panel when navigating away
   saveScrollPosition('left');
   const type = detectFileType(path);
   const fileChanged = currentFilePath !== path;

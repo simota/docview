@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { createReadStream, readFileSync } from 'node:fs';
-import { readFile, readdir, stat, realpath } from 'node:fs/promises';
+import { readFile, readdir, stat, realpath, open } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { join, resolve, relative, extname, basename, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,11 @@ import { Readable } from 'node:stream';
 import { isIP } from 'node:net';
 import chokidar from 'chokidar';
 import jschardet from 'jschardet';
+import {
+  parseDimensions, buildDimensions, parsePngTextChunksFromFile,
+  extractExif, extractPngColorInfo, detectAiProvenance,
+  readC2pa, detectC2paFromBytes, humanSize,
+} from './lib/image-meta.mjs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const distDir = join(__dirname, 'dist');
@@ -1240,6 +1245,130 @@ const server = createServer(async (req, res) => {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'File not found' }));
     }
+    return;
+  }
+
+  // Image metadata endpoint — FR-1,2,5,6,7,8,9,10,11
+  if (url.pathname === '/api/image/meta') {
+    const filePath = url.searchParams.get('path');
+    if (!filePath) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing path parameter' }));
+      return;
+    }
+    const resolved = await safePath(filePath);
+    if (!resolved) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Access denied' }));
+      return;
+    }
+    const ext = extname(resolved).toLowerCase();
+    if (!IMAGE_EXTENSIONS.has(ext)) {
+      res.writeHead(415, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Not an image file' }));
+      return;
+    }
+    let fileStat;
+    try {
+      fileStat = await stat(resolved);
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'File not found' }));
+      return;
+    }
+
+    // NFR-2: ヘッダスライスのみメモリに読む（寸法/色は先頭で足りる）。全文は読まない。
+    // 大画像でもメモリ使用は HEADER_BYTES + 最大 PNG text チャンク程度に収まる。
+    const HEADER_BYTES = 256 * 1024;
+    let headerBuf = Buffer.alloc(0);
+    try {
+      const fh = await open(resolved, 'r');
+      try {
+        const want = Math.min(HEADER_BYTES, fileStat.size);
+        const tmp = Buffer.alloc(want);
+        const { bytesRead } = await fh.read(tmp, 0, want, 0);
+        headerBuf = tmp.subarray(0, bytesRead);
+      } finally {
+        await fh.close();
+      }
+    } catch { headerBuf = Buffer.alloc(0); }
+
+    const mime = IMAGE_MIME[ext] || 'application/octet-stream';
+
+    // dimensions (FR-5) — ヘッダスライスで判定
+    let dimensions = null;
+    try {
+      const rawDim = parseDimensions(headerBuf, ext);
+      dimensions = buildDimensions(rawDim, ext);
+    } catch { /* best-effort */ }
+
+    // PNG text chunks (FR-9a) — ストリーム走査（NFR-2 / AC-9: IDAT 後の text も捕捉）
+    let pngChunks = {};
+    if (ext === '.png') {
+      try { pngChunks = await parsePngTextChunksFromFile(resolved); } catch { /* best-effort */ }
+    }
+
+    // EXIF / color / GPS (FR-6,7,8) — exifr にパスを渡し範囲読み（NFR-2）
+    let exif = null, color = null, gps = null, rawExif = {};
+    try {
+      const exifResult = await extractExif(resolved, ext);
+      exif   = exifResult.exif;
+      color  = exifResult.color;
+      gps    = exifResult.gps;
+      rawExif = exifResult.raw ?? {};
+    } catch { /* best-effort */ }
+
+    // PNG color info from IHDR (FR-7) — ヘッダスライスで足りる
+    if (ext === '.png') {
+      try {
+        const rawDim = parseDimensions(headerBuf, ext);
+        const pngColor = extractPngColorInfo(headerBuf, rawDim);
+        if (pngColor) color = pngColor;
+      } catch { /* best-effort */ }
+    }
+
+    // C2PA (FR-9c, NFR-5) — 存在/AI由来はバイト走査で確実に検出（c2pa-nodeの完全パースは
+    // 実画像でよく失敗するため）、暗号検証は readC2pa が成功した時のみ best-effort で付与。
+    let c2paResult = null;
+    try {
+      c2paResult = await readC2pa(resolved, mime);
+    } catch { /* best-effort — c2pa縮退 */ }
+    let c2paBytes = null;
+    try {
+      c2paBytes = await detectC2paFromBytes(resolved);
+    } catch { /* best-effort */ }
+
+    // AI provenance (FR-9)
+    let ai = null;
+    try {
+      ai = detectAiProvenance(pngChunks, rawExif, c2paResult, c2paBytes);
+    } catch { /* best-effort */ }
+
+    // raw (FR-10) — merge PNG text chunks + EXIF tags
+    const raw = { ...rawExif, ...pngChunks };
+
+    const result = {
+      path: filePath,
+      basic: {
+        size:      fileStat.size,
+        sizeHuman: humanSize(fileStat.size),
+        mtime:     fileStat.mtime.toISOString(),
+        ext,
+        mime,
+      },
+      dimensions,
+      exif,
+      color,
+      gps,
+      ai,
+      raw,
+    };
+
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'max-age=5',
+    });
+    res.end(JSON.stringify(result));
     return;
   }
 
