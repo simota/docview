@@ -109,6 +109,10 @@ const C2PA_AI_PNG = Buffer.concat([
   Buffer.from('jumbf urn:c2pa:test c2pa.assertions c2pa.actions digitalSourceType trainedAlgorithmicMedia claim_generator gpt-image openai', 'latin1'),
 ]);
 writeFileSync(join(DIR, 'img-meta-fixtures', 'c2pa-ai.png'), C2PA_AI_PNG);
+// False-positive trap: NO C2PA, but a generic Comment tEXt that coincidentally mentions
+// AI tool names (openai/gemini/flux). Must NOT be flagged AI (precision regression guard).
+const FP_WORDS_PNG = makePngWithText('Comment', 'Notes: visited the Gemini observatory; flux density chart; see openai.com');
+writeFileSync(join(DIR, 'img-meta-fixtures', 'fp-words.png'), FP_WORDS_PNG);
 
 // ---------------------------------------------------------------------------
 // API テスト（Playwright request fixture）
@@ -144,6 +148,16 @@ test.describe('GET /api/image/meta — API', () => {
     expect(ai.c2pa.verifyState).toBe('unparsed');
     // trainedAlgorithmicMedia + gpt-image in the bytes → AI flag must be set
     expect(ai.isLikelyAiGenerated).toBe(true);
+  });
+
+  // Precision: a non-C2PA image whose text coincidentally names AI tools must NOT be
+  // flagged AI, and must not report a C2PA section. Guards the kaizen precision fix.
+  test('precision: AI-tool words without C2PA are not flagged', async ({ request }) => {
+    const resp = await request.get(`${BASE}/api/image/meta?path=img-meta-fixtures/fp-words.png`);
+    expect(resp.status()).toBe(200);
+    const { ai } = await resp.json();
+    expect(ai.isLikelyAiGenerated).toBe(false);
+    expect(ai.c2pa).toBeNull();
   });
 
   // AC-2a: path パラメータなし → 400
