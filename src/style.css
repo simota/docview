@@ -7312,9 +7312,13 @@ a.wiki-link:hover {
   top: calc(100% + 6px);
   right: 0;
   min-width: 180px;
+  max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px);
   margin: 0;
   padding: 6px;
   list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

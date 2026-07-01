@@ -70,6 +70,29 @@ test.describe('DocView E2E', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'handwritten');
   });
 
+  test('theme picker menu scrolls within the viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 800, height: 360 });
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item');
+    await page.locator('#btn-theme').click();
+
+    const metrics = await page.locator('#theme-menu').evaluate((menu) => {
+      const rect = menu.getBoundingClientRect();
+      const style = window.getComputedStyle(menu);
+      return {
+        bottom: rect.bottom,
+        clientHeight: menu.clientHeight,
+        overflowY: style.overflowY,
+        scrollHeight: menu.scrollHeight,
+        viewportHeight: window.innerHeight,
+      };
+    });
+
+    expect(metrics.overflowY).toBe('auto');
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    expect(metrics.bottom).toBeLessThanOrEqual(metrics.viewportHeight);
+  });
+
   test('breadcrumb updates', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.filetree-item[data-type="file"]');
