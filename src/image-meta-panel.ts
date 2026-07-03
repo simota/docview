@@ -93,6 +93,13 @@ function section(id: string, title: string, content: string, defaultOpen = true)
   </details>`;
 }
 
+// 不正な日時値は "Invalid Date" を表示せず「該当なし」プレースホルダに落とす
+function fmtDate(value: string | number | null | undefined): string | null {
+  if (value == null || value === '') return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleString('ja-JP');
+}
+
 function buildBasicSection(meta: ImageMeta): string {
   const d = meta.dimensions;
   const b = meta.basic;
@@ -104,7 +111,7 @@ function buildBasicSection(meta: ImageMeta): string {
   }
   const content = `<table class="imp-table">
     ${row('ファイルサイズ', b.sizeHuman)}
-    ${row('更新日時', b.mtime ? new Date(b.mtime).toLocaleString('ja-JP') : null)}
+    ${row('更新日時', fmtDate(b.mtime))}
     ${row('形式', `${sanitize(b.ext)} / ${sanitize(b.mime)}`)}
     ${row('寸法', dims)}
     ${row('アスペクト比', aspect)}
@@ -125,7 +132,7 @@ function buildExifSection(exif: ImageMetaExif | null): string {
     ${row('露出時間', exif.exposureTime)}
     ${row('F値', exif.fNumber != null ? `f/${exif.fNumber}` : null)}
     ${row('焦点距離', exif.focalLength != null ? `${exif.focalLength} mm` : null)}
-    ${row('撮影日時', exif.dateTimeOriginal ? new Date(exif.dateTimeOriginal).toLocaleString('ja-JP') : null)}
+    ${row('撮影日時', fmtDate(exif.dateTimeOriginal))}
     ${row('向き', exif.orientation != null ? String(exif.orientation) : null)}
   </table>`;
   return section('imp-exif', 'EXIF', content);

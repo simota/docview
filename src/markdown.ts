@@ -1648,6 +1648,19 @@ for (const type of containerTypes) {
 // GitHub-style alerts > [!NOTE], > [!WARNING], etc.
 md.use(githubAlerts);
 
+// Harden: the plugin injects the raw text after [!NOTE] as the title without
+// escaping it (`${icon}${title}`), so `> [!NOTE] <img src=x onerror=...>`
+// would execute in our origin. Re-render alert_open with the title escaped.
+{
+  const octicons = new Set(['note', 'tip', 'important', 'warning', 'caution']);
+  md.renderer.rules.alert_open = (tokens, idx) => {
+    const { title, type, icon } = tokens[idx].meta as { title: string; type: string; icon: string };
+    // icon is a built-in constant SVG for known types; drop anything unexpected.
+    const safeIcon = octicons.has(type) ? icon : '';
+    return `<div class="markdown-alert markdown-alert-${md.utils.escapeHtml(type)}"><p class="markdown-alert-title">${safeIcon}${md.utils.escapeHtml(title)}</p>`;
+  };
+}
+
 // Definition lists
 md.use(deflist);
 

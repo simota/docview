@@ -27,6 +27,7 @@ export class SearchModal {
   private useRegex = false;
   private fileList: string[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchSeq = 0;
 
   constructor(onSelect: FileSelectCallback) {
     this.onSelect = onSelect;
@@ -218,11 +219,16 @@ export class SearchModal {
   }
 
   private async searchFullText(query: string) {
+    const seq = ++this.searchSeq;
     try {
       const regexParam = this.useRegex ? '&regex=1' : '';
       const res = await fetch(withSecretSafeParam(`/api/search?q=${encodeURIComponent(query)}${regexParam}`));
+      // A newer query started while this was in flight — drop the stale result
+      // so a slow early response can't overwrite fresher output.
+      if (seq !== this.searchSeq) return;
       if (!res.ok) return;
       const results: SearchResult[] = await res.json();
+      if (seq !== this.searchSeq) return;
 
       this.results.innerHTML = results.length
         ? results.map((r, i) => this.renderFullTextResult(r, i, query)).join('')
@@ -280,7 +286,10 @@ export class SearchModal {
     for (const match of text.matchAll(regex)) {
       const matchedText = match[0];
       const start = match.index ?? 0;
-      if (!matchedText) break;
+      // Zero-length matches (e.g. `a*`) must be skipped, not treated as a
+      // terminator — matchAll already advances past them, and breaking here
+      // would drop every real match that follows.
+      if (!matchedText) continue;
       highlighted += this.escapeHtml(text.slice(lastIndex, start));
       highlighted += `<mark>${this.escapeHtml(matchedText)}</mark>`;
       lastIndex = start + matchedText.length;

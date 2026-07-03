@@ -185,6 +185,7 @@ export class FileTree {
   private openDirs = new Set<string>();
   private treeData: FileNode[] = [];
   private filterQuery = '';
+  private loadSeq = 0;
   /** Max age in days for the mtime filter; 0 (or NaN) means no time filter. */
   private mtimeMaxDays = 0;
   private contextMenuEl: HTMLElement | null = null;
@@ -391,15 +392,20 @@ export class FileTree {
   }
 
   async load(): Promise<void> {
+    const seq = ++this.loadSeq;
     try {
       const res = await fetch('/api/tree');
+      // A burst of SSE-triggered reloads can resolve out of order; ignore any
+      // response that a newer load() has already superseded.
+      if (seq !== this.loadSeq) return;
       if (!res.ok) return;
       const data: TreeResponse = await res.json();
+      if (seq !== this.loadSeq) return;
       this.rootLabel.textContent = data.root;
       this.treeData = data.tree;
       this.applyFilters();
     } catch {
-      this.container.style.display = 'none';
+      if (seq === this.loadSeq) this.container.style.display = 'none';
     }
   }
 

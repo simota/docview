@@ -26,6 +26,8 @@ if (args.includes('--help') || args.includes('-h')) {
 
   Options:
     -p, --port <port>         Port number (default: 4000)
+    --host <address>          Bind address (default: 127.0.0.1). Use 0.0.0.0
+                              to expose the viewer on the LAN (opt-in).
     --no-open                 Don't auto-open browser
     --no-remote               Disable the remote URL fetcher (Cmd+L remote mode)
     --allow-private-remote    Also fetch private/loopback remote URLs (opt-in)
@@ -79,6 +81,11 @@ child.stdout.on('data', (data) => {
     const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
     execFile(cmd, [url], () => {});
   }
+});
+
+child.on('error', (err) => {
+  process.stderr.write(`Failed to start DocView server: ${err.message}\n`);
+  process.exit(1);
 });
 
 child.on('exit', (code) => process.exit(code ?? 0));

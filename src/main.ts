@@ -813,6 +813,9 @@ function interceptRelativeLinks(currentPath: string, target: HTMLElement = viewe
 // --- Rendering ---
 function renderContent(content: string, path: string, target: HTMLElement = viewer) {
   const pane = getPaneIdForTarget(target) ?? 'left';
+  // Replacing the viewer's innerHTML below detaches any nodes the find bar
+  // holds Ranges into, leaving it pointing at stale content. Close it first.
+  getFindBarForPane(pane)?.close();
   const type = detectFileType(path);
   const secretSafe = isSecretSafeModeEnabled();
   const displayContent = secretSafe ? maskSecrets(content) : content;
@@ -1689,6 +1692,7 @@ function initComparePaneZoom(wrap: HTMLElement, paneIndex: number): void {
 
 function showWelcome() {
   leaveCompareViewForNavigation();
+  saveScrollPosition('left');
   currentFilePath = null;
   clearAlbumTracking();
   refreshSlidesButton(null);
@@ -1917,6 +1921,9 @@ function remoteDisplayName(rawUrl: string): string {
 
 async function loadFullFile(path: string) {
   const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
+  // The user may have navigated elsewhere while this was in flight — don't let
+  // a slow response for an old file clobber a newer view.
+  if (currentFilePath !== path) return;
   if (!res.ok) {
     showError(`Failed to load: ${path} (${res.status})`);
     return;
@@ -1924,6 +1931,7 @@ async function loadFullFile(path: string) {
   const mtime = res.headers.get('X-File-Mtime');
   updateBreadcrumb(path, mtime);
   const content = await res.text();
+  if (currentFilePath !== path) return;
 
   // Large file warning
   if (content.length > MAX_FILE_SIZE) {
@@ -1951,6 +1959,7 @@ async function reloadCurrentFile() {
 function loadLocalFile(file: File) {
   leaveCompareViewForNavigation();
   clearAlbumTracking();
+  saveScrollPosition('left');
   const type = detectFileType(file.name);
   currentFilePath = null;
   document.title = `${file.name} — DocView`;

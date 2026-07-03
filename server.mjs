@@ -207,6 +207,9 @@ const args = process.argv.slice(2);
 let targetDir = process.cwd();
 let initialFile = null;
 let port = 4000;
+// Bind loopback-only by default so the viewer (and its unauthenticated APIs)
+// is not reachable from other machines on the LAN. Opt in with --host.
+let host = '127.0.0.1';
 let remoteEnabled = true;
 let allowPrivateRemote = false;
 let remoteMaxSize = 5 * 1024 * 1024; // 5 MB default
@@ -232,6 +235,15 @@ for (let i = 0; i < args.length; i++) {
       ));
     }
     port = parsed;
+  } else if (args[i] === '--host') {
+    const raw = args[++i];
+    if (typeof raw !== 'string' || raw.length === 0) {
+      reportAndExit(Object.assign(
+        new Error(`--host の値が不正です: "${raw}" (例: 0.0.0.0 で LAN 公開)`),
+        { code: 'EINVALIDHOST' },
+      ));
+    }
+    host = raw;
   } else if (args[i] === '--no-remote') {
     remoteEnabled = false;
   } else if (args[i] === '--allow-private-remote') {
@@ -1173,12 +1185,22 @@ async function searchFileLines(filePath, query, offset, limit) {
 
 // HTTP server
 const server = createServer(async (req, res) => {
-  const url = new URL(req.url, `http://localhost:${port}`);
-
   // Client disconnects (ECONNRESET etc.) must not bubble up to
   // uncaughtException, which would exit the whole process.
   req.on('error', () => { res.destroy(); });
   res.on('error', () => {});
+
+  // A malformed request line (e.g. an absolute-form URL with a bad host)
+  // makes new URL() throw. Unhandled, that reject would exit the whole
+  // process — reply 400 and keep serving instead.
+  let url;
+  try {
+    url = new URL(req.url, `http://localhost:${port}`);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('Bad Request');
+    return;
+  }
 
   // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -1760,8 +1782,14 @@ const server = createServer(async (req, res) => {
       : SEARCH_CONTEXT_LINES;
     let matcher;
     if (useRegex) {
-      // Reject patterns likely to cause catastrophic backtracking (ReDoS)
-      if (query.length > 200 || /(\.\*){3,}|(\([^)]*\+\)[^)]*\+)/.test(query)) {
+      // Reject patterns likely to cause catastrophic backtracking (ReDoS).
+      // A quantifier applied to a group that itself contains an alternation or
+      // a quantifier is the classic exponential family — (a|a)+, (a+)+, (a*)* —
+      // which the old (.*){3,} heuristic missed. Erring toward rejection is
+      // acceptable for a local search box; simple groups like (abc)+ still pass.
+      const redosProne = /(\.\*){3,}/.test(query)
+        || /\([^)]*[|*+][^)]*\)\s*[*+{]/.test(query);
+      if (query.length > 200 || redosProne) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Regex pattern too complex' }));
         return;
@@ -1944,9 +1972,25 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/shutdown') {
+    // CSRF guard: without it any page could shut the server down via a
+    // cross-site GET (<img src=".../api/shutdown">). Require a POST carrying a
+    // custom header — a browser cannot set custom headers on a cross-origin
+    // request without a CORS preflight this server never approves. The only
+    // legitimate caller is killExistingDocview (server-to-server).
+    if (req.method !== 'POST' || req.headers['x-docview-shutdown'] !== '1') {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
     watcher.close();
+    // Live SSE connections (/api/watch) keep the socket open, so server.close()
+    // would never fire its callback. End them explicitly first.
+    for (const client of sseClients) {
+      try { client.end(); } catch { /* already closed */ }
+    }
+    sseClients.clear();
     server.close(() => process.exit(0));
     return;
   }
@@ -2303,7 +2347,10 @@ async function killExistingDocview(p) {
     const res = await fetch(`http://localhost:${p}/api/tree`);
     if (res.ok) {
       console.log(`  Stopping existing DocView on port ${p}...`);
-      await fetch(`http://localhost:${p}/api/shutdown`).catch(() => {});
+      await fetch(`http://localhost:${p}/api/shutdown`, {
+        method: 'POST',
+        headers: { 'x-docview-shutdown': '1' },
+      }).catch(() => {});
       await new Promise((r) => setTimeout(r, 500));
     }
   } catch {
@@ -2348,7 +2395,7 @@ function pickTip() {
   return TIPS[Math.floor(Math.random() * TIPS.length)];
 }
 
-server.listen(port, () => {
+server.listen(port, host, () => {
   console.log('');
   console.log(BANNER);
   console.log(`  ─────────────────────────────────────────────`);

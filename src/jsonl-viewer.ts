@@ -93,7 +93,7 @@ export function renderJsonlTable(content: string, path: string, maskValue?: Secr
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Insertion-order preserving set using Map. */

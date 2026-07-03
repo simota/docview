@@ -192,7 +192,7 @@ export class UrlBar {
     if (!raw) { this.clearStatus(); return; }
 
     // Album hash shortcut: #album=<path>
-    if (raw.startsWith('#album=') || raw.startsWith('#album=')) {
+    if (raw.startsWith('#album=')) {
       try {
         const params = new URLSearchParams(raw.slice(1));
         const albumPath = params.get('album');

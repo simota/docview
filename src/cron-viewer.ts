@@ -154,7 +154,7 @@ function fmtInZone(d: Date, tz: string): string {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // 稼働時間帯を "9–17時, 21時" のような範囲ラベルに整形する(ツールチップ用)。

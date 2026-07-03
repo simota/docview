@@ -34,7 +34,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 // --- Shared HTML helpers ---
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Escape HTML then wrap matching portions in <mark> */
@@ -470,7 +470,11 @@ export class ChunkedTable {
         theadHtml = this.buildThead(parsed.fields, true);
         tbodyHtml = renderCsvRows(parsed.fields, parsed.rows, numbering(parsed.rows));
       } else {
-        const parsed = parseCsvChunk(fields.join(',') + '\n' + chunkText, true);
+        // 合成ヘッダ行はクォート必須: フィールド名に区切り文字や引用符が
+        // 含まれると Papa.parse が列をずらして解釈してしまう
+        const delim = this.meta.path.toLowerCase().endsWith('.tsv') ? '\t' : ',';
+        const headerLine = fields.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(delim);
+        const parsed = parseCsvChunk(headerLine + '\n' + chunkText, true);
         theadHtml = this.buildThead(fields, true);
         tbodyHtml = renderCsvRows(fields, parsed.rows, numbering(parsed.rows));
       }

@@ -45,7 +45,7 @@ export function renderCsvTable(content: string, path: string, maskValue?: Secret
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 const NUM_RE = /^-?[\d,]+\.?\d*$/;
