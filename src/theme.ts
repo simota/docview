@@ -25,7 +25,8 @@ export type Theme =
   | 'dotmatrix'
   | 'ledger'
   | 'plaintext'
-  | 'braille';
+  | 'braille'
+  | 'qiita';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -55,6 +56,7 @@ export const THEMES: readonly Theme[] = [
   'ledger',
   'plaintext',
   'braille',
+  'qiita',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -85,6 +87,7 @@ export const THEME_LABELS: Record<Theme, string> = {
   ledger: 'Ledger',
   plaintext: 'Plaintext',
   braille: 'Braille',
+  qiita: 'Qiita',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';

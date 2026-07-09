@@ -3145,6 +3145,17 @@ body.dragging::after {
   --syn-comment: #556668;
 }
 
+/* Qiita — bright palette for the signature dark code block */
+[data-theme='qiita'] {
+  --syn-keyword: #cc99cd;
+  --syn-string: #7ec699;
+  --syn-title: #6cb6ff;
+  --syn-attr: #e2b93d;
+  --syn-variable: #f08d49;
+  --syn-comment: #9e9e9e;
+  --syn-deletion: #e2777a;
+}
+
 /* Comment ink overrides where the code surface differs enough from the page bg
    that the inherited --text-muted dips below AA on code comments. */
 [data-theme='dark'] { --syn-comment: #828ba6; }
@@ -7397,6 +7408,7 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-ledger { background: linear-gradient(135deg, #f6f9f2 50%, #1f6b3b 50%); }
 .theme-menu-item-swatch-plaintext { background: linear-gradient(135deg, #fcfcfa 50%, #7d7d7d 50%); }
 .theme-menu-item-swatch-braille { background: linear-gradient(135deg, #f0eee9 50%, #4a4640 50%); }
+.theme-menu-item-swatch-qiita { background: linear-gradient(135deg, #ffffff 50%, #55c500 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;
@@ -9933,6 +9945,102 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='braille'] .markdown-body h2 {
   color: var(--accent);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 -1px 1px rgba(42, 40, 36, 0.3);
+}
+
+/* Qiita — clean tech-article surface: white card, Qiita-green accents, dark code blocks */
+[data-theme='qiita'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f6f6;
+  --bg-tertiary: #eceeef;
+  --bg-editor: #fafbfb;
+  --text-primary: #0f1214;
+  --text-secondary: #4a5054;
+  --text-muted: #6e7476;
+  --border: #e0e3e4;
+  --border-subtle: #eef0f0;
+  --border-strong: #9aa0a2;
+  --accent: #55c500;
+  --accent-light: #6cd41a;
+  --accent-lighter: #a3e072;
+  --accent-bg: rgba(85, 197, 0, 0.08);
+  --accent-border: rgba(85, 197, 0, 0.28);
+  --accent-gradient: linear-gradient(135deg, #4cb800, #55c500, #6cd41a);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(85, 197, 0, 0.12), rgba(108, 212, 26, 0.07));
+  --gutter-bg: #eceeef;
+  --gutter-hover: #dde0e1;
+  --shadow-sm: 0 1px 3px rgba(15, 18, 20, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(15, 18, 20, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(15, 18, 20, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --code-bg: #f2f3f3;
+  --code-text: #d13d5a;
+  --code-block-bg: #2e2e2e;
+  --blockquote-border: #d0d3d4;
+  --blockquote-bg: #f6f7f7;
+  --table-stripe: #f7f8f8;
+  --table-border: #e0e3e4;
+  --table-header-bg: linear-gradient(180deg, #f5f6f6, #eceeef);
+  --link-color: #227a1a;
+  --link-hover: #1a6512;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
+  --mark-bg: #fff3b8;
+  --scrollbar-thumb: #cdd1d2;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(245, 246, 246, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  /* Semantic colors — mirror the AA-hardened light set (shared white page bg) */
+  --color-info: #1d4ed8;
+  --color-info-bg: rgba(29, 78, 216, 0.06);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.06);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.06);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.06);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.06);
+  --icon-markdown: #4cb800;
+  --icon-data: #15803d;
+  --icon-config: #b45309;
+  --icon-image: #b91c1c;
+  --icon-video: #7c3aed;
+  --icon-default: #9aa0a2;
+}
+[data-theme='qiita'] body,
+[data-theme='qiita'] .markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+}
+/* Qiita article headings — bold, with a subtle bottom rule on h1/h2 */
+[data-theme='qiita'] .markdown-body h1,
+[data-theme='qiita'] .markdown-body h2 {
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+[data-theme='qiita'] .markdown-body h3,
+[data-theme='qiita'] .markdown-body h4 {
+  font-weight: 700;
+}
+/* Qiita links — brand green, underlined */
+[data-theme='qiita'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(34, 122, 26, 0.4);
+}
+[data-theme='qiita'] .markdown-body a:hover {
+  color: var(--link-hover);
+  text-decoration-color: var(--link-hover);
+}
+/* Qiita's signature dark code block — override the (dark) default code ink to a light one */
+[data-theme='qiita'] .markdown-body pre.hljs code {
+  color: #eaeaea;
+}
+[data-theme='qiita'] .markdown-body pre {
+  border-color: #2e2e2e;
+}
+/* Blockquote — neutral grey left rule */
+[data-theme='qiita'] .markdown-body blockquote {
+  color: var(--text-secondary);
 }
 
 /* ===== Image Metadata Panel ===== */
