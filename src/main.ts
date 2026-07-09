@@ -1984,10 +1984,23 @@ function loadLocalFile(file: File) {
 }
 
 // --- UI ---
+// Below this width the sidebar and TOC are in-flow panels wide enough to push
+// the document off-screen, so opening one hides the content entirely.
+const MOBILE_SIDEBAR_BREAKPOINT = 640;
+
 function toggleSidebar() {
   sidebarVisible = !sidebarVisible;
   sidebar.classList.toggle('sidebar-hidden', !sidebarVisible);
   btnSidebar.classList.toggle('toolbar-btn-active', sidebarVisible);
+}
+
+// On narrow viewports the open sidebar covers the whole width, so a freshly
+// selected file renders behind it and looks like "nothing happened". Collapse
+// it after a selection to reveal the document — the usual mobile drawer flow.
+function collapseSidebarOnMobile() {
+  if (sidebarVisible && window.innerWidth <= MOBILE_SIDEBAR_BREAKPOINT) {
+    toggleSidebar();
+  }
 }
 
 function applyTocVisibility(visible: boolean, focusBtn?: boolean) {
@@ -2521,10 +2534,12 @@ async function init() {
           void loadIntoSplit(path);
         } else {
           void loadServerFile(path);
+          collapseSidebarOnMobile();
         }
       },
       (albumPath) => {
         void loadAlbumView(albumPath, false);
+        collapseSidebarOnMobile();
       },
       {
         notify: (msg) => showCopyToast(msg),
@@ -2537,7 +2552,7 @@ async function init() {
     await fileTree.load();
 
     // Wire up TOC backlinks to navigate files
-    toc.setFileSelectCallback((path) => loadServerFile(path));
+    toc.setFileSelectCallback((path) => { void loadServerFile(path); collapseSidebarOnMobile(); });
 
     sidebarVisible = true;
     sidebar.classList.remove('sidebar-hidden');
