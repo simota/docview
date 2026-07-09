@@ -416,6 +416,9 @@ const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.web
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const OFFICE_EXTENSIONS = new Set(['.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key']);
 const SEARCH_CONTEXT_LINES = 20;
+// Largest file the directory-wide full-text search will read whole. Bigger
+// files are skipped so a huge fixture can't block the event loop (see searchDir).
+const MAX_SEARCH_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const REDACTED = '[REDACTED]';
 const SECRET_KEY_VALUE_RE =
   /(["']?)(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|authorization|auth[_-]?token|cookie|session)(\1\s*[:=]\s*)(["']?)([^"',\s}\]]{3,}|[^"',\n}\]]{8,})(\4)/gi;
@@ -1821,6 +1824,12 @@ const server = createServer(async (req, res) => {
           const ext = extname(entry.name).toLowerCase();
           if (isSupportedFilename(entry.name) && !IMAGE_EXTENSIONS.has(ext) && !VIDEO_EXTENSIONS.has(ext) && !OFFICE_EXTENSIONS.has(ext)) {
             try {
+              // Full-text search reads the whole file and splits it in memory.
+              // A multi-hundred-MB file (e.g. a benchmark fixture) would block
+              // the single-threaded event loop for seconds and freeze every
+              // other request — skip anything above the cap.
+              const st = await stat(fullPath);
+              if (st.size > MAX_SEARCH_FILE_BYTES) continue;
               const content = await readFileText(fullPath);
               const lines = content.split('\n');
               for (let i = 0; i < lines.length && results.length < 100; i++) {
@@ -2051,6 +2060,12 @@ const server = createServer(async (req, res) => {
           const relPath = relative(targetDir, fullPath).replace(/\\/g, '/');
           if (relPath === targetPath) continue;
           try {
+            // Same guard as /api/search: running the link regex over a
+            // multi-hundred-MB file blocks the event loop and freezes the
+            // server for every client. Backlinks from such files aren't
+            // worth that; skip them.
+            const st = await stat(fullPath);
+            if (st.size > MAX_SEARCH_FILE_BYTES) continue;
             const content = await readFileText(fullPath);
             const linkRegex = /\[(?:[^\]]*)\]\(([^)]+)\)|\[\[([^\]|]+)(?:\|[^\]]*?)?\]\]/g;
             let match;
