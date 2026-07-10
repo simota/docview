@@ -3156,6 +3156,17 @@ body.dragging::after {
   --syn-deletion: #e2777a;
 }
 
+/* Zenn — bright palette for the signature dark-navy code block */
+[data-theme='zenn'] {
+  --syn-keyword: #c792ea;
+  --syn-string: #addb67;
+  --syn-title: #82aaff;
+  --syn-attr: #ffcb6b;
+  --syn-variable: #f78c6c;
+  --syn-comment: #5f7e97;
+  --syn-deletion: #ef5350;
+}
+
 /* Comment ink overrides where the code surface differs enough from the page bg
    that the inherited --text-muted dips below AA on code comments. */
 [data-theme='dark'] { --syn-comment: #828ba6; }
@@ -7409,6 +7420,7 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-plaintext { background: linear-gradient(135deg, #fcfcfa 50%, #7d7d7d 50%); }
 .theme-menu-item-swatch-braille { background: linear-gradient(135deg, #f0eee9 50%, #4a4640 50%); }
 .theme-menu-item-swatch-qiita { background: linear-gradient(135deg, #ffffff 50%, #55c500 50%); }
+.theme-menu-item-swatch-zenn { background: linear-gradient(135deg, #ffffff 50%, #3ea8ff 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;
@@ -10040,6 +10052,128 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 }
 /* Blockquote — neutral grey left rule */
 [data-theme='qiita'] .markdown-body blockquote {
+  color: var(--text-secondary);
+}
+
+/* Zenn — clean tech-article surface: white card, Zenn-blue accents, dark-navy code blocks */
+[data-theme='zenn'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f9fc;
+  --bg-tertiary: #edf2f7;
+  --bg-editor: #f7fafc;
+  --text-primary: #334155;
+  --text-secondary: #65717b;
+  --text-muted: #8f9faa;
+  --border: #d6e3ed;
+  --border-subtle: #e7eef4;
+  --border-strong: #8f9faa;
+  --accent: #3ea8ff;
+  --accent-light: #63bcff;
+  --accent-lighter: #a8d9ff;
+  --accent-bg: rgba(62, 168, 255, 0.08);
+  --accent-border: rgba(62, 168, 255, 0.28);
+  --accent-gradient: linear-gradient(135deg, #0f83fd, #3ea8ff, #63bcff);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(15, 131, 253, 0.12), rgba(62, 168, 255, 0.07));
+  --gutter-bg: #edf2f7;
+  --gutter-hover: #dbe6ee;
+  --shadow-sm: 0 1px 3px rgba(51, 65, 85, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(51, 65, 85, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(51, 65, 85, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --code-bg: #edf2f7;
+  --code-text: #334155;
+  --code-block-bg: #1a2638;
+  --blockquote-border: #8f9faa;
+  --blockquote-bg: #f6f9fb;
+  --table-stripe: #f8fafc;
+  --table-border: #d6e3ed;
+  --table-header-bg: linear-gradient(180deg, #edf2f7, #e3ecf3);
+  --link-color: #0f83fd;
+  --link-hover: #0a6fd6;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
+  --mark-bg: #fff3b8;
+  --scrollbar-thumb: #c3d3df;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(245, 249, 252, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  /* Semantic colors — mirror the AA-hardened light set (shared white page bg) */
+  --color-info: #1d4ed8;
+  --color-info-bg: rgba(29, 78, 216, 0.06);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.06);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.06);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.06);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.06);
+  --icon-markdown: #3ea8ff;
+  --icon-data: #15803d;
+  --icon-config: #b45309;
+  --icon-image: #b91c1c;
+  --icon-video: #7c3aed;
+  --icon-default: #9aa0a2;
+}
+[data-theme='zenn'] body,
+[data-theme='zenn'] .markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
+  line-height: 1.9;
+}
+/* Zenn article headings — bottom rule on h1/h2 only, generous top spacing throughout */
+[data-theme='zenn'] .markdown-body h1,
+[data-theme='zenn'] .markdown-body h2,
+[data-theme='zenn'] .markdown-body h3,
+[data-theme='zenn'] .markdown-body h4 {
+  margin-top: 2.3em;
+}
+[data-theme='zenn'] .markdown-body h1 {
+  font-size: 1.7em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2em;
+  background-image: none;
+}
+[data-theme='zenn'] .markdown-body h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+[data-theme='zenn'] .markdown-body h3 {
+  font-size: 1.3em;
+}
+[data-theme='zenn'] .markdown-body h4 {
+  font-size: 1.1em;
+}
+/* Zenn links — brand blue, underline on hover */
+[data-theme='zenn'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+[data-theme='zenn'] .markdown-body a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+/* Zenn inline code — compact grey chip */
+[data-theme='zenn'] .markdown-body code {
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  border: none;
+}
+/* Zenn's signature dark-navy code block — stays dark even though the page is light */
+[data-theme='zenn'] .markdown-body pre.hljs code {
+  color: #ffffff;
+  font-size: 0.9em;
+}
+[data-theme='zenn'] .markdown-body pre {
+  border-color: #1a2638;
+  border-radius: 4px;
+}
+/* Mermaid sits on a light surface on Zenn, not the dark code-block navy */
+[data-theme='zenn'] .mermaid-container,
+[data-theme='zenn'] .mermaid-rendered {
+  background: #f5f9fc;
+}
+/* Blockquote — neutral grey left rule, not the brand blue */
+[data-theme='zenn'] .markdown-body blockquote {
+  border-left-color: var(--blockquote-border);
   color: var(--text-secondary);
 }
 
