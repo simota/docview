@@ -27,7 +27,8 @@ export type Theme =
   | 'plaintext'
   | 'braille'
   | 'qiita'
-  | 'zenn';
+  | 'zenn'
+  | 'novel';
 
 export const THEMES: readonly Theme[] = [
   'light',
@@ -59,6 +60,7 @@ export const THEMES: readonly Theme[] = [
   'braille',
   'qiita',
   'zenn',
+  'novel',
 ];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -91,6 +93,7 @@ export const THEME_LABELS: Record<Theme, string> = {
   braille: 'Braille',
   qiita: 'Qiita',
   zenn: 'Zenn',
+  novel: 'Novel',
 };
 
 const STORAGE_KEY = 'md-viewer-theme';

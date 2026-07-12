@@ -3167,6 +3167,17 @@ body.dragging::after {
   --syn-deletion: #ef5350;
 }
 
+/* Novel — warm palette for the ink-toned code block */
+[data-theme='novel'] {
+  --syn-keyword: #d4938b;
+  --syn-string: #b5b078;
+  --syn-title: #9db4c9;
+  --syn-attr: #d9b877;
+  --syn-variable: #c9a06a;
+  --syn-comment: #7d7568;
+  --syn-deletion: #e2777a;
+}
+
 /* Comment ink overrides where the code surface differs enough from the page bg
    that the inherited --text-muted dips below AA on code comments. */
 [data-theme='dark'] { --syn-comment: #828ba6; }
@@ -7421,6 +7432,7 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-braille { background: linear-gradient(135deg, #f0eee9 50%, #4a4640 50%); }
 .theme-menu-item-swatch-qiita { background: linear-gradient(135deg, #ffffff 50%, #55c500 50%); }
 .theme-menu-item-swatch-zenn { background: linear-gradient(135deg, #ffffff 50%, #3ea8ff 50%); }
+.theme-menu-item-swatch-novel { background: linear-gradient(135deg, #f5efe2 50%, #8c3a32 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;
@@ -10174,6 +10186,132 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 /* Blockquote — neutral grey left rule, not the brand blue */
 [data-theme='zenn'] .markdown-body blockquote {
   border-left-color: var(--blockquote-border);
+  color: var(--text-secondary);
+}
+
+/* Novel — 和紙-toned reading surface: serif prose, generous leading, vermilion accents */
+[data-theme='novel'] {
+  --bg-primary: #f5efe2;
+  --bg-secondary: #efe7d6;
+  --bg-tertiary: #e7ddc8;
+  --bg-editor: #efe7d6;
+  --text-primary: #33302a;
+  --text-secondary: #5f594e;
+  --text-muted: #8a8274;
+  --border: #d9cfba;
+  --border-subtle: #e5dcc9;
+  --border-strong: #a89f8c;
+  --accent: #8c3a32;
+  --accent-light: #a85248;
+  --accent-lighter: #cf9b94;
+  --accent-bg: rgba(140, 58, 50, 0.08);
+  --accent-border: rgba(140, 58, 50, 0.28);
+  --accent-gradient: linear-gradient(135deg, #6f2c26, #8c3a32, #a85248);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(111, 44, 38, 0.12), rgba(140, 58, 50, 0.07));
+  --gutter-bg: #e7ddc8;
+  --gutter-hover: #ddd0b4;
+  --shadow-sm: 0 1px 3px rgba(70, 60, 40, 0.08), 0 1px 2px rgba(70, 60, 40, 0.05);
+  --shadow-md: 0 4px 16px rgba(70, 60, 40, 0.10), 0 2px 6px rgba(70, 60, 40, 0.06);
+  --shadow-lg: 0 12px 40px rgba(70, 60, 40, 0.14), 0 4px 12px rgba(70, 60, 40, 0.07);
+  --code-bg: #eae2cf;
+  --code-text: #4a443a;
+  --code-block-bg: #2e2a24;
+  --blockquote-border: #a89f8c;
+  --blockquote-bg: #efe8d8;
+  --table-stripe: #f0e9da;
+  --table-border: #d9cfba;
+  --table-header-bg: linear-gradient(180deg, #e7ddc8, #ddd0b4);
+  --link-color: #7a4a3a;
+  --link-hover: #5f382c;
+  --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
+  --mark-bg: #f3dfae;
+  --scrollbar-thumb: #cbbfa2;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(239, 231, 214, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  /* Semantic colors — mirror the AA-hardened light set, recolored for the warm page bg */
+  --color-info: #4a5a70;
+  --color-info-bg: rgba(74, 90, 112, 0.06);
+  --color-success: #5f7a4f;
+  --color-success-bg: rgba(95, 122, 79, 0.06);
+  --color-warning: #b98b3e;
+  --color-warning-bg: rgba(185, 139, 62, 0.06);
+  --color-danger: #8c3a32;
+  --color-danger-bg: rgba(140, 58, 50, 0.06);
+  --color-important: #6b4a7a;
+  --color-important-bg: rgba(107, 74, 122, 0.06);
+  --icon-markdown: #8c3a32;
+  --icon-data: #5f7a4f;
+  --icon-config: #b98b3e;
+  --icon-image: #a85248;
+  --icon-video: #6b4a7a;
+  --icon-default: #8a8274;
+}
+[data-theme='novel'] body,
+[data-theme='novel'] .markdown-body {
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  line-height: 2.1;
+  letter-spacing: 0.04em;
+}
+/* Novel headings — same serif face, normal weight for a calm reading rhythm */
+[data-theme='novel'] .markdown-body h1,
+[data-theme='novel'] .markdown-body h2,
+[data-theme='novel'] .markdown-body h3,
+[data-theme='novel'] .markdown-body h4 {
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  font-weight: 500;
+  margin-top: 2.3em;
+}
+[data-theme='novel'] .markdown-body h1 {
+  font-size: 1.7em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2em;
+  background-image: none;
+}
+[data-theme='novel'] .markdown-body h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+[data-theme='novel'] .markdown-body h3 {
+  font-size: 1.3em;
+}
+[data-theme='novel'] .markdown-body h4 {
+  font-size: 1.1em;
+}
+/* Novel links — muted vermilion ink, underline on hover */
+[data-theme='novel'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+[data-theme='novel'] .markdown-body a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+/* Novel inline code — soft washi chip */
+[data-theme='novel'] .markdown-body code {
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  border: none;
+}
+/* Novel's warm dark code block — stays dark even though the page is a paper tone */
+[data-theme='novel'] .markdown-body pre.hljs code {
+  color: #ece4d2;
+  font-size: 0.9em;
+}
+[data-theme='novel'] .markdown-body pre {
+  border-color: #2e2a24;
+  border-radius: 4px;
+}
+/* Mermaid sits on the paper surface on Novel, not the warm dark code-block bg */
+[data-theme='novel'] .mermaid-container,
+[data-theme='novel'] .mermaid-rendered {
+  background: #efe7d6;
+}
+/* Blockquote — muted brown left rule and washi tint */
+[data-theme='novel'] .markdown-body blockquote {
+  border-left-color: var(--blockquote-border);
+  background: var(--blockquote-bg);
   color: var(--text-secondary);
 }
 
