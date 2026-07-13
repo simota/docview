@@ -52,6 +52,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **Office / iWork file handling** — lists Excel, PowerPoint, Numbers, Pages, and Keynote files, opens them in the OS default app from the local server, and keeps a download fallback for normal files. Browser WebViews cannot directly preview these formats without a conversion or app runtime
 - **File tree with auto-reload** — sidebar listing of all files in the served directory; changes are detected and reloaded automatically via file watching. Right-click an item for a context menu (copy path / file name / absolute path, open in split view)
 - **Dark / light theme** — toggle between themes; preference is persisted
+- **Text size** — adjust document text from 50% to 200% in 10% steps; preference is persisted
 - **Table of contents** — auto-generated TOC sidebar from heading structure
 - **Search** — full-text search across all files in the directory
 - **Tabs** — open multiple files as tabs within a single session
@@ -133,12 +134,15 @@ docview ./docs --no-open
 | `Cmd/Ctrl + E`    | Toggle table of contents            |
 | `Cmd/Ctrl + Shift + E` | Toggle theme (dark / light)   |
 | `Cmd/Ctrl + Shift + S` | Present as slides (Marp deck for `marp: true` files) |
+| `Cmd/Ctrl + =` / `-` / `0` | Increase / decrease / reset document text size |
 | `?`               | Show keyboard shortcut help         |
 | `↑` / `↓`         | Navigate file list / search results |
 
 ## Custom CSS
 
 Place a `.docview.css` file in the directory you are viewing (or any parent directory). DocView will automatically load it and apply your styles on top of the default theme.
+
+Set `--font-size-base` to customize the document size used at the 100% Text size setting.
 
 ```css
 /* .docview.css */

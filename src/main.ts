@@ -24,7 +24,17 @@ import './style.css';
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 const CHUNK_THRESHOLD = 5 * 1024 * 1024; // 5MB — files above this use chunked loading
-let zoomLevel = 100; // % (#6)
+const FONT_SIZE_STORAGE_KEY = 'docview.fontSize';
+const FONT_SIZE_MIN = 50;
+const FONT_SIZE_MAX = 200;
+const FONT_SIZE_STEP = 10;
+const FONT_SIZE_DEFAULT = 100;
+let fontSizePercent = loadFontSize();
+
+type FontSizeUpdateOptions = {
+  persist: boolean;
+  statusMode: 'announce' | 'sync' | 'preserve';
+};
 
 // Export mode: ?export strips all UI chrome for Playwright screenshots
 const exportMode = new URLSearchParams(location.search).has('export');
@@ -67,6 +77,14 @@ const viewerPane = document.getElementById('viewer-pane') as HTMLDivElement;
 const imageMetaPanel = new ImageMetaPanel(viewer);
 const workspace = document.getElementById('workspace') as HTMLElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
+const btnFontSize = document.querySelector<HTMLButtonElement>('#btn-font-size');
+const fontSizePopover = document.querySelector<HTMLElement>('#font-size-popover');
+const fontSizeSlider = document.querySelector<HTMLInputElement>('#font-size-slider');
+const fontSizeOutput = document.querySelector<HTMLElement>('#font-size-output');
+const fontSizeStatus = document.querySelector<HTMLElement>('#font-size-status');
+const btnFontSizeDecrease = document.querySelector<HTMLButtonElement>('#btn-font-size-decrease');
+const btnFontSizeReset = document.querySelector<HTMLButtonElement>('#btn-font-size-reset');
+const btnFontSizeIncrease = document.querySelector<HTMLButtonElement>('#btn-font-size-increase');
 const btnHelp = document.getElementById('btn-help') as HTMLButtonElement;
 const btnOpen = document.getElementById('btn-open') as HTMLButtonElement;
 const btnOpenUrl = document.getElementById('btn-open-url') as HTMLButtonElement;
@@ -85,6 +103,9 @@ const tabBarEl = document.getElementById('tab-bar') as HTMLElement;
 const progressBar = document.getElementById('progress-bar') as HTMLElement;
 let splitTabBarEl: HTMLElement | null = null;
 let splitProgressBar: HTMLElement | null = null;
+
+// Apply the stored preference after DOM references exist and before content rendering starts.
+setFontSize(fontSizePercent, { persist: false, statusMode: 'sync' });
 
 // --- Find bar (/) ---
 const findBar = new FindBar(viewer);
@@ -1166,15 +1187,105 @@ function fixRelativeImages(currentPath: string, target: HTMLElement = viewer) {
   });
 }
 
-// Zoom (#6)
-function applyZoom() {
-  viewer.style.fontSize = `${zoomLevel}%`;
-  if (splitViewer) splitViewer.style.fontSize = `${zoomLevel}%`;
+// Text size (#6)
+function parseStoredFontSize(raw: string | null): number | null {
+  if (raw === null || !/^(?:0|[1-9]\d*)$/.test(raw)) return null;
+
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || String(value) !== raw) return null;
+  if (value < FONT_SIZE_MIN || value > FONT_SIZE_MAX) return null;
+  if ((value - FONT_SIZE_MIN) % FONT_SIZE_STEP !== 0) return null;
+  return value;
 }
 
-function zoom(delta: number) {
-  zoomLevel = Math.max(50, Math.min(200, zoomLevel + delta));
-  applyZoom();
+function removeStoredFontSize(): void {
+  try {
+    window.localStorage.removeItem(FONT_SIZE_STORAGE_KEY);
+  } catch {
+    // Storage is optional; keep the in-memory preference when access is unavailable.
+  }
+}
+
+function loadFontSize(): number {
+  try {
+    const raw = window.localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+    const parsed = parseStoredFontSize(raw);
+    if (parsed !== null) return parsed;
+    if (raw !== null) removeStoredFontSize();
+  } catch {
+    // Storage is optional; the safe default keeps rendering available.
+  }
+  return FONT_SIZE_DEFAULT;
+}
+
+function persistFontSize(value: number): void {
+  try {
+    window.localStorage.setItem(FONT_SIZE_STORAGE_KEY, String(value));
+  } catch {
+    // Storage is optional; the current page still keeps the selected value.
+  }
+}
+
+function normalizeFontSize(value: number): number {
+  if (!Number.isFinite(value)) return FONT_SIZE_DEFAULT;
+  const clamped = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, value));
+  return FONT_SIZE_MIN + Math.round((clamped - FONT_SIZE_MIN) / FONT_SIZE_STEP) * FONT_SIZE_STEP;
+}
+
+function applyFontSize(): void {
+  workspace.style.setProperty('--docview-font-scale', String(fontSizePercent / 100));
+}
+
+function updateFontSizeControls(statusMode: FontSizeUpdateOptions['statusMode']): void {
+  const current = `${fontSizePercent}%`;
+  btnFontSize?.setAttribute('aria-label', `Text size: ${current}`);
+  if (fontSizeSlider) {
+    fontSizeSlider.min = String(FONT_SIZE_MIN);
+    fontSizeSlider.max = String(FONT_SIZE_MAX);
+    fontSizeSlider.step = String(FONT_SIZE_STEP);
+    fontSizeSlider.value = String(fontSizePercent);
+    fontSizeSlider.setAttribute('aria-valuenow', String(fontSizePercent));
+    fontSizeSlider.setAttribute('aria-valuetext', current);
+  }
+  if (fontSizeOutput) fontSizeOutput.textContent = current;
+  if (btnFontSizeDecrease) btnFontSizeDecrease.disabled = fontSizePercent === FONT_SIZE_MIN;
+  if (btnFontSizeIncrease) btnFontSizeIncrease.disabled = fontSizePercent === FONT_SIZE_MAX;
+  const statusText = `Text size ${current}`;
+  if (fontSizeStatus && statusMode !== 'preserve' && fontSizeStatus.textContent !== statusText) {
+    if (statusMode === 'sync') fontSizeStatus.setAttribute('aria-live', 'off');
+    fontSizeStatus.textContent = statusText;
+    if (statusMode === 'sync') {
+      queueMicrotask(() => fontSizeStatus.setAttribute('aria-live', 'polite'));
+    }
+  }
+}
+
+function setFontSize(
+  value: number,
+  options: FontSizeUpdateOptions = { persist: true, statusMode: 'announce' },
+): void {
+  const next = normalizeFontSize(value);
+  const changed = next !== fontSizePercent;
+  fontSizePercent = next;
+  applyFontSize();
+  const statusMode = options.statusMode === 'sync'
+    ? 'sync'
+    : changed ? options.statusMode : 'preserve';
+  updateFontSizeControls(statusMode);
+  if (options.persist) persistFontSize(fontSizePercent);
+}
+
+function changeFontSize(delta: number): void {
+  setFontSize(fontSizePercent + delta);
+}
+
+function setFontSizePopoverOpen(open: boolean, restoreFocus = false): void {
+  if (!fontSizePopover || !btnFontSize) return;
+  if (open) setThemeMenuOpen(false);
+  fontSizePopover.hidden = !open;
+  btnFontSize.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) fontSizeSlider?.focus();
+  else if (restoreFocus) btnFontSize.focus();
 }
 
 // Word wrap toggle (#7)
@@ -2093,8 +2204,9 @@ function handleKeyboard(e: KeyboardEvent) {
   if (urlBar.isOpen) return;
 
   // Guard: don't fire single-key shortcuts when typing in an input
-  const tag = (e.target as HTMLElement).tagName;
-  const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable;
+  const target = e.target instanceof HTMLElement ? e.target : null;
+  const tag = target?.tagName;
+  const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(target?.isContentEditable);
 
   // Vim-style find (/)
   if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable) {
@@ -2148,19 +2260,18 @@ function handleKeyboard(e: KeyboardEvent) {
     e.preventDefault();
     toggleToc();
   }
-  // Zoom (#6)
-  if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+  // Text size (#6)
+  if (!isEditable && (e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
     e.preventDefault();
-    zoom(10);
+    changeFontSize(FONT_SIZE_STEP);
   }
-  if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+  if (!isEditable && (e.metaKey || e.ctrlKey) && e.key === '-') {
     e.preventDefault();
-    zoom(-10);
+    changeFontSize(-FONT_SIZE_STEP);
   }
-  if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+  if (!isEditable && (e.metaKey || e.ctrlKey) && e.key === '0') {
     e.preventDefault();
-    zoomLevel = 100;
-    applyZoom();
+    setFontSize(FONT_SIZE_DEFAULT);
   }
   // Word wrap (#7)
   if (e.altKey && e.key === 'z') {
@@ -2442,7 +2553,6 @@ function toggleSplitView() {
     splitViewer.addEventListener('scroll', () => handlePaneScroll('right'));
     bindLineInteractions(splitViewer, 'right');
     splitFindBar = new FindBar(splitViewer);
-    applyZoom();
     if (wordWrap) splitViewer.classList.add('word-wrap');
     updatePaneLabels();
     updateSyncScrollButton();
@@ -2617,6 +2727,7 @@ const themeMenu = document.getElementById('theme-menu') as HTMLElement | null;
 
 function setThemeMenuOpen(open: boolean) {
   if (!themeMenu) return;
+  if (open) setFontSizePopoverOpen(false);
   themeMenu.hidden = !open;
   btnTheme.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open) {
@@ -2630,6 +2741,7 @@ function setThemeMenuOpen(open: boolean) {
 
 function applyTheme(theme: Theme) {
   setTheme(theme);
+  applyFontSize();
   updateMermaidTheme(theme);
   if (currentFilePath) void reloadCurrentFile();
   if (splitActive && splitFilePath) void loadIntoSplit(splitFilePath);
@@ -2637,6 +2749,7 @@ function applyTheme(theme: Theme) {
 
 btnTheme.addEventListener('click', (e) => {
   e.stopPropagation();
+  setFontSizePopoverOpen(false);
   if (!themeMenu) {
     const order = [...THEMES];
     const stored = (document.documentElement.getAttribute('data-theme') as Theme | null) ?? 'light';
@@ -2683,6 +2796,34 @@ if (themeMenu) {
         : items[(idx - 1 + items.length) % items.length];
       next.focus();
     }
+  });
+}
+btnFontSize?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!fontSizePopover) return;
+  setFontSizePopoverOpen(Boolean(fontSizePopover.hidden));
+});
+fontSizeSlider?.addEventListener('input', () => {
+  setFontSize(fontSizeSlider.valueAsNumber, { persist: true, statusMode: 'preserve' });
+});
+btnFontSizeDecrease?.addEventListener('click', () => changeFontSize(-FONT_SIZE_STEP));
+btnFontSizeReset?.addEventListener('click', () => setFontSize(FONT_SIZE_DEFAULT));
+btnFontSizeIncrease?.addEventListener('click', () => changeFontSize(FONT_SIZE_STEP));
+
+if (fontSizePopover && btnFontSize) {
+  document.addEventListener('click', (e) => {
+    if (fontSizePopover.hidden) return;
+    const target = e.target;
+    if (!(target instanceof Node)) return;
+    if (!fontSizePopover.contains(target) && !btnFontSize.contains(target)) {
+      setFontSizePopoverOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (fontSizePopover.hidden || e.key !== 'Escape') return;
+    e.preventDefault();
+    setFontSizePopoverOpen(false, true);
   });
 }
 btnOpen.addEventListener('click', () => fileInput.click());

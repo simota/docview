@@ -29,7 +29,7 @@ function buildSections(): ShortcutSection[] {
     {
       title: 'View',
       items: [
-        [`${MOD}+=  /  ${MOD}+−  /  ${MOD}+0`, 'Zoom in / out / reset'],
+        [`${MOD}+=  /  ${MOD}+−  /  ${MOD}+0`, 'Text size increase / decrease / reset'],
         ['Alt+Z', 'Word wrap toggle'],
         [`${MOD}+J`, 'Toggle TOC'],
         [`${MOD}+Shift+S`, 'Slide mode'],
