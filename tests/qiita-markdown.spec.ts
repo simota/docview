@@ -3,6 +3,8 @@ import { writeFileSync } from 'node:fs';
 
 const FIXTURE = 'qiita-markdown.md';
 const MERMAID_FIXTURE = 'qiita-mermaid.md';
+const FRONTMATTER_ARRAY_FIXTURE = 'qiita-frontmatter-array.md';
+const FRONTMATTER_STRING_FIXTURE = 'qiita-frontmatter-string.md';
 
 test.beforeAll(() => {
   writeFileSync('/tmp/md-test-docs/' + FIXTURE, `# Qiita Markdown
@@ -84,6 +86,22 @@ flowchart TD
   C -->|サイト開いている間| E[引き続き利用可能]
 \`\`\`
 `);
+  writeFileSync('/tmp/md-test-docs/' + FRONTMATTER_ARRAY_FIXTURE, `---
+title: "Qiita <img/src=x/onerror=alert(1)>"
+tags:
+  - TypeScript
+  - "safe<tag>"
+---
+
+## Array body
+`);
+  writeFileSync('/tmp/md-test-docs/' + FRONTMATTER_STRING_FIXTURE, `---
+title: ChromeのWeb Push通知レート制限仕様まとめ〜Site Engagement ScoreとHTTP 429エラー対応〜
+tags: Chrome WebPush FCM Firebase JavaScript
+---
+
+## String body
+`);
 });
 
 async function openWithTheme(page: import('@playwright/test').Page, theme: 'light' | 'qiita', fixture = FIXTURE) {
@@ -96,6 +114,52 @@ async function openWithTheme(page: import('@playwright/test').Page, theme: 'ligh
 }
 
 test.describe('Qiita Markdown syntax', () => {
+  test('renders safe Qiita article metadata from array and whitespace tags', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('md-viewer-theme', 'qiita'));
+    await page.goto('/#file=' + FRONTMATTER_ARRAY_FIXTURE);
+
+    await expect(page.locator('.qiita-article-title')).toHaveText('Qiita <img/src=x/onerror=alert(1)>');
+    await expect(page.locator('.qiita-article-tags li')).toHaveText(['TypeScript', 'safe<tag>']);
+    await expect(page.locator('.qiita-article-header img')).toHaveCount(0);
+    await expect(page.locator('#viewer .json-view-tree')).not.toContainText('tags:');
+
+    await page.locator('#viewer .json-toggle-btn[data-view="source"]').click();
+    await expect(page.locator('#viewer .json-view-source')).toContainText('title: "Qiita <img/src=x/onerror=alert(1)>"');
+    await expect(page.locator('#viewer .json-view-source')).toContainText('  - "safe<tag>"');
+
+    await page.goto('/#file=' + FRONTMATTER_STRING_FIXTURE);
+    await expect(page.locator('.qiita-article-title')).toHaveText(
+      'ChromeのWeb Push通知レート制限仕様まとめ〜Site Engagement ScoreとHTTP 429エラー対応〜',
+    );
+    await expect(page.locator('.qiita-article-tags li')).toHaveText([
+      'Chrome', 'WebPush', 'FCM', 'Firebase', 'JavaScript',
+    ]);
+    const tagListStyle = await page.locator('.qiita-article-tags').evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        margin: `${style.marginTop} ${style.marginRight} ${style.marginBottom} ${style.marginLeft}`,
+        padding: `${style.paddingTop} ${style.paddingRight} ${style.paddingBottom} ${style.paddingLeft}`,
+        listStyle: style.listStyleType,
+      };
+    });
+    expect(tagListStyle).toEqual({
+      margin: '16px 0px 0px 0px',
+      padding: '0px 0px 0px 0px',
+      listStyle: 'none',
+    });
+  });
+
+  test('keeps frontmatter hidden and unenhanced outside the Qiita theme', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('md-viewer-theme', 'light'));
+    await page.goto('/#file=' + FRONTMATTER_ARRAY_FIXTURE);
+
+    await expect(page.locator('#viewer .markdown-body h2')).toContainText('Array body');
+    await expect(page.locator('.qiita-article-header')).toHaveCount(0);
+    await expect(page.locator('#viewer .json-view-tree')).not.toContainText('tags:');
+    await page.locator('#viewer .json-toggle-btn[data-view="source"]').click();
+    await expect(page.locator('#viewer .json-view-source')).toContainText('tags:');
+  });
+
   test('renders Qiita notes and filename fences only with the Qiita theme', async ({ page }) => {
     await openWithTheme(page, 'qiita');
 

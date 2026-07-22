@@ -22,6 +22,7 @@ import katex from 'katex';
 // @ts-expect-error — no type declarations
 import deflist from 'markdown-it-deflist';
 import frontmatter from 'markdown-it-front-matter';
+import { parse as parseYaml } from 'yaml';
 
 import 'katex/dist/katex.min.css';
 
@@ -1809,7 +1810,30 @@ md.use(frontmatter, () => {
   // silently consume front matter
 });
 
-type MarkdownRenderEnv = { qiita: boolean };
+type QiitaArticleMeta = { title: string; tags: string[] };
+type MarkdownRenderEnv = { qiita: boolean; qiitaArticle?: QiitaArticleMeta };
+
+function parseQiitaArticleMeta(raw: string): QiitaArticleMeta | undefined {
+  try {
+    const data: unknown = parseYaml(raw);
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) return undefined;
+    const title = 'title' in data && typeof data.title === 'string' ? data.title.trim() : '';
+    const rawTags: unknown = 'tags' in data ? data.tags : undefined;
+    const tags = (Array.isArray(rawTags) ? rawTags : typeof rawTags === 'string' ? rawTags.split(/\s+/) : [])
+      .filter((tag): tag is string => typeof tag === 'string')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    return title || tags.length ? { title, tags } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+md.core.ruler.after('block', 'qiita_article_frontmatter', (state) => {
+  if (!state.env?.qiita) return;
+  const raw: unknown = state.tokens.find((token) => token.type === 'front_matter')?.meta;
+  if (typeof raw === 'string') state.env.qiitaArticle = parseQiitaArticleMeta(raw);
+});
 
 // Wiki links [[target]] or [[target|display]]
 function wikiLinkPlugin(mdi: MarkdownIt) {
@@ -1912,7 +1936,15 @@ export function renderMarkdown(source: string, theme?: Theme): string {
   diagramCounter = 0;
   const qiita = isQiitaTheme(theme);
   const env: MarkdownRenderEnv = { qiita };
-  return md.render(qiita ? transformQiitaNotes(source) : source, env);
+  const body = md.render(qiita ? transformQiitaNotes(source) : source, env);
+  if (!env.qiitaArticle) return body;
+  const title = env.qiitaArticle.title
+    ? `<h1 class="qiita-article-title">${md.utils.escapeHtml(env.qiitaArticle.title)}</h1>`
+    : '';
+  const tags = env.qiitaArticle.tags.length
+    ? `<ul class="qiita-article-tags" aria-label="Tags">${env.qiitaArticle.tags.map((tag) => `<li>${md.utils.escapeHtml(tag)}</li>`).join('')}</ul>`
+    : '';
+  return `<header class="qiita-article-header">${title}${tags}</header>\n${body}`;
 }
 
 export async function renderExternalDiagrams(container: HTMLElement): Promise<void> {

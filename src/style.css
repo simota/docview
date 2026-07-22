@@ -10269,6 +10269,39 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='qiita'] .markdown-body h6 { margin: 32px 0 16px; font-size: 0.94em; line-height: 1.8; }
 [data-theme='qiita'] .markdown-body :is(h1, h2, h3, h4, h5) + :is(h2, h3, h4, h5, h6) { margin-top: 0; }
 
+[data-theme='qiita'] .qiita-article-header {
+  margin-block-end: 40px;
+  padding-block-end: 24px;
+  border-block-end: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='qiita'] .markdown-body .qiita-article-title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 2em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+[data-theme='qiita'] .markdown-body .qiita-article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-theme='qiita'] .markdown-body .qiita-article-tags li {
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(85, 197, 0, 0.1);
+  color: #357a00;
+  font-size: 0.82em;
+  font-weight: 600;
+}
+
 [data-theme='qiita'] .markdown-body p { margin: 16px 0; }
 [data-theme='qiita'] .markdown-body strong { color: inherit; font-weight: 700; }
 
