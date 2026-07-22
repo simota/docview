@@ -1642,14 +1642,14 @@ const MERMAID_PALETTES: Record<Theme, { fontFamily: string; vars: MermaidVars }>
 function buildMermaidConfig(theme: Theme) {
   const palette = MERMAID_PALETTES[theme] ?? MERMAID_PALETTES.light;
   const handDrawn = theme === 'whiteboard' || theme === 'handwritten';
+  const useLibraryDefault = theme === 'qiita';
   return {
     startOnLoad: false,
-    theme: 'base' as const,
+    theme: (useLibraryDefault ? 'default' : 'base') as 'default' | 'base',
     look: (handDrawn ? 'handDrawn' : 'classic') as 'handDrawn' | 'classic',
     handDrawnSeed: 1,
     securityLevel: 'strict' as const,
-    fontFamily: palette.fontFamily,
-    themeVariables: palette.vars,
+    ...(!useLibraryDefault && { fontFamily: palette.fontFamily, themeVariables: palette.vars }),
     flowchart: { curve: handDrawn ? ('linear' as const) : ('basis' as const), padding: 16 },
     sequence: { mirrorActors: false, bottomMarginAdj: 2 },
   };

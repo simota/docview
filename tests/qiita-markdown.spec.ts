@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 
 const FIXTURE = 'qiita-markdown.md';
+const MERMAID_FIXTURE = 'qiita-mermaid.md';
 
 test.beforeAll(() => {
   writeFileSync('/tmp/md-test-docs/' + FIXTURE, `# Qiita Markdown
@@ -73,6 +74,16 @@ Footnote reference.[^1]
 
 [^1]: Footnote content.
 `);
+  writeFileSync('/tmp/md-test-docs/' + MERMAID_FIXTURE, `# Mermaid
+
+\`\`\`mermaid
+flowchart TD
+  A[Web通知の組み合わせ] --> B[Push API<br/>メッセージのバックグラウンド受信]
+  A --> C[Notifications API<br/>画面への通知表示]
+  B -->|サーバーからの配信時| D[★ 今回のレート制限対象]
+  C -->|サイト開いている間| E[引き続き利用可能]
+\`\`\`
+`);
 });
 
 async function openWithTheme(page: import('@playwright/test').Page, theme: 'light' | 'qiita', fixture = FIXTURE) {
@@ -80,7 +91,8 @@ async function openWithTheme(page: import('@playwright/test').Page, theme: 'ligh
     localStorage.setItem('md-viewer-theme', selectedTheme);
   }, theme);
   await page.goto('/#file=' + fixture);
-  await expect(page.locator('#viewer .markdown-body h1')).toContainText('Qiita Markdown');
+  const heading = fixture === FIXTURE ? 'Qiita Markdown' : 'Mermaid';
+  await expect(page.locator('#viewer .markdown-body h1')).toContainText(heading);
 }
 
 test.describe('Qiita Markdown syntax', () => {
@@ -227,6 +239,40 @@ test.describe('Qiita Markdown syntax', () => {
 
     const hasPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     expect(hasPageOverflow).toBe(false);
+  });
+
+  test('uses Mermaid default styling with the Qiita theme', async ({ page }) => {
+    test.slow();
+    await openWithTheme(page, 'qiita', MERMAID_FIXTURE);
+    await page.waitForSelector('.mermaid-rendered svg');
+
+    const diagram = page.locator('.mermaid-rendered').first();
+    const styles = await diagram.evaluate((element) => {
+      const node = element.querySelector<SVGGraphicsElement>('.node rect')!;
+      const edge = element.querySelector<SVGGraphicsElement>('.flowchart-link')!;
+      const label = element.querySelector<HTMLElement>('.edgeLabel')!;
+      return {
+        background: getComputedStyle(element).backgroundColor,
+        border: getComputedStyle(element).borderTopWidth,
+        shadow: getComputedStyle(element).boxShadow,
+        nodeFill: getComputedStyle(node).fill,
+        nodeStroke: getComputedStyle(node).stroke,
+        nodeRadius: getComputedStyle(node).rx,
+        edgeStroke: getComputedStyle(edge).stroke,
+        labelBackground: getComputedStyle(label).backgroundColor,
+      };
+    });
+
+    expect(styles).toEqual({
+      background: 'rgb(255, 255, 255)',
+      border: '0px',
+      shadow: 'none',
+      nodeFill: 'rgb(236, 236, 255)',
+      nodeStroke: 'rgb(147, 112, 219)',
+      nodeRadius: '0px',
+      edgeStroke: 'rgb(51, 51, 51)',
+      labelBackground: 'rgba(232, 232, 232, 0.8)',
+    });
   });
 
   test('keeps the Qiita Source view readable', async ({ page }) => {

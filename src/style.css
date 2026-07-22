@@ -10436,6 +10436,21 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='qiita'] .markdown-body img:hover { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
 [data-theme='qiita'] .markdown-body hr { height: 1px; margin: 48px 0; border: 0; border-radius: 0; background: rgba(0, 0, 0, 0.12); }
 
+/* Qiita renders Mermaid with the library's default visual treatment. */
+[data-theme='qiita'] .markdown-body .mermaid-container,
+[data-theme='qiita'] .markdown-body .mermaid-rendered {
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+[data-theme='qiita'] .markdown-body .mermaid-rendered svg { filter: none; }
+[data-theme='qiita'] .markdown-body .mermaid-rendered .node :is(rect, circle, ellipse, polygon) {
+  rx: 0;
+  ry: 0;
+}
+[data-theme='qiita'] .markdown-body .mermaid-rendered .edgeLabel { font-size: inherit; }
+
 [data-theme='qiita'] .markdown-body .custom-block {
   position: relative;
   margin: 24px 0;
