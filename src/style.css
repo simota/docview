@@ -10136,12 +10136,12 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --bg-secondary: #f5f6f6;
   --bg-tertiary: #eceeef;
   --bg-editor: #fafbfb;
-  --text-primary: #0f1214;
-  --text-secondary: #4a5054;
-  --text-muted: #6e7476;
-  --border: #e0e3e4;
-  --border-subtle: #eef0f0;
-  --border-strong: #9aa0a2;
+  --text-primary: #212121;
+  --text-secondary: #666666;
+  --text-muted: #5e6060;
+  --border: rgba(0, 0, 0, 0.12);
+  --border-subtle: #edeeee;
+  --border-strong: #5e6060;
   --accent: #55c500;
   --accent-light: #6cd41a;
   --accent-lighter: #a3e072;
@@ -10154,18 +10154,23 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --shadow-sm: 0 1px 3px rgba(15, 18, 20, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
   --shadow-md: 0 4px 16px rgba(15, 18, 20, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 12px 40px rgba(15, 18, 20, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
-  --code-bg: #f2f3f3;
-  --code-text: #d13d5a;
-  --code-block-bg: #2e2e2e;
-  --blockquote-border: #d0d3d4;
-  --blockquote-bg: #f6f7f7;
-  --table-stripe: #f7f8f8;
-  --table-border: #e0e3e4;
-  --table-header-bg: linear-gradient(180deg, #f5f6f6, #eceeef);
-  --link-color: #227a1a;
-  --link-hover: #1a6512;
+  --code-bg: rgba(0, 0, 0, 0.08);
+  --code-text: rgba(0, 0, 0, 0.87);
+  --code-block-bg: #1d2020;
+  --blockquote-border: #dfe0e0;
+  --blockquote-bg: transparent;
+  --table-stripe: #f5f6f6;
+  --table-border: rgba(0, 0, 0, 0.12);
+  --table-header-bg: #ffffff;
+  --link-color: #357a00;
+  --link-hover: #357a00;
   --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
   --mark-bg: #fff3b8;
+  /* HIGH: measured from the 2x Qiita note reference. */
+  --qiita-note-content-offset: 44px;
+  --qiita-note-icon-top: 21px;
+  --qiita-note-danger-icon: #ac2b16;
+  --qiita-note-icon-foreground: #ffffff;
   --scrollbar-thumb: #cdd1d2;
   --scrollbar-track: transparent;
   --glass-bg: rgba(245, 246, 246, 0.85);
@@ -10192,38 +10197,368 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='qiita'] .markdown-body {
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
-/* Qiita article headings — bold, with a subtle bottom rule on h1/h2 */
+
+/* Qiita article detail surface. Keep DocView chrome outside this scope. */
+[data-theme='qiita'] #viewer,
+[data-theme='qiita'] #viewer-right {
+  padding: 16px 24px 24px;
+  background: #f5f6f6;
+}
+
+[data-theme='qiita'] #viewer > .json-view-toggle,
+[data-theme='qiita'] #viewer-right > .json-view-toggle {
+  max-width: 820px;
+  margin: 0 auto 16px;
+}
+
+[data-theme='qiita'] #viewer > .markdown-body,
+[data-theme='qiita'] #viewer-right > .markdown-body {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 56px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+[data-theme='qiita'] .markdown-body {
+  color: rgba(0, 0, 0, 0.87);
+  font-size: calc(17px * var(--docview-font-scale, 1));
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  text-autospace: normal;
+}
+
+[data-theme='qiita'] .markdown-body > :first-child { margin-top: 0; }
+[data-theme='qiita'] .markdown-body > :last-child { margin-bottom: 0; }
+
 [data-theme='qiita'] .markdown-body h1,
-[data-theme='qiita'] .markdown-body h2 {
-  font-weight: 700;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.3em;
-}
+[data-theme='qiita'] .markdown-body h2,
 [data-theme='qiita'] .markdown-body h3,
-[data-theme='qiita'] .markdown-body h4 {
+[data-theme='qiita'] .markdown-body h4,
+[data-theme='qiita'] .markdown-body h5,
+[data-theme='qiita'] .markdown-body h6 {
+  color: rgba(0, 0, 0, 0.87);
   font-weight: 700;
+  font-feature-settings: 'palt';
+  letter-spacing: normal;
+  position: relative;
 }
-/* Qiita links — brand green, underlined */
+
+[data-theme='qiita'] .markdown-body h1 {
+  margin: 64px 0 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  background-image: none;
+  font-size: 1.65em;
+  line-height: 1.4;
+}
+
+[data-theme='qiita'] .markdown-body h2 {
+  margin: 56px 0 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 1.53em;
+  line-height: 1.4;
+}
+
+[data-theme='qiita'] .markdown-body h3 { margin: 40px 0 16px; font-size: 1.29em; line-height: 1.6; }
+[data-theme='qiita'] .markdown-body h4 { margin: 40px 0 16px; font-size: 1.06em; line-height: 1.6; }
+[data-theme='qiita'] .markdown-body h5,
+[data-theme='qiita'] .markdown-body h6 { margin: 32px 0 16px; font-size: 0.94em; line-height: 1.8; }
+[data-theme='qiita'] .markdown-body :is(h1, h2, h3, h4, h5) + :is(h2, h3, h4, h5, h6) { margin-top: 0; }
+
+[data-theme='qiita'] .markdown-body p { margin: 16px 0; }
+[data-theme='qiita'] .markdown-body strong { color: inherit; font-weight: 700; }
+
 [data-theme='qiita'] .markdown-body a {
-  color: var(--link-color);
+  padding-bottom: 0;
+  color: #357a00;
+  background-image: none;
   text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: rgba(34, 122, 26, 0.4);
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.5rem;
+  word-break: break-all;
 }
-[data-theme='qiita'] .markdown-body a:hover {
-  color: var(--link-hover);
-  text-decoration-color: var(--link-hover);
+
+[data-theme='qiita'] .markdown-body a:visited { color: #681da8; }
+[data-theme='qiita'] .markdown-body a:hover { color: #357a00; }
+[data-theme='qiita'] .markdown-body :is(.header-anchor, .footnote-backref),
+[data-theme='qiita'] .markdown-body sup.footnote-ref a { text-decoration: none; }
+
+[data-theme='qiita'] .markdown-body :not(pre) > code {
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.87);
+  font-family: Consolas, 'Liberation Mono', Menlo, Courier, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', 'BIZ UDGothic', Meiryo, monospace;
+  font-size: 0.88em;
+  font-weight: 400;
 }
-/* Qiita's signature dark code block — override the (dark) default code ink to a light one */
+
+[data-theme='qiita'] .markdown-body .code-block {
+  margin-block: 24px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #1d2020;
+}
+
+[data-theme='qiita'] .markdown-body .code-lang {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 0 0 4px 4px;
+  background: #5e6060;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.88em;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.7;
+  text-transform: none;
+  transform: translateY(-8px);
+}
+
+[data-theme='qiita'] .markdown-body pre,
+[data-theme='qiita'] .markdown-body pre.hljs {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: #ffffff;
+  overflow-x: auto;
+}
+
 [data-theme='qiita'] .markdown-body pre.hljs code {
-  color: #eaeaea;
+  display: block;
+  width: fit-content;
+  min-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e3e3e3;
+  font-family: Consolas, 'Liberation Mono', Menlo, Courier, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', 'BIZ UDGothic', Meiryo, monospace;
+  font-size: 0.88em;
+  line-height: 1.5;
 }
-[data-theme='qiita'] .markdown-body pre {
-  border-color: #2e2e2e;
-}
-/* Blockquote — neutral grey left rule */
+
+[data-theme='qiita'] .markdown-body pre.hljs .hljs-comment,
+[data-theme='qiita'] .markdown-body pre.hljs .hljs-quote { color: rgb(151, 151, 151); }
+[data-theme='qiita'] .markdown-body pre.hljs .hljs-keyword { color: #ebd247; }
+[data-theme='qiita'] .markdown-body pre.hljs :is(.hljs-title, .hljs-name, .hljs-built_in, .hljs-attr) { color: rgb(139, 223, 76); }
+[data-theme='qiita'] .markdown-body pre.hljs :is(.hljs-string, .hljs-regexp) { color: #3bbbbc; }
+[data-theme='qiita'] .markdown-body pre.hljs :is(.hljs-number, .hljs-literal) { color: #a980f5; }
+[data-theme='qiita'] .markdown-body pre.hljs :is(.hljs-variable, .hljs-type, .hljs-tag) { color: #ff8095; }
+
 [data-theme='qiita'] .markdown-body blockquote {
-  color: var(--text-secondary);
+  margin: 24px 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.60);
+  font-style: normal;
+  position: relative;
+}
+
+[data-theme='qiita'] .markdown-body blockquote::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 4px;
+  background: #dfe0e0;
+  opacity: 1;
+}
+
+[data-theme='qiita'] .markdown-body blockquote > :first-child { margin-top: 0; }
+[data-theme='qiita'] .markdown-body blockquote > :last-child { margin-bottom: 0; }
+
+[data-theme='qiita'] .markdown-body ul,
+[data-theme='qiita'] .markdown-body ol { margin: 16px 0; padding-left: 1.5em; }
+[data-theme='qiita'] .markdown-body li { margin: 0; }
+[data-theme='qiita'] .markdown-body li::marker { color: inherit; }
+[data-theme='qiita'] .markdown-body :is(ul, ol) :is(ul, ol) { margin: 0; }
+
+[data-theme='qiita'] .markdown-body table {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  margin: 16px 0;
+  border: 0;
+  border-collapse: collapse;
+  border-radius: 0;
+  box-shadow: none;
+  overflow-x: auto;
+  font-size: 1em;
+  scrollbar-width: thin;
+  scrollbar-color: #dfe0e0 transparent;
+}
+
+[data-theme='qiita'] .markdown-body thead,
+[data-theme='qiita'] .markdown-body tbody { border-left: 1px solid rgba(0, 0, 0, 0.12); }
+[data-theme='qiita'] .markdown-body tr:nth-child(odd) { background: #f5f6f6; }
+[data-theme='qiita'] .markdown-body tr:nth-child(even) { background: #ffffff; }
+[data-theme='qiita'] .markdown-body tr:hover td { background: inherit; }
+[data-theme='qiita'] .markdown-body th,
+[data-theme='qiita'] .markdown-body td {
+  max-width: 600px;
+  padding: 4px 12px;
+  border: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  text-align: left;
+}
+[data-theme='qiita'] .markdown-body th {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: inherit;
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+[data-theme='qiita'] .markdown-body img {
+  max-width: 100%;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: none;
+}
+[data-theme='qiita'] .markdown-body img:hover { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+[data-theme='qiita'] .markdown-body hr { height: 1px; margin: 48px 0; border: 0; border-radius: 0; background: rgba(0, 0, 0, 0.12); }
+
+[data-theme='qiita'] .markdown-body .custom-block {
+  position: relative;
+  margin: 24px 0;
+  padding: 16px 16px 16px var(--qiita-note-content-offset);
+  border: 0;
+  border-radius: 8px;
+  font-size: 1em;
+  white-space: normal;
+}
+
+[data-theme='qiita'] .markdown-body .custom-block.info { background: #dff4cf; }
+[data-theme='qiita'] .markdown-body .custom-block.warning { background: #fff0b3; }
+[data-theme='qiita'] .markdown-body .custom-block.danger { background: #ffdbdb; }
+[data-theme='qiita'] .markdown-body .custom-block-title {
+  position: absolute;
+  top: var(--qiita-note-icon-top);
+  left: 16px;
+  width: 24px;
+  margin: 0;
+  color: transparent;
+  font-size: 0;
+  line-height: 24px;
+}
+[data-theme='qiita'] .markdown-body .custom-block-title::before {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  color: #357a00;
+  content: '✓';
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+[data-theme='qiita'] .markdown-body .warning .custom-block-title::before { color: #806000; content: '!'; }
+[data-theme='qiita'] .markdown-body .danger .custom-block-title::before {
+  border-color: var(--qiita-note-danger-icon);
+  background: var(--qiita-note-danger-icon);
+  color: var(--qiita-note-icon-foreground);
+  content: '×';
+}
+[data-theme='qiita'] .markdown-body .custom-block:not(.details) > .custom-block-title + * { margin-top: 0; }
+[data-theme='qiita'] .markdown-body .custom-block:not(.details) li > p { margin: 0; }
+[data-theme='qiita'] .markdown-body .custom-block > :last-child { margin-bottom: 0; }
+
+[data-theme='qiita'] .markdown-body details { margin: 16px 0; }
+[data-theme='qiita'] .markdown-body summary { cursor: pointer; }
+[data-theme='qiita'] .markdown-body .footnotes-sep { display: none; }
+[data-theme='qiita'] .markdown-body .footnotes {
+  margin-top: 40px;
+  padding-top: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.60);
+  font-size: 0.9em;
+}
+
+/* Source is application chrome, not Qiita article Markdown. Restore an
+   explicit high-contrast code surface after the article-scoped pre resets. */
+[data-theme='qiita'] #viewer > .json-view-source,
+[data-theme='qiita'] #viewer-right > .json-view-source {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 56px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+[data-theme='qiita'] .json-view-source .data-view pre.hljs {
+  padding: 40px 16px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d2020;
+  box-shadow: none;
+  color: #e3e3e3;
+}
+
+[data-theme='qiita'] .json-view-source .data-view pre.hljs code {
+  color: #e3e3e3;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+[data-theme='qiita'] .json-view-source .data-lang {
+  right: auto;
+  left: 16px;
+  padding: 2px 8px;
+  border-radius: 0 0 4px 4px;
+  background: #5e6060;
+  color: #ffffff;
+}
+
+@media (max-width: 769px) {
+  [data-theme='qiita'] #viewer,
+  [data-theme='qiita'] #viewer-right { padding: 16px 24px 24px; }
+  [data-theme='qiita'] #viewer > .markdown-body,
+  [data-theme='qiita'] #viewer-right > .markdown-body { padding: 24px 32px; }
+  [data-theme='qiita'] #viewer > .json-view-source,
+  [data-theme='qiita'] #viewer-right > .json-view-source { padding: 24px 32px; }
+  [data-theme='qiita'] .markdown-body { font-size: calc(16px * var(--docview-font-scale, 1)); }
+  [data-theme='qiita'] .markdown-body h1 { font-size: 1.5em; line-height: 1.6; }
+  [data-theme='qiita'] .markdown-body h2 { font-size: 1.38em; line-height: 1.6; }
+  [data-theme='qiita'] .markdown-body h3 { font-size: 1.25em; }
+  [data-theme='qiita'] .markdown-body h4 { font-size: 1.13em; line-height: 1.8; }
+  [data-theme='qiita'] .markdown-body h5,
+  [data-theme='qiita'] .markdown-body h6 { font-size: 1em; }
+  [data-theme='qiita'] .markdown-body pre.hljs code { font-size: 0.88em; }
+}
+
+@media (max-width: 479px) {
+  [data-theme='qiita'] #viewer,
+  [data-theme='qiita'] #viewer-right { padding: 16px 0 24px; }
+  [data-theme='qiita'] #viewer > .json-view-toggle,
+  [data-theme='qiita'] #viewer-right > .json-view-toggle { margin-inline: 16px; }
+  [data-theme='qiita'] #viewer > .markdown-body,
+  [data-theme='qiita'] #viewer-right > .markdown-body { padding: 24px 16px; border-radius: 0; }
+  [data-theme='qiita'] #viewer > .json-view-source,
+  [data-theme='qiita'] #viewer-right > .json-view-source { padding: 24px 16px; border-radius: 0; }
 }
 
 /* Zenn — clean tech-article surface: white card, Zenn-blue accents, dark-navy code blocks */
