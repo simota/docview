@@ -1662,7 +1662,7 @@ const md = new MarkdownIt({
   html: false,
   linkify: true,
   typographer: true,
-  highlight(str_: string, lang: string): string {
+  highlight(str_: string, lang: string, displayLabel = lang): string {
     const str = str_.replace(/^([ \t]*\n)+/, '').trimEnd();
     if (lang === 'mermaid') {
       const id = `mermaid-${mermaidCounter++}-${uniqueSuffix()}`;
@@ -1698,7 +1698,10 @@ const md = new MarkdownIt({
       };
       return `<div class="diagram-container" data-diagram-type="${normalizedLang}" data-diagram-id="${id}"><div class="diagram-label">${labelMap[normalizedLang] || normalizedLang}</div><pre class="diagram-source" id="${id}">${md.utils.escapeHtml(str)}</pre><div class="diagram-rendered" id="${id}-rendered"></div></div>`;
     }
-    const langLabel = lang ? `<span class="code-lang">${md.utils.escapeHtml(lang)}</span>` : '';
+    const labelClass = displayLabel !== lang ? 'code-lang code-filename' : 'code-lang';
+    const langLabel = displayLabel
+      ? `<span class="${labelClass}">${md.utils.escapeHtml(displayLabel)}</span>`
+      : '';
     if (lang && hljs.getLanguage(lang)) {
       try {
         return `<div class="code-block">${langLabel}<pre class="hljs"><code>${hljs.highlight(str, { language: lang }).value}</code></pre></div>`;
@@ -1714,9 +1717,17 @@ const md = new MarkdownIt({
 md.renderer.rules.fence = function (tokens, idx, options, _env, slf) {
   const token = tokens[idx];
   const info = token.info ? token.info.trim() : '';
-  const lang = info.split(/\s+/g)[0] || '';
+  let lang = info.split(/\s+/g)[0] || '';
+  let displayLabel = lang;
+  if (_env?.qiita) {
+    const separator = lang.indexOf(':');
+    if (separator > 0 && separator < lang.length - 1) {
+      displayLabel = lang.slice(separator + 1);
+      lang = lang.slice(0, separator);
+    }
+  }
   if (options.highlight) {
-    const result = options.highlight(token.content, lang, '');
+    const result = options.highlight(token.content, lang, displayLabel);
     if (result) return result;
   }
   return `<pre${slf.renderAttrs(token)}><code>${md.utils.escapeHtml(token.content)}</code></pre>`;
@@ -1798,6 +1809,8 @@ md.use(frontmatter, () => {
   // silently consume front matter
 });
 
+type MarkdownRenderEnv = { qiita: boolean };
+
 // Wiki links [[target]] or [[target|display]]
 function wikiLinkPlugin(mdi: MarkdownIt) {
   mdi.inline.ruler.after('link', 'wiki_link', (state, silent) => {
@@ -1853,10 +1866,53 @@ md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
 
 // --- Exports ---
 
-export function renderMarkdown(source: string): string {
+const QIITA_NOTE_TYPES: Record<string, string> = {
+  info: 'info',
+  warn: 'warning',
+  alert: 'danger',
+};
+
+function transformQiitaNotes(source: string): string {
+  let fenceMarker = '';
+  let fenceLength = 0;
+
+  return source.split('\n').map((line) => {
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      const marker = fence[1][0];
+      const markerLength = fence[1].length;
+      const rest = fence[2];
+      if (!fenceMarker) {
+        fenceMarker = marker;
+        fenceLength = markerLength;
+      } else if (marker === fenceMarker && markerLength >= fenceLength && rest.trim() === '') {
+        fenceMarker = '';
+        fenceLength = 0;
+      }
+      return line;
+    }
+
+    if (fenceMarker) return line;
+
+    return line.replace(
+      /^( {0,3}):::note(?:\s+(info|warn|alert))?\s*$/,
+      (_match, indent: string, type: string | undefined) => `${indent}:::${QIITA_NOTE_TYPES[type ?? 'info']}`,
+    );
+  }).join('\n');
+}
+
+function isQiitaTheme(theme?: Theme): boolean {
+  if (theme) return theme === 'qiita';
+  return typeof document !== 'undefined'
+    && document.documentElement.getAttribute('data-theme') === 'qiita';
+}
+
+export function renderMarkdown(source: string, theme?: Theme): string {
   mermaidCounter = 0;
   diagramCounter = 0;
-  return md.render(source);
+  const qiita = isQiitaTheme(theme);
+  const env: MarkdownRenderEnv = { qiita };
+  return md.render(qiita ? transformQiitaNotes(source) : source, env);
 }
 
 export async function renderExternalDiagrams(container: HTMLElement): Promise<void> {
