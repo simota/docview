@@ -1,6 +1,6 @@
 {
   "name": "docview",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "type": "module",
   "description": "Beautiful document viewer for Markdown, YAML, JSON, CSV, config files, and images with Mermaid diagram and Marp slide support",
   "license": "MIT",
