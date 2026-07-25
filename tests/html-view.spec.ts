@@ -95,4 +95,35 @@ test.describe('HTML view (sandboxed iframe)', () => {
     await page.waitForSelector('.filetree-item[data-path]');
     await expect(page.locator('.filetree-item[data-path="page.html"]')).toHaveCount(1);
   });
+
+  test('displays full-page screenshot button (.html-screenshot-btn) in HTML preview header', async ({ page }) => {
+    await page.goto('/#file=page.html');
+    await page.waitForSelector('.html-preview-frame');
+
+    const btn = page.locator('.html-screenshot-btn');
+    await expect(btn).toBeVisible();
+    await expect(btn).toContainText('全画面キャプチャ');
+  });
+
+  test('clicking full-page screenshot button triggers download of PNG screenshot', async ({ page }) => {
+    await page.goto('/#file=page.html');
+    await page.waitForSelector('.html-preview-frame');
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('.html-screenshot-btn').click();
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toMatch(/page.*-fullpage\.png$/);
+  });
+
+  test('main export button (#btn-export) triggers full-page PNG screenshot when previewing HTML', async ({ page }) => {
+    await page.goto('/#file=page.html');
+    await page.waitForSelector('.html-preview-frame');
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#btn-export').click();
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toMatch(/page\.png$/);
+  });
 });

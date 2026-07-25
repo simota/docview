@@ -4428,8 +4428,36 @@ body.dragging::after {
   background: #fff;
 }
 
-.html-scripts-toggle {
+.html-screenshot-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   margin-left: auto;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary, transparent);
+  color: var(--text-primary, inherit);
+  cursor: pointer;
+  transition: var(--transition-interactive);
+}
+
+.html-screenshot-btn:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border-color: var(--border-hover, var(--border));
+  color: var(--accent, #2563eb);
+}
+
+.html-screenshot-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.html-scripts-toggle {
+  margin-left: 6px;
   padding: 5px 12px;
   font-size: 11px;
   font-weight: 600;

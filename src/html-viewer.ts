@@ -125,6 +125,29 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
     if (raw) el.setAttribute('style', rewriteCssResourceUrls(raw, currentPath));
   });
 
+  // Inject postMessage screenshot helper script inside iframe
+  const captureScript = doc.createElement('script');
+  captureScript.textContent = `
+    (function() {
+      window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_REQUEST') {
+          var rect = document.documentElement.getBoundingClientRect();
+          var width = Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0, Math.ceil(rect.width));
+          var height = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0, Math.ceil(rect.height));
+          var htmlContent = document.documentElement.outerHTML;
+          window.parent.postMessage({
+            type: 'DOCVIEW_HTML_CAPTURE_RESPONSE',
+            requestId: e.data.requestId,
+            width: width,
+            height: height,
+            htmlContent: htmlContent
+          }, '*');
+        }
+      });
+    })();
+  `;
+  (doc.head || doc.documentElement).appendChild(captureScript);
+
   const doctype = doc.doctype ? `<!doctype ${doc.doctype.name}>` : '<!doctype html>';
   return `${doctype}\n${doc.documentElement.outerHTML}`;
 }
@@ -139,6 +162,10 @@ export function renderHtmlView(displayContent: string, ext: string, sourceHighli
     <div class="json-view-toggle">
       <button class="json-toggle-btn active" data-view="tree">Preview</button>
       <button class="json-toggle-btn" data-view="source">Source</button>
+      <button class="html-screenshot-btn" type="button" title="HTMLプレビューの全画面スクリーンショットをキャプチャ">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>全画面キャプチャ</span>
+      </button>
       <button class="html-scripts-toggle html-scripts-toggle--on" type="button" aria-pressed="true" title="このHTML内のスクリプトを切り替え">スクリプト: 有効</button>
     </div>
     <div class="json-view-tree">
@@ -172,3 +199,123 @@ export function initHtmlScriptsToggle(): void {
     frame.setAttribute('srcdoc', doc);
   });
 }
+
+/**
+ * Capture full-page screenshot of the rendered HTML inside an iframe.
+ */
+export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilename = 'html-screenshot.png'): Promise<void> {
+  const { domToPng } = await import('modern-screenshot');
+
+  const requestId = 'req_' + Math.random().toString(36).slice(2);
+  let captureData: { width: number; height: number; htmlContent?: string } | null = null;
+
+  try {
+    captureData = await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        window.removeEventListener('message', handleMsg);
+        resolve(null);
+      }, 500);
+
+      function handleMsg(e: MessageEvent) {
+        if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_RESPONSE' && e.data.requestId === requestId) {
+          clearTimeout(timer);
+          window.removeEventListener('message', handleMsg);
+          resolve({
+            width: e.data.width || frame.clientWidth || 800,
+            height: e.data.height || frame.clientHeight || 600,
+            htmlContent: e.data.htmlContent,
+          });
+        }
+      }
+
+      window.addEventListener('message', handleMsg);
+      frame.contentWindow?.postMessage({ type: 'DOCVIEW_HTML_CAPTURE_REQUEST', requestId }, '*');
+    });
+  } catch (err) {
+    console.warn('PostMessage communication failed:', err);
+  }
+
+  const width = Math.max(captureData?.width || frame.clientWidth || 1024, 320);
+  const height = Math.max(captureData?.height || frame.clientHeight || 768, 200);
+
+  const offscreen = document.createElement('div');
+  offscreen.className = 'html-capture-offscreen';
+  offscreen.style.cssText = `
+    position: absolute;
+    left: -99999px;
+    top: 0;
+    width: ${width}px;
+    min-height: ${height}px;
+    background: #ffffff;
+    overflow: visible;
+    z-index: -99999;
+  `;
+
+  if (captureData?.htmlContent) {
+    offscreen.innerHTML = captureData.htmlContent;
+  } else {
+    const srcdoc = frame.getAttribute('srcdoc');
+    if (srcdoc) {
+      offscreen.innerHTML = srcdoc;
+    }
+  }
+
+  document.body.appendChild(offscreen);
+
+  try {
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const dataUrl = await domToPng(offscreen, {
+      scale: 2,
+      width,
+      height,
+      backgroundColor: '#ffffff',
+    });
+
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = defaultFilename;
+    a.click();
+  } finally {
+    if (offscreen.parentNode) {
+      offscreen.parentNode.removeChild(offscreen);
+    }
+  }
+}
+
+/**
+ * Wire the HTML full-page screenshot button. Delegated once at startup.
+ */
+export function initHtmlScreenshotToggle(): void {
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('.html-screenshot-btn') as HTMLButtonElement | null;
+    if (!btn || btn.disabled) return;
+    const toggle = btn.closest('.json-view-toggle');
+    const frame = toggle?.parentElement?.querySelector('.html-preview-frame') as HTMLIFrameElement | null;
+    if (!frame) return;
+
+    btn.disabled = true;
+    btn.classList.add('html-screenshot-btn--loading');
+    const labelSpan = btn.querySelector('span');
+    const originalText = labelSpan?.textContent || '全画面キャプチャ';
+    if (labelSpan) {
+      labelSpan.textContent = 'キャプチャ中...';
+    }
+
+    try {
+      const currentFilePath = document.querySelector<HTMLElement>('#breadcrumb')?.textContent?.trim() || 'html-document.html';
+      const cleanName = currentFilePath.split('/').pop()?.replace(/\.[^.]+$/, '') || 'html-document';
+      const filename = cleanName + '-fullpage.png';
+      await captureHtmlFullPage(frame, filename);
+    } catch (err) {
+      console.error('HTML full-page screenshot failed:', err);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('html-screenshot-btn--loading');
+      if (labelSpan) {
+        labelSpan.textContent = originalText;
+      }
+    }
+  });
+}
+

@@ -9,7 +9,7 @@ import { renderYamlTree } from './yaml-tree';
 import { TabBar, addRecent, getRecent } from './tabs';
 import { renderCsvTable, initCsvSort, initCsvColumnCopy } from './csv-viewer';
 import { renderJsonlTable } from './jsonl-viewer';
-import { renderHtmlView, initHtmlScriptsToggle } from './html-viewer';
+import { renderHtmlView, initHtmlScriptsToggle, initHtmlScreenshotToggle, captureHtmlFullPage } from './html-viewer';
 import { renderLogTable, initLaravelSort } from './log-viewer';
 import { renderCronTable, initCronToggles } from './cron-viewer';
 import { ChunkedTable } from './chunked-table';
@@ -2684,6 +2684,7 @@ async function init() {
     initCsvColumnCopy();
     initTableRowJump();
     initHtmlScriptsToggle();
+    initHtmlScreenshotToggle();
     initLaravelSort();
     initCronToggles();
 
@@ -2839,6 +2840,17 @@ btnExport.addEventListener('click', async () => {
   btnExport.disabled = true;
   btnExport.classList.add('toolbar-btn-active');
   try {
+    const htmlFrame = viewer.querySelector('.html-preview-frame') as HTMLIFrameElement | null;
+    const jsonTree = viewer.querySelector('.json-view-tree') as HTMLElement | null;
+    const isHtmlPreviewActive = htmlFrame && jsonTree && jsonTree.style.display !== 'none';
+
+    if (isHtmlPreviewActive) {
+      const cleanName = currentFilePath?.split('/').pop()?.replace(/\.[^.]+$/, '') || 'document';
+      const filename = cleanName + '.png';
+      await captureHtmlFullPage(htmlFrame, filename);
+      return;
+    }
+
     const { domToPng } = await import('modern-screenshot');
 
     // Temporarily apply export-mode styling in-place
