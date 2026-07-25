@@ -185,71 +185,101 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
   const { domToPng } = await import('modern-screenshot');
 
   const srcdoc = frame.getAttribute('srcdoc') || '';
+  const width = Math.max(frame.clientWidth || 1200, 800);
 
-  // Create temporary host container in parent DOM context (same-origin, no canvas tainting)
-  const host = document.createElement('div');
-  host.className = 'html-capture-host';
-  host.style.cssText = `
+  // Create a temporary same-origin iframe to render full document with body styles
+  const tempFrame = document.createElement('iframe');
+  tempFrame.className = 'html-capture-temp-frame';
+  tempFrame.style.cssText = `
     position: absolute;
     left: 0;
     top: 0;
-    width: 1200px;
-    height: auto;
+    width: ${width}px;
+    height: 1000px;
+    border: none;
+    margin: 0;
+    padding: 0;
     background: #ffffff;
-    color: #000000;
     z-index: -99999;
-    overflow: visible;
+    opacity: 0.01;
     pointer-events: none;
-    box-sizing: border-box;
+    overflow: visible;
   `;
+  tempFrame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+  tempFrame.setAttribute('srcdoc', srcdoc);
 
-  if (srcdoc) {
-    const doc = new DOMParser().parseFromString(srcdoc, 'text/html');
-
-    doc.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
-      host.appendChild(node.cloneNode(true));
-    });
-
-    doc.body.childNodes.forEach((node) => {
-      host.appendChild(node.cloneNode(true));
-    });
-  } else {
-    host.innerHTML = '<div>HTML Preview</div>';
-  }
-
-  document.body.appendChild(host);
+  document.body.appendChild(tempFrame);
 
   try {
-    const images = Array.from(host.querySelectorAll('img'));
+    await new Promise((resolve) => {
+      tempFrame.onload = resolve;
+      setTimeout(resolve, 1500);
+    });
+
+    const doc = tempFrame.contentDocument || tempFrame.contentWindow?.document;
+    if (!doc) {
+      throw new Error('Could not access iframe document');
+    }
+
+    const images = Array.from(doc.querySelectorAll('img'));
     await Promise.all(
       images.map((img) => {
         if (img.complete) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
+        return new Promise((r) => {
+          img.onload = r;
+          img.onerror = r;
         });
       })
     );
 
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    const width = Math.max(host.scrollWidth, host.offsetWidth, 1200);
-    const height = Math.max(host.scrollHeight, host.offsetHeight, 400);
+    const body = doc.body;
+    const html = doc.documentElement;
+    const fullHeight = Math.max(
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      html ? html.scrollHeight : 0,
+      html ? html.offsetHeight : 0,
+      600
+    );
+    const fullWidth = Math.max(
+      body ? body.scrollWidth : 0,
+      html ? html.scrollWidth : 0,
+      width
+    );
 
-    const dataUrl = await domToPng(host, {
-      scale: 2,
-      width,
-      height,
-      backgroundColor: '#ffffff',
-    });
+    tempFrame.style.width = `${fullWidth}px`;
+    tempFrame.style.height = `${fullHeight}px`;
 
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = defaultFilename;
-    a.click();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    let dataUrl: string | null = null;
+    try {
+      dataUrl = await domToPng(html, {
+        scale: 2,
+        width: fullWidth,
+        height: fullHeight,
+        backgroundColor: '#ffffff',
+      });
+    } catch (e) {
+      dataUrl = await domToPng(tempFrame, {
+        scale: 2,
+        width: fullWidth,
+        height: fullHeight,
+        backgroundColor: '#ffffff',
+      });
+    }
+
+    if (dataUrl) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = defaultFilename;
+      a.click();
+    }
   } finally {
-    if (host.parentNode) {
-      host.parentNode.removeChild(host);
+    if (tempFrame.parentNode) {
+      tempFrame.parentNode.removeChild(tempFrame);
     }
   }
 }
