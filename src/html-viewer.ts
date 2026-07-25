@@ -272,42 +272,46 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
     }
 
     if (canvas) {
-      const MAX_SLICE_HEIGHT = 4000; // ~2000px CSS height at 2x scale, well within 8MB
+      const MAX_BYTES = 8 * 1024 * 1024; // 8MB maximum file size limit
       const baseName = defaultFilename.replace(/\.png$/i, '');
 
-      if (canvas.height > MAX_SLICE_HEIGHT) {
-        const numSlices = Math.ceil(canvas.height / MAX_SLICE_HEIGHT);
-        for (let i = 0; i < numSlices; i++) {
-          const sliceY = i * MAX_SLICE_HEIGHT;
-          const sliceH = Math.min(MAX_SLICE_HEIGHT, canvas.height - sliceY);
+      const fullBlob = await canvasToBlob(canvas);
 
-          const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = sliceH;
-
-          const sliceCtx = sliceCanvas.getContext('2d');
-          if (sliceCtx) {
-            sliceCtx.fillStyle = '#ffffff';
-            sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceH);
-            sliceCtx.drawImage(
-              canvas,
-              0, sliceY, canvas.width, sliceH,
-              0, 0, canvas.width, sliceH
-            );
-
-            const sliceDataUrl = sliceCanvas.toDataURL('image/png');
-            const a = document.createElement('a');
-            a.href = sliceDataUrl;
-            a.download = `${baseName}_part${i + 1}.png`;
-            a.click();
-          }
-        }
+      if (fullBlob && fullBlob.size <= MAX_BYTES) {
+        downloadBlob(fullBlob, defaultFilename);
       } else {
-        const dataUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = defaultFilename;
-        a.click();
+        const totalHeight = canvas.height;
+        const totalBytes = fullBlob ? fullBlob.size : totalHeight * canvas.width * 4;
+
+        // Estimate target slice height for ~6.8MB (85% of 8MB) to stay safely within 8MB
+        const targetMaxBytes = MAX_BYTES * 0.85;
+        const estimatedHeightPerChunk = Math.max(
+          200,
+          Math.floor((targetMaxBytes / totalBytes) * totalHeight)
+        );
+
+        let currentY = 0;
+        let partIndex = 1;
+
+        while (currentY < totalHeight) {
+          let sliceH = Math.min(estimatedHeightPerChunk, totalHeight - currentY);
+          let sliceCanvas = createSliceCanvas(canvas, currentY, sliceH);
+          let sliceBlob = await canvasToBlob(sliceCanvas);
+
+          // Dynamic safety check: shrink slice height if it still exceeds 8MB
+          while (sliceBlob && sliceBlob.size > MAX_BYTES && sliceH > 100) {
+            sliceH = Math.floor(sliceH * 0.75);
+            sliceCanvas = createSliceCanvas(canvas, currentY, sliceH);
+            sliceBlob = await canvasToBlob(sliceCanvas);
+          }
+
+          if (sliceBlob) {
+            downloadBlob(sliceBlob, `${baseName}_part${partIndex}.png`);
+          }
+
+          currentY += sliceH;
+          partIndex++;
+        }
       }
     }
   } finally {
@@ -315,6 +319,38 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
       tempFrame.parentNode.removeChild(tempFrame);
     }
   }
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), 'image/png');
+  });
+}
+
+function createSliceCanvas(sourceCanvas: HTMLCanvasElement, startY: number, sliceHeight: number): HTMLCanvasElement {
+  const slice = document.createElement('canvas');
+  slice.width = sourceCanvas.width;
+  slice.height = sliceHeight;
+  const ctx = slice.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, slice.width, sliceHeight);
+    ctx.drawImage(
+      sourceCanvas,
+      0, startY, sourceCanvas.width, sliceHeight,
+      0, 0, sourceCanvas.width, sliceHeight
+    );
+  }
+  return slice;
 }
 
 /**
