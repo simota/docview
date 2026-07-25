@@ -114,6 +114,8 @@ test.describe('HTML view (sandboxed iframe)', () => {
     const download = await downloadPromise;
 
     expect(download.suggestedFilename()).toMatch(/page.*-fullpage\.png$/);
+    const path = await download.path();
+    expect(path).toBeTruthy();
   });
 
   test('main export button (#btn-export) triggers full-page PNG screenshot when previewing HTML', async ({ page }) => {
@@ -125,5 +127,7 @@ test.describe('HTML view (sandboxed iframe)', () => {
     const download = await downloadPromise;
 
     expect(download.suggestedFilename()).toMatch(/page\.png$/);
+    const path = await download.path();
+    expect(path).toBeTruthy();
   });
 });

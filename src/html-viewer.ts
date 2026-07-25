@@ -129,18 +129,72 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
   const captureScript = doc.createElement('script');
   captureScript.textContent = `
     (function() {
-      window.addEventListener('message', function(e) {
+      async function captureSelf() {
+        try {
+          var width = Math.max(
+            document.documentElement.scrollWidth,
+            document.body ? document.body.scrollWidth : 0,
+            document.documentElement.clientWidth,
+            800
+          );
+          var height = Math.max(
+            document.documentElement.scrollHeight,
+            document.body ? document.body.scrollHeight : 0,
+            document.documentElement.clientHeight,
+            600
+          );
+
+          var bg = window.getComputedStyle(document.body).backgroundColor;
+          if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
+            bg = '#ffffff';
+          }
+
+          var docEl = document.documentElement.cloneNode(true);
+
+          var svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
+            '<foreignObject width="100%" height="100%">' +
+            '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + width + 'px;height:' + height + 'px;background:' + bg + ';margin:0;padding:0;box-sizing:border-box;">' +
+            docEl.outerHTML +
+            '</div>' +
+            '</foreignObject>' +
+            '</svg>';
+
+          var blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+          var url = URL.createObjectURL(blob);
+
+          var img = new Image();
+          await new Promise(function(resolve) {
+            img.onload = resolve;
+            img.onerror = resolve;
+            img.src = url;
+          });
+
+          var canvas = document.createElement('canvas');
+          var scale = 2;
+          canvas.width = width * scale;
+          canvas.height = height * scale;
+          var ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.scale(scale, scale);
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0);
+          }
+          URL.revokeObjectURL(url);
+          return canvas.toDataURL('image/png');
+        } catch (err) {
+          console.error('Frame capture error:', err);
+          return null;
+        }
+      }
+
+      window.addEventListener('message', async function(e) {
         if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_REQUEST') {
-          var rect = document.documentElement.getBoundingClientRect();
-          var width = Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0, Math.ceil(rect.width));
-          var height = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0, Math.ceil(rect.height));
-          var htmlContent = document.documentElement.outerHTML;
+          var dataUrl = await captureSelf();
           window.parent.postMessage({
             type: 'DOCVIEW_HTML_CAPTURE_RESPONSE',
             requestId: e.data.requestId,
-            width: width,
-            height: height,
-            htmlContent: htmlContent
+            dataUrl: dataUrl
           }, '*');
         }
       });
@@ -204,27 +258,21 @@ export function initHtmlScriptsToggle(): void {
  * Capture full-page screenshot of the rendered HTML inside an iframe.
  */
 export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilename = 'html-screenshot.png'): Promise<void> {
-  const { domToPng } = await import('modern-screenshot');
-
   const requestId = 'req_' + Math.random().toString(36).slice(2);
-  let captureData: { width: number; height: number; htmlContent?: string } | null = null;
+  let dataUrl: string | null = null;
 
   try {
-    captureData = await new Promise((resolve) => {
+    dataUrl = await new Promise((resolve) => {
       const timer = setTimeout(() => {
         window.removeEventListener('message', handleMsg);
         resolve(null);
-      }, 500);
+      }, 1000);
 
       function handleMsg(e: MessageEvent) {
         if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_RESPONSE' && e.data.requestId === requestId) {
           clearTimeout(timer);
           window.removeEventListener('message', handleMsg);
-          resolve({
-            width: e.data.width || frame.clientWidth || 800,
-            height: e.data.height || frame.clientHeight || 600,
-            htmlContent: e.data.htmlContent,
-          });
+          resolve(e.data.dataUrl || null);
         }
       }
 
@@ -232,54 +280,38 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
       frame.contentWindow?.postMessage({ type: 'DOCVIEW_HTML_CAPTURE_REQUEST', requestId }, '*');
     });
   } catch (err) {
-    console.warn('PostMessage communication failed:', err);
+    console.warn('PostMessage capture request failed:', err);
   }
 
-  const width = Math.max(captureData?.width || frame.clientWidth || 1024, 320);
-  const height = Math.max(captureData?.height || frame.clientHeight || 768, 200);
+  // Fallback if iframe postMessage did not produce a dataUrl (e.g., scripts disabled)
+  if (!dataUrl) {
+    const { domToPng } = await import('modern-screenshot');
 
-  const offscreen = document.createElement('div');
-  offscreen.className = 'html-capture-offscreen';
-  offscreen.style.cssText = `
-    position: absolute;
-    left: -99999px;
-    top: 0;
-    width: ${width}px;
-    min-height: ${height}px;
-    background: #ffffff;
-    overflow: visible;
-    z-index: -99999;
-  `;
+    const originalHeight = frame.style.height;
+    const originalMaxHeight = frame.style.maxHeight;
 
-  if (captureData?.htmlContent) {
-    offscreen.innerHTML = captureData.htmlContent;
-  } else {
-    const srcdoc = frame.getAttribute('srcdoc');
-    if (srcdoc) {
-      offscreen.innerHTML = srcdoc;
+    try {
+      // Temporarily expand frame height in DOM for capture
+      frame.style.height = '2000px';
+      frame.style.maxHeight = 'none';
+
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      dataUrl = await domToPng(frame, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+      });
+    } finally {
+      frame.style.height = originalHeight;
+      frame.style.maxHeight = originalMaxHeight;
     }
   }
 
-  document.body.appendChild(offscreen);
-
-  try {
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-    const dataUrl = await domToPng(offscreen, {
-      scale: 2,
-      width,
-      height,
-      backgroundColor: '#ffffff',
-    });
-
+  if (dataUrl) {
     const a = document.createElement('a');
     a.href = dataUrl;
     a.download = defaultFilename;
     a.click();
-  } finally {
-    if (offscreen.parentNode) {
-      offscreen.parentNode.removeChild(offscreen);
-    }
   }
 }
 
