@@ -125,134 +125,6 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
     if (raw) el.setAttribute('style', rewriteCssResourceUrls(raw, currentPath));
   });
 
-  // Inject postMessage screenshot helper script inside iframe
-  const captureScript = doc.createElement('script');
-  captureScript.textContent = `
-    (function() {
-      function getInlinedStyles() {
-        var cssText = '';
-        try {
-          for (var i = 0; i < document.styleSheets.length; i++) {
-            var sheet = document.styleSheets[i];
-            try {
-              var rules = sheet.cssRules || sheet.rules;
-              if (rules) {
-                for (var j = 0; j < rules.length; j++) {
-                  cssText += rules[j].cssText + '\\n';
-                }
-              }
-            } catch (e) {}
-          }
-        } catch (e) {}
-        return cssText;
-      }
-
-      async function inlineImages(element) {
-        var imgs = Array.from(element.querySelectorAll('img'));
-        for (var i = 0; i < imgs.length; i++) {
-          var img = imgs[i];
-          if (img.src && !img.src.startsWith('data:')) {
-            try {
-              var canvas = document.createElement('canvas');
-              canvas.width = img.naturalWidth || img.width || 100;
-              canvas.height = img.naturalHeight || img.height || 100;
-              var ctx = canvas.getContext('2d');
-              if (ctx && canvas.width > 0 && canvas.height > 0) {
-                ctx.drawImage(img, 0, 0);
-                img.src = canvas.toDataURL('image/png');
-              }
-            } catch (e) {}
-          }
-        }
-      }
-
-      async function captureSelf() {
-        try {
-          var width = Math.max(
-            document.documentElement.scrollWidth,
-            document.body ? document.body.scrollWidth : 0,
-            document.documentElement.clientWidth,
-            800
-          );
-          var height = Math.max(
-            document.documentElement.scrollHeight,
-            document.body ? document.body.scrollHeight : 0,
-            document.documentElement.clientHeight,
-            600
-          );
-
-          var bg = window.getComputedStyle(document.body).backgroundColor;
-          if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
-            bg = '#ffffff';
-          }
-
-          var docEl = document.documentElement.cloneNode(true);
-
-          var inlinedCss = getInlinedStyles();
-          if (inlinedCss) {
-            var styleEl = document.createElement('style');
-            styleEl.textContent = inlinedCss;
-            var head = docEl.querySelector('head');
-            if (head) {
-              head.appendChild(styleEl);
-            } else {
-              docEl.appendChild(styleEl);
-            }
-          }
-
-          await inlineImages(docEl);
-
-          var svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
-            '<foreignObject width="100%" height="100%">' +
-            '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + width + 'px;height:' + height + 'px;background:' + bg + ';margin:0;padding:0;box-sizing:border-box;">' +
-            docEl.outerHTML +
-            '</div>' +
-            '</foreignObject>' +
-            '</svg>';
-
-          var blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-          var url = URL.createObjectURL(blob);
-
-          var img = new Image();
-          await new Promise(function(resolve) {
-            img.onload = resolve;
-            img.onerror = resolve;
-            img.src = url;
-          });
-
-          var canvas = document.createElement('canvas');
-          var scale = 2;
-          canvas.width = width * scale;
-          canvas.height = height * scale;
-          var ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.scale(scale, scale);
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0);
-          }
-          URL.revokeObjectURL(url);
-          return canvas.toDataURL('image/png');
-        } catch (err) {
-          console.error('Frame capture error:', err);
-          return null;
-        }
-      }
-
-      window.addEventListener('message', async function(e) {
-        if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_REQUEST') {
-          var dataUrl = await captureSelf();
-          window.parent.postMessage({
-            type: 'DOCVIEW_HTML_CAPTURE_RESPONSE',
-            requestId: e.data.requestId,
-            dataUrl: dataUrl
-          }, '*');
-        }
-      });
-    })();
-  `;
-  (doc.head || doc.documentElement).appendChild(captureScript);
-
   const doctype = doc.doctype ? `<!doctype ${doc.doctype.name}>` : '<!doctype html>';
   return `${doctype}\n${doc.documentElement.outerHTML}`;
 }
@@ -262,7 +134,8 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
  * when applicable) raw HTML; `sourceHighlighted` is the hljs-highlighted source.
  */
 export function renderHtmlView(displayContent: string, ext: string, sourceHighlighted: string, currentPath: string): string {
-  const srcdoc = escapeSrcdoc(buildPreviewHtml(displayContent, currentPath));
+  const previewHtml = buildPreviewHtml(displayContent, currentPath);
+  const srcdoc = escapeSrcdoc(previewHtml);
   return `
     <div class="json-view-toggle">
       <button class="json-toggle-btn active" data-view="tree">Preview</button>
@@ -273,7 +146,7 @@ export function renderHtmlView(displayContent: string, ext: string, sourceHighli
       </button>
       <button class="html-scripts-toggle html-scripts-toggle--on" type="button" aria-pressed="true" title="このHTML内のスクリプトを切り替え">スクリプト: 有効</button>
     </div>
-    <div class="json-view-tree">
+    <div class="json-view-tree" data-current-path="${escapeSrcdoc(currentPath)}">
       <iframe class="html-preview-frame" sandbox="allow-scripts" srcdoc="${srcdoc}" title="HTML preview" referrerpolicy="no-referrer"></iframe>
     </div>
     <div class="json-view-source" style="display:none"><div class="data-view"><span class="data-lang">${ext}</span><pre class="hljs"><code>${sourceHighlighted}</code></pre></div></div>`;
@@ -306,63 +179,78 @@ export function initHtmlScriptsToggle(): void {
 }
 
 /**
- * Capture full-page screenshot of the rendered HTML inside an iframe.
+ * Capture full-page screenshot of the rendered HTML.
  */
 export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilename = 'html-screenshot.png'): Promise<void> {
-  const requestId = 'req_' + Math.random().toString(36).slice(2);
-  let dataUrl: string | null = null;
+  const { domToPng } = await import('modern-screenshot');
+
+  const srcdoc = frame.getAttribute('srcdoc') || '';
+
+  // Create temporary host container in parent DOM context (same-origin, no canvas tainting)
+  const host = document.createElement('div');
+  host.className = 'html-capture-host';
+  host.style.cssText = `
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1200px;
+    height: auto;
+    background: #ffffff;
+    color: #000000;
+    z-index: -99999;
+    overflow: visible;
+    pointer-events: none;
+    box-sizing: border-box;
+  `;
+
+  if (srcdoc) {
+    const doc = new DOMParser().parseFromString(srcdoc, 'text/html');
+
+    doc.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
+      host.appendChild(node.cloneNode(true));
+    });
+
+    doc.body.childNodes.forEach((node) => {
+      host.appendChild(node.cloneNode(true));
+    });
+  } else {
+    host.innerHTML = '<div>HTML Preview</div>';
+  }
+
+  document.body.appendChild(host);
 
   try {
-    dataUrl = await new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        window.removeEventListener('message', handleMsg);
-        resolve(null);
-      }, 3500);
+    const images = Array.from(host.querySelectorAll('img'));
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      })
+    );
 
-      function handleMsg(e: MessageEvent) {
-        if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_RESPONSE' && e.data.requestId === requestId) {
-          clearTimeout(timer);
-          window.removeEventListener('message', handleMsg);
-          resolve(e.data.dataUrl || null);
-        }
-      }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      window.addEventListener('message', handleMsg);
-      frame.contentWindow?.postMessage({ type: 'DOCVIEW_HTML_CAPTURE_REQUEST', requestId }, '*');
+    const width = Math.max(host.scrollWidth, host.offsetWidth, 1200);
+    const height = Math.max(host.scrollHeight, host.offsetHeight, 400);
+
+    const dataUrl = await domToPng(host, {
+      scale: 2,
+      width,
+      height,
+      backgroundColor: '#ffffff',
     });
-  } catch (err) {
-    console.warn('PostMessage capture request failed:', err);
-  }
 
-  // Fallback if iframe postMessage did not produce a dataUrl (e.g., scripts disabled)
-  if (!dataUrl) {
-    const { domToPng } = await import('modern-screenshot');
-
-    const originalHeight = frame.style.height;
-    const originalMaxHeight = frame.style.maxHeight;
-
-    try {
-      // Temporarily expand frame height in DOM for capture
-      frame.style.height = '2000px';
-      frame.style.maxHeight = 'none';
-
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-      dataUrl = await domToPng(frame, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-      });
-    } finally {
-      frame.style.height = originalHeight;
-      frame.style.maxHeight = originalMaxHeight;
-    }
-  }
-
-  if (dataUrl) {
     const a = document.createElement('a');
     a.href = dataUrl;
     a.download = defaultFilename;
     a.click();
+  } finally {
+    if (host.parentNode) {
+      host.parentNode.removeChild(host);
+    }
   }
 }
 

@@ -117,8 +117,6 @@ test.describe('HTML view (sandboxed iframe)', () => {
     const path = await download.path();
     const fs = await import('node:fs');
     const buffer = fs.readFileSync(path);
-    console.log('DOWNLOADED PNG SIZE:', buffer.length);
-    fs.writeFileSync('/tmp/test-screenshot.png', buffer);
     expect(buffer.length).toBeGreaterThan(100);
   });
 
