@@ -182,7 +182,7 @@ export function initHtmlScriptsToggle(): void {
  * Capture full-page screenshot of the rendered HTML.
  */
 export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilename = 'html-screenshot.png'): Promise<void> {
-  const { domToPng } = await import('modern-screenshot');
+  const { domToCanvas } = await import('modern-screenshot');
 
   const srcdoc = frame.getAttribute('srcdoc') || '';
   const width = Math.max(frame.clientWidth || 1200, 800);
@@ -254,16 +254,16 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
 
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    let dataUrl: string | null = null;
+    let canvas: HTMLCanvasElement | null = null;
     try {
-      dataUrl = await domToPng(html, {
+      canvas = await domToCanvas(html, {
         scale: 2,
         width: fullWidth,
         height: fullHeight,
         backgroundColor: '#ffffff',
       });
     } catch (e) {
-      dataUrl = await domToPng(tempFrame, {
+      canvas = await domToCanvas(tempFrame, {
         scale: 2,
         width: fullWidth,
         height: fullHeight,
@@ -271,11 +271,44 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
       });
     }
 
-    if (dataUrl) {
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = defaultFilename;
-      a.click();
+    if (canvas) {
+      const MAX_SLICE_HEIGHT = 4000; // ~2000px CSS height at 2x scale, well within 8MB
+      const baseName = defaultFilename.replace(/\.png$/i, '');
+
+      if (canvas.height > MAX_SLICE_HEIGHT) {
+        const numSlices = Math.ceil(canvas.height / MAX_SLICE_HEIGHT);
+        for (let i = 0; i < numSlices; i++) {
+          const sliceY = i * MAX_SLICE_HEIGHT;
+          const sliceH = Math.min(MAX_SLICE_HEIGHT, canvas.height - sliceY);
+
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceH;
+
+          const sliceCtx = sliceCanvas.getContext('2d');
+          if (sliceCtx) {
+            sliceCtx.fillStyle = '#ffffff';
+            sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceH);
+            sliceCtx.drawImage(
+              canvas,
+              0, sliceY, canvas.width, sliceH,
+              0, 0, canvas.width, sliceH
+            );
+
+            const sliceDataUrl = sliceCanvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = sliceDataUrl;
+            a.download = `${baseName}_part${i + 1}.png`;
+            a.click();
+          }
+        }
+      } else {
+        const dataUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = defaultFilename;
+        a.click();
+      }
     }
   } finally {
     if (tempFrame.parentNode) {
