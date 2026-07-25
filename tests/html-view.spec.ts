@@ -115,7 +115,11 @@ test.describe('HTML view (sandboxed iframe)', () => {
 
     expect(download.suggestedFilename()).toMatch(/page.*-fullpage\.png$/);
     const path = await download.path();
-    expect(path).toBeTruthy();
+    const fs = await import('node:fs');
+    const buffer = fs.readFileSync(path);
+    console.log('DOWNLOADED PNG SIZE:', buffer.length);
+    fs.writeFileSync('/tmp/test-screenshot.png', buffer);
+    expect(buffer.length).toBeGreaterThan(100);
   });
 
   test('main export button (#btn-export) triggers full-page PNG screenshot when previewing HTML', async ({ page }) => {

@@ -129,6 +129,43 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
   const captureScript = doc.createElement('script');
   captureScript.textContent = `
     (function() {
+      function getInlinedStyles() {
+        var cssText = '';
+        try {
+          for (var i = 0; i < document.styleSheets.length; i++) {
+            var sheet = document.styleSheets[i];
+            try {
+              var rules = sheet.cssRules || sheet.rules;
+              if (rules) {
+                for (var j = 0; j < rules.length; j++) {
+                  cssText += rules[j].cssText + '\\n';
+                }
+              }
+            } catch (e) {}
+          }
+        } catch (e) {}
+        return cssText;
+      }
+
+      async function inlineImages(element) {
+        var imgs = Array.from(element.querySelectorAll('img'));
+        for (var i = 0; i < imgs.length; i++) {
+          var img = imgs[i];
+          if (img.src && !img.src.startsWith('data:')) {
+            try {
+              var canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width || 100;
+              canvas.height = img.naturalHeight || img.height || 100;
+              var ctx = canvas.getContext('2d');
+              if (ctx && canvas.width > 0 && canvas.height > 0) {
+                ctx.drawImage(img, 0, 0);
+                img.src = canvas.toDataURL('image/png');
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
       async function captureSelf() {
         try {
           var width = Math.max(
@@ -150,6 +187,20 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
           }
 
           var docEl = document.documentElement.cloneNode(true);
+
+          var inlinedCss = getInlinedStyles();
+          if (inlinedCss) {
+            var styleEl = document.createElement('style');
+            styleEl.textContent = inlinedCss;
+            var head = docEl.querySelector('head');
+            if (head) {
+              head.appendChild(styleEl);
+            } else {
+              docEl.appendChild(styleEl);
+            }
+          }
+
+          await inlineImages(docEl);
 
           var svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
             '<foreignObject width="100%" height="100%">' +
@@ -266,7 +317,7 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
       const timer = setTimeout(() => {
         window.removeEventListener('message', handleMsg);
         resolve(null);
-      }, 1000);
+      }, 3500);
 
       function handleMsg(e: MessageEvent) {
         if (e.data && e.data.type === 'DOCVIEW_HTML_CAPTURE_RESPONSE' && e.data.requestId === requestId) {
