@@ -272,7 +272,7 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
     }
 
     if (canvas) {
-      const MAX_BYTES = 8 * 1024 * 1024; // 8MB maximum file size limit
+      const MAX_BYTES = 5 * 1024 * 1024; // 5MB maximum file size limit
       const baseName = defaultFilename.replace(/\.png$/i, '');
 
       const fullBlob = await canvasToBlob(canvas);
@@ -283,7 +283,7 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
         const totalHeight = canvas.height;
         const totalBytes = fullBlob ? fullBlob.size : totalHeight * canvas.width * 4;
 
-        // Estimate target slice height for ~6.8MB (85% of 8MB) to stay safely within 8MB
+        // Estimate target slice height for ~4.25MB (85% of 5MB) to stay safely within 5MB
         const targetMaxBytes = MAX_BYTES * 0.85;
         const estimatedHeightPerChunk = Math.max(
           200,
@@ -298,7 +298,7 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
           let sliceCanvas = createSliceCanvas(canvas, currentY, sliceH);
           let sliceBlob = await canvasToBlob(sliceCanvas);
 
-          // Dynamic safety check: shrink slice height if it still exceeds 8MB
+          // Dynamic safety check: shrink slice height if it still exceeds 5MB
           while (sliceBlob && sliceBlob.size > MAX_BYTES && sliceH > 100) {
             sliceH = Math.floor(sliceH * 0.75);
             sliceCanvas = createSliceCanvas(canvas, currentY, sliceH);
