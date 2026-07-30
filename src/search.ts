@@ -23,7 +23,7 @@ export class SearchModal {
   private tabFiles: HTMLButtonElement;
   private tabFulltext: HTMLButtonElement;
   private onSelect: FileSelectCallback;
-  private mode: 'files' | 'fulltext' = 'files';
+  private mode: 'files' | 'fulltext' = 'fulltext';
   private useRegex = false;
   private fileList: string[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -50,17 +50,17 @@ export class SearchModal {
     tabList.setAttribute('aria-label', 'Search mode');
 
     this.tabFiles = document.createElement('button');
-    this.tabFiles.className = 'search-tab active';
+    this.tabFiles.className = 'search-tab';
     this.tabFiles.textContent = 'Files';
     this.tabFiles.setAttribute('role', 'tab');
-    this.tabFiles.setAttribute('aria-selected', 'true');
+    this.tabFiles.setAttribute('aria-selected', 'false');
     this.tabFiles.addEventListener('click', () => this.switchMode('files'));
 
     this.tabFulltext = document.createElement('button');
-    this.tabFulltext.className = 'search-tab';
+    this.tabFulltext.className = 'search-tab active';
     this.tabFulltext.textContent = 'Full text';
     this.tabFulltext.setAttribute('role', 'tab');
-    this.tabFulltext.setAttribute('aria-selected', 'false');
+    this.tabFulltext.setAttribute('aria-selected', 'true');
     this.tabFulltext.addEventListener('click', () => this.switchMode('fulltext'));
 
     // Arrow key navigation between tabs
@@ -81,7 +81,7 @@ export class SearchModal {
 
     this.input = document.createElement('input');
     this.input.className = 'search-input';
-    this.input.placeholder = 'Search files... (Shift for full-text)';
+    this.input.placeholder = 'Search content across all files...';
     this.input.type = 'text';
 
     this.regexToggle = document.createElement('button');
@@ -153,7 +153,7 @@ export class SearchModal {
     if (mode === 'files') this.loadFileList();
   }
 
-  open(mode: 'files' | 'fulltext' = 'files') {
+  open(mode: 'files' | 'fulltext' = 'fulltext') {
     this.input.value = '';
     this.results.innerHTML = '';
     this.overlay.style.display = '';

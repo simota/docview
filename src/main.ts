@@ -2831,7 +2831,7 @@ btnOpen.addEventListener('click', () => fileInput.click());
 btnOpenUrl?.addEventListener('click', () => urlBar.open());
 btnSidebar.addEventListener('click', toggleSidebar);
 btnToc.addEventListener('click', toggleToc);
-btnSearch.addEventListener('click', () => searchModal.open('files'));
+btnSearch.addEventListener('click', () => searchModal.open('fulltext'));
 btnPrint.addEventListener('click', () => window.print()); // #12
 btnSlides.addEventListener('click', () => {
   if (currentSlideSource) void enterMarpSlideMode(currentSlideSource);
