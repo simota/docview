@@ -387,6 +387,8 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.json', '.jsonl', '.ndjson', '.yaml', '.yml', '.csv', '.tsv',
   // Office / iWork documents (listed and served as binary; browser preview is handled by the frontend)
   '.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key',
+  // PDF (streamed with Range support; rendered by the browser's built-in viewer in an iframe)
+  '.pdf',
   // Config
   '.toml', '.ini', '.conf', '.env', '.cfg', '.properties',
   // Logs
@@ -415,6 +417,11 @@ function isSupportedFilename(name) {
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const OFFICE_EXTENSIONS = new Set(['.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key']);
+const PDF_EXTENSIONS = new Set(['.pdf']);
+// Binary formats: never read as text (line counts, full-text search, in-file search).
+function isBinaryExt(ext) {
+  return IMAGE_EXTENSIONS.has(ext) || VIDEO_EXTENSIONS.has(ext) || OFFICE_EXTENSIONS.has(ext) || PDF_EXTENSIONS.has(ext);
+}
 const SEARCH_CONTEXT_LINES = 20;
 // Largest file the directory-wide full-text search will read whole. Bigger
 // files are skipped so a huge fixture can't block the event loop (see searchDir).
@@ -453,6 +460,7 @@ const REMOTE_MIME_ALLOW = new Set([
   'application/toml', 'text/x-toml', 'text/x-ini', 'text/x-properties',
   'image/png', 'image/jpeg', 'image/gif', 'image/svg+xml',
   'image/webp', 'image/bmp', 'image/x-icon', 'image/vnd.microsoft.icon',
+  'application/pdf',
 ]);
 const REMOTE_MIME_DENY = new Set([
   'text/html', 'application/xhtml+xml',
@@ -689,6 +697,51 @@ const TEXT_MIME = {
   '.svg': 'image/svg+xml',
 };
 
+// Stream a binary file with HTTP Range support (206 Partial Content).
+// <video> seeking and the browser PDF viewer's incremental loading both depend
+// on this — without it, seek bars are dead and large files lock up the browser.
+function streamWithRange(req, res, resolved, fileStat, baseHeaders) {
+  const total = fileStat.size;
+  const rangeHeader = req.headers['range'];
+  const headers = { ...baseHeaders, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' };
+
+  let start = 0;
+  let end = total - 1;
+  if (rangeHeader) {
+    const range = parseRange(rangeHeader, total);
+    if (!range) {
+      res.writeHead(416, { ...headers, 'Content-Range': `bytes */${total}`, 'Content-Length': '0' });
+      res.end();
+      return;
+    }
+    ({ start, end } = range);
+    res.writeHead(206, {
+      ...headers,
+      'Content-Range': `bytes ${start}-${end}/${total}`,
+      'Content-Length': String(end - start + 1),
+    });
+  } else {
+    res.writeHead(200, { ...headers, 'Content-Length': String(total) });
+  }
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
+  const stream = createReadStream(resolved, rangeHeader ? { start, end } : undefined);
+  stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
+  res.on('close', () => stream.destroy());
+  stream.pipe(res);
+}
+
+// PDF responses are framed by the SPA (<iframe src="/api/file?path=…pdf">), so the
+// global X-Frame-Options: DENY must be relaxed to SAMEORIGIN. The CSP header is
+// dropped because it only governs HTML documents and older Chrome builds refused
+// to load the built-in PDF viewer under a restrictive object-src.
+function pdfHeaders(res, mtime) {
+  res.removeHeader('Content-Security-Policy');
+  return { 'Content-Type': 'application/pdf', 'X-Frame-Options': 'SAMEORIGIN', 'X-File-Mtime': mtime };
+}
+
 async function serveRawFile(req, res, filePath) {
   const resolved = await safePath(filePath);
   if (!resolved) {
@@ -711,49 +764,13 @@ async function serveRawFile(req, res, filePath) {
     }
 
     if (VIDEO_EXTENSIONS.has(ext)) {
-      const total = fileStat.size;
       const mime = VIDEO_MIME[ext] || 'application/octet-stream';
-      const rangeHeader = req.headers['range'];
-      const baseHeaders = {
-        'Content-Type': mime,
-        'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-store',
-        'X-File-Mtime': mtime,
-      };
+      streamWithRange(req, res, resolved, fileStat, { 'Content-Type': mime, 'X-File-Mtime': mtime });
+      return;
+    }
 
-      if (rangeHeader) {
-        const range = parseRange(rangeHeader, total);
-        if (!range) {
-          res.writeHead(416, { ...baseHeaders, 'Content-Range': `bytes */${total}`, 'Content-Length': '0' });
-          res.end();
-          return;
-        }
-        const { start, end } = range;
-        res.writeHead(206, {
-          ...baseHeaders,
-          'Content-Range': `bytes ${start}-${end}/${total}`,
-          'Content-Length': String(end - start + 1),
-        });
-        if (req.method === 'HEAD') {
-          res.end();
-          return;
-        }
-        const stream = createReadStream(resolved, { start, end });
-        stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
-        res.on('close', () => stream.destroy());
-        stream.pipe(res);
-        return;
-      }
-
-      res.writeHead(200, { ...baseHeaders, 'Content-Length': String(total) });
-      if (req.method === 'HEAD') {
-        res.end();
-        return;
-      }
-      const stream = createReadStream(resolved);
-      stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
-      res.on('close', () => stream.destroy());
-      stream.pipe(res);
+    if (PDF_EXTENSIONS.has(ext)) {
+      streamWithRange(req, res, resolved, fileStat, pdfHeaders(res, mtime));
       return;
     }
 
@@ -1208,7 +1225,7 @@ const server = createServer(async (req, res) => {
   // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; font-src 'self' data: https: http:; img-src 'self' data: blob: https: http:; connect-src 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; font-src 'self' data: https: http:; img-src 'self' data: blob: https: http:; connect-src 'self'; frame-src 'self' blob:");
   // CORS restricted to same origin (no external access)
   const origin = req.headers.origin;
   if (origin && (origin === `http://localhost:${port}` || origin === `http://127.0.0.1:${port}`)) {
@@ -1261,7 +1278,7 @@ const server = createServer(async (req, res) => {
         isDirectory: fileStat.isDirectory(),
       };
       // For text files > 0 bytes, estimate line count from a sample
-      if (fileStat.isFile() && !IMAGE_EXTENSIONS.has(ext) && !VIDEO_EXTENSIONS.has(ext) && !OFFICE_EXTENSIONS.has(ext) && fileStat.size > 0) {
+      if (fileStat.isFile() && !isBinaryExt(ext) && fileStat.size > 0) {
         meta.lines = await estimateLineCount(resolved, fileStat.size);
       }
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1434,59 +1451,10 @@ const server = createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime });
         res.end(content);
       } else if (VIDEO_EXTENSIONS.has(ext)) {
-        // Stream videos with HTTP Range support (206 Partial Content).
-        // <video> elements depend on this for seeking — without it, seek bars
-        // are non-functional and large files lock up the browser.
-        const total = fileStat.size;
         const mime = VIDEO_MIME[ext] || 'application/octet-stream';
-        const rangeHeader = req.headers['range'];
-        const baseHeaders = {
-          'Content-Type': mime,
-          'Accept-Ranges': 'bytes',
-          'Cache-Control': 'no-store',
-          'X-File-Mtime': mtime,
-        };
-
-        if (rangeHeader) {
-          const range = parseRange(rangeHeader, total);
-          if (!range) {
-            res.writeHead(416, {
-              ...baseHeaders,
-              'Content-Range': `bytes */${total}`,
-              'Content-Length': '0',
-            });
-            res.end();
-            return;
-          }
-          const { start, end } = range;
-          const chunkLen = end - start + 1;
-          res.writeHead(206, {
-            ...baseHeaders,
-            'Content-Range': `bytes ${start}-${end}/${total}`,
-            'Content-Length': String(chunkLen),
-          });
-          if (req.method === 'HEAD') {
-            res.end();
-            return;
-          }
-          const stream = createReadStream(resolved, { start, end });
-          stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
-          res.on('close', () => stream.destroy());
-          stream.pipe(res);
-        } else {
-          res.writeHead(200, {
-            ...baseHeaders,
-            'Content-Length': String(total),
-          });
-          if (req.method === 'HEAD') {
-            res.end();
-            return;
-          }
-          const stream = createReadStream(resolved);
-          stream.on('error', () => { try { res.destroy(); } catch { /* ignore */ } });
-          res.on('close', () => stream.destroy());
-          stream.pipe(res);
-        }
+        streamWithRange(req, res, resolved, fileStat, { 'Content-Type': mime, 'X-File-Mtime': mtime });
+      } else if (PDF_EXTENSIONS.has(ext)) {
+        streamWithRange(req, res, resolved, fileStat, pdfHeaders(res, mtime));
       } else if (OFFICE_EXTENSIONS.has(ext)) {
         if (fileStat.isDirectory()) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -1553,7 +1521,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     const ext = extname(resolved).toLowerCase();
-    if (IMAGE_EXTENSIONS.has(ext) || VIDEO_EXTENSIONS.has(ext) || OFFICE_EXTENSIONS.has(ext)) {
+    if (isBinaryExt(ext)) {
       res.writeHead(415, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: `Search is not supported for binary file type: ${ext}` }));
       return;
@@ -1822,7 +1790,7 @@ const server = createServer(async (req, res) => {
         } else {
           if (shouldSkipFile(entry.name, relPath)) continue;
           const ext = extname(entry.name).toLowerCase();
-          if (isSupportedFilename(entry.name) && !IMAGE_EXTENSIONS.has(ext) && !VIDEO_EXTENSIONS.has(ext) && !OFFICE_EXTENSIONS.has(ext)) {
+          if (isSupportedFilename(entry.name) && !isBinaryExt(ext)) {
             try {
               // Full-text search reads the whole file and splits it in memory.
               // A multi-hundred-MB file (e.g. a benchmark fixture) would block

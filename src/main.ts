@@ -190,11 +190,12 @@ const CONFIG_EXT = new Set(['.toml', '.ini', '.conf', '.env', '.cfg', '.properti
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']);
 const VIDEO_EXT = new Set(['.mp4', '.m4v', '.webm', '.ogv', '.mov']);
 const OFFICE_EXT = new Set(['.xls', '.xlsx', '.ppt', '.pptx', '.numbers', '.pages', '.key']);
+const PDF_EXT = new Set(['.pdf']);
 const LOG_EXT = new Set(['.log']);
 const CRON_EXT = new Set(['.cron', '.crontab']);
 const HTML_EXT = new Set(['.html', '.htm']);
 
-type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'office' | 'html' | 'unknown';
+type FileType = 'markdown' | 'mermaid' | 'data' | 'csv' | 'jsonl' | 'config' | 'log' | 'cron' | 'image' | 'video' | 'office' | 'pdf' | 'html' | 'unknown';
 
 function getExt(path: string): string {
   return '.' + (path.split('.').pop()?.toLowerCase() || '');
@@ -221,6 +222,7 @@ function detectFileType(path: string): FileType {
   if (IMAGE_EXT.has(ext)) return 'image';
   if (VIDEO_EXT.has(ext)) return 'video';
   if (OFFICE_EXT.has(ext)) return 'office';
+  if (PDF_EXT.has(ext)) return 'pdf';
   if (HTML_EXT.has(ext)) return 'html';
   return 'unknown';
 }
@@ -1010,6 +1012,10 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       void renderOfficeUnsupported(path, target);
       break;
 
+    case 'pdf':
+      void renderPdf(path, target);
+      break;
+
     case 'config':
       renderHighlighted(content, path, target);
       if (target === viewer) toc.clear();
@@ -1123,6 +1129,44 @@ async function renderOfficeUnsupported(path: string, target: HTMLElement = viewe
       ${actions}
     </div>`;
   target.querySelector<HTMLButtonElement>('.office-preview-open-app')?.addEventListener('click', () => {
+    void openInApp(path);
+  });
+  if (target === viewer) toc.clear();
+  setPendingLineJump(pane, null);
+}
+
+// PDF: delegate rendering to the browser's built-in viewer via a same-origin
+// iframe. Server files stream from /api/file (Range-capable); remote and
+// drag-and-dropped files are shown from a blob: URL (CSP frame-src allows it).
+async function renderPdf(path: string, target: HTMLElement = viewer, options: { src?: string; localFile?: File; remote?: boolean } = {}) {
+  const pane = getPaneIdForTarget(target) ?? 'left';
+  const isServerFile = !options.remote && !options.localFile;
+  const src = options.src ?? `/api/file?path=${encodeURIComponent(path)}`;
+  const fileName = path.split('/').pop() || path;
+
+  if (target === viewer && isServerFile) {
+    try {
+      const headRes = await fetch(src, { method: 'HEAD' });
+      updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));
+    } catch { /* ignore */ }
+  }
+
+  const actions = [
+    `<a class="pdf-view__action" href="${escapeHtml(src)}" target="_blank" rel="noopener">新しいタブで開く</a>`,
+    isServerFile ? '<button class="pdf-view__action pdf-view-open-app" type="button">アプリで開く</button>' : '',
+    isServerFile ? `<a class="pdf-view__action" href="/api/raw/${encodeURIComponent(path)}" download="${escapeHtml(fileName)}">ダウンロード</a>` : '',
+  ].join('');
+
+  target.innerHTML = `
+    <div class="pdf-view">
+      <div class="pdf-view__toolbar">
+        <span class="pdf-view__name">${escapeHtml(path)}</span>
+        <div class="pdf-view__actions">${actions}</div>
+      </div>
+      <iframe class="pdf-view__frame" src="${escapeHtml(src)}" title="${escapeHtml(fileName)}"></iframe>
+      <p class="pdf-view__fallback">PDF が表示されない場合は「新しいタブで開く」または「アプリで開く」を使用してください。</p>
+    </div>`;
+  target.querySelector<HTMLButtonElement>('.pdf-view-open-app')?.addEventListener('click', () => {
     void openInApp(path);
   });
   if (target === viewer) toc.clear();
@@ -1915,6 +1959,13 @@ async function loadServerFile(path: string) {
     return;
   }
 
+  if (type === 'pdf') {
+    await renderPdf(path);
+    fileTree?.setActive(path);
+    setPaneProgress('left', 0);
+    return;
+  }
+
   // Show loading skeleton for feedback
   viewer.innerHTML = `<div class="loading-skeleton">${'<div class="skel-line"></div>'.repeat(6)}</div>`;
 
@@ -2011,6 +2062,13 @@ async function loadRemoteUrl(rawUrl: string) {
       return;
     }
 
+    if (type === 'pdf') {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      await renderPdf(displayName, viewer, { src: blobUrl, remote: true });
+      return;
+    }
+
     const content = await res.text();
     renderContent(content, displayName);
     const mtime = res.headers.get('X-File-Mtime');
@@ -2086,6 +2144,12 @@ function loadLocalFile(file: File) {
 
   if (type === 'office') {
     void renderOfficeUnsupported(file.name, viewer, { localFile: file });
+    return;
+  }
+
+  if (type === 'pdf') {
+    const blobUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
+    void renderPdf(file.name, viewer, { src: blobUrl, localFile: file });
     return;
   }
 
@@ -2611,6 +2675,12 @@ async function loadIntoSplit(path: string) {
 
   if (type === 'office') {
     await renderOfficeUnsupported(path, splitViewer);
+    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
+    return;
+  }
+
+  if (type === 'pdf') {
+    await renderPdf(path, splitViewer);
     if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
     return;
   }

@@ -50,6 +50,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **Config file highlighting** — syntax highlighting for TOML, INI, `.env`, `.conf`, and similar formats
 - **Image display** — renders PNG, JPEG, GIF, SVG, WebP, BMP, and ICO files directly in the browser
 - **Office / iWork file handling** — lists Excel, PowerPoint, Numbers, Pages, and Keynote files, opens them in the OS default app from the local server, and keeps a download fallback for normal files. Browser WebViews cannot directly preview these formats without a conversion or app runtime
+- **PDF view** — renders `.pdf` files with the browser's built-in PDF viewer (streamed with HTTP Range support), plus open-in-new-tab / open-in-app / download actions
 - **File tree with auto-reload** — sidebar listing of all files in the served directory; changes are detected and reloaded automatically via file watching. Right-click an item for a context menu (copy path / file name / absolute path, open in split view)
 - **Dark / light theme** — toggle between themes; preference is persisted
 - **Text size** — adjust document text from 50% to 200% in 10% steps; preference is persisted
@@ -67,6 +68,7 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 | Crontab   | `.cron` `.crontab` (and files named `crontab`)     |
 | Images    | `.png` `.jpg` `.jpeg` `.gif` `.svg` `.webp` `.bmp` `.ico` |
 | Office / iWork | `.xls` `.xlsx` `.ppt` `.pptx` `.numbers` `.pages` `.key` (listed, open in default app / download fallback for normal files; no direct WebView preview) |
+| PDF       | `.pdf` (browser built-in viewer in an iframe; open in new tab / default app / download) |
 
 ## Installation (optional)
 

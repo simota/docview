@@ -220,6 +220,19 @@ flowchart TD
   mkdirSync('/tmp/md-test-docs/keynote.key', { recursive: true });
   writeFileSync('/tmp/md-test-docs/keynote.key/index.apxl', 'docview-keynote-package-fixture');
 
+  // PDF fixture: minimal single-page document (no xref table — viewers rebuild it).
+  // The comment token must never surface in full-text search results.
+  writeFileSync('/tmp/md-test-docs/manual.pdf', [
+    '%PDF-1.4',
+    '% DOCVIEWPDFTOKEN',
+    '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+    '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+    '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] >> endobj',
+    'trailer << /Root 1 0 R >>',
+    '%%EOF',
+    '',
+  ].join('\n'));
+
   write('html-assets/relative.html', [
     '<!doctype html>',
     '<html lang="en">',
