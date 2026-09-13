@@ -56,6 +56,8 @@ let _selectedIndex = -1;
 let _albumTarget: HTMLElement | null = null;
 let _keyboardHandler: ((e: KeyboardEvent) => void) | null = null;
 let _observer: IntersectionObserver | null = null;
+let _albumRenderId = 0;
+let _albumAbortController: AbortController | null = null;
 
 // ---- Multi-select state ----
 // MAX_COMPARE gates only the Compare button visibility (compare view supports
@@ -158,6 +160,7 @@ let _lightboxOpen = false;
 let _lightboxKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 let _lightboxPopstateHandler: (() => void) | null = null;
 let _preloadLinks: HTMLLinkElement[] = [];
+let _lightboxAbortController: AbortController | null = null;
 
 // Zoom/pan state per Lightbox open session
 let _lbScale = 1;
@@ -452,6 +455,7 @@ async function loadLightboxVideo(item: AlbumImage, wrap: HTMLElement): Promise<v
     setStoredMuted(v.muted);
   });
   v.addEventListener('error', () => {
+    if (!v.isConnected) return;
     if (!wrap.querySelector('.lightbox__video-error')) {
       const ext = '.' + (item.path.split('.').pop()?.toLowerCase() ?? '');
       const note = ext === '.mov'
@@ -485,23 +489,43 @@ async function loadLightboxVideo(item: AlbumImage, wrap: HTMLElement): Promise<v
 }
 
 async function loadLightboxImage(item: AlbumImage, wrap: HTMLElement): Promise<void> {
+  clearLightboxMedia();
+  const ctrl = new AbortController();
+  _lightboxAbortController = ctrl;
   if (itemKind(item) === 'video') {
     await loadLightboxVideo(item, wrap);
     return;
   }
-  return loadLightboxImageInternal(item, wrap);
+  return loadLightboxImageInternal(item, wrap, ctrl.signal);
 }
 
-async function loadLightboxImageInternal(image: AlbumImage, wrap: HTMLElement): Promise<void> {
+function clearLightboxMedia(): void {
+  _lightboxAbortController?.abort();
+  _lightboxAbortController = null;
+  const video = getLightboxVideoEl();
+  if (video) {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  }
+  if (_lbMouseMoveHandler) document.removeEventListener('mousemove', _lbMouseMoveHandler);
+  if (_lbMouseUpHandler) document.removeEventListener('mouseup', _lbMouseUpHandler);
+  _lbMouseMoveHandler = null;
+  _lbMouseUpHandler = null;
+  _lbDragging = false;
+}
+
+async function loadLightboxImageInternal(image: AlbumImage, wrap: HTMLElement, signal: AbortSignal): Promise<void> {
   wrap.innerHTML = '<div class="lightbox__loading">読み込み中...</div>';
 
   const url = `/api/file?path=${encodeURIComponent(image.path)}`;
 
   if (isSvg(image.path)) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const svgText = await res.text();
+      if (signal.aborted || !wrap.isConnected) return;
       const cleanSvg = DOMPurify.sanitize(svgText, {
         USE_PROFILES: { html: true, svg: true, svgFilters: true },
         ADD_TAGS: ['use', 'foreignObject'],
@@ -516,6 +540,7 @@ async function loadLightboxImageInternal(image: AlbumImage, wrap: HTMLElement): 
       const imgEl = wrap.querySelector<HTMLElement>('.lightbox__img');
       if (imgEl) initLightboxZoom(imgEl);
     } catch {
+      if (signal.aborted || !wrap.isConnected) return;
       wrap.innerHTML = '<div class="lightbox__error">画像を読み込めませんでした</div>';
     }
     return;
@@ -565,7 +590,7 @@ async function navigateLightbox(newIndex: number): Promise<void> {
 
   // Load image
   const wrap = _lightboxEl.querySelector<HTMLElement>('#lightbox-img-wrap');
-  if (wrap) await loadLightboxImage(image, wrap);
+  if (wrap) void loadLightboxImage(image, wrap);
 
   // Update preloads
   updatePreloadLinks(_lightboxIndex, _currentImages);
@@ -573,9 +598,10 @@ async function navigateLightbox(newIndex: number): Promise<void> {
 
 // ---- Open / Close Lightbox ----
 
-function closeLightbox(): void {
+function closeLightbox(restoreFocus = true): void {
   if (!_lightboxOpen) return;
   _lightboxOpen = false;
+  clearLightboxMedia();
 
   // Re-enable body scroll
   document.body.classList.remove('lightbox-open');
@@ -615,7 +641,7 @@ function closeLightbox(): void {
   }
 
   // Restore focus to the album tile
-  if (_albumTarget && _lightboxIndex >= 0) {
+  if (restoreFocus && _albumTarget && _lightboxIndex >= 0) {
     const tiles = _albumTarget.querySelectorAll<HTMLElement>('.album-tile');
     const tile = tiles[_lightboxIndex];
     if (tile) {
@@ -837,7 +863,7 @@ async function openLightbox(index: number): Promise<void> {
 
   // Load image into wrap
   const wrap = overlay.querySelector<HTMLElement>('#lightbox-img-wrap');
-  if (wrap) await loadLightboxImage(image, wrap);
+  if (wrap) void loadLightboxImage(image, wrap);
 
   // Preload adjacent
   updatePreloadLinks(index, _currentImages);
@@ -1234,12 +1260,12 @@ function renderGrid(images: AlbumImage[]): string {
   return `<div class="album-grid" role="grid">${tiles}</div>`;
 }
 
-async function fetchAlbum(path: string, recursive: boolean): Promise<AlbumResponse> {
+async function fetchAlbum(path: string, recursive: boolean, signal: AbortSignal): Promise<AlbumResponse> {
   // Query the unified gallery endpoint (image + video). Map back to the legacy
   // AlbumResponse shape so the rest of the renderer can stay agnostic of the
   // wire format.
   const params = new URLSearchParams({ path, recursive: recursive ? '1' : '0', kind: 'all' });
-  const res = await fetch(`/api/gallery?${params.toString()}`);
+  const res = await fetch(`/api/gallery?${params.toString()}`, { signal });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
     throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
@@ -1270,13 +1296,15 @@ export async function renderAlbum(
   recursive = false,
   onCompare: CompareCallback | null = null,
 ): Promise<void> {
+  // Invalidate pending work before installing the next album's state.
+  disposeAlbum();
+  const renderId = _albumRenderId;
+  const ctrl = new AbortController();
+  _albumAbortController = ctrl;
   _albumTarget = target;
   _currentAlbumPath = path;
   _selectedIndex = -1;
   _currentImages = [];
-
-  // Dispose any previous keyboard handler and lightbox
-  disposeAlbum();
 
   // Set compare callback AFTER disposeAlbum (which clears it)
   _compareCallback = onCompare;
@@ -1304,11 +1332,14 @@ export async function renderAlbum(
 
   let data: AlbumResponse;
   try {
-    data = await fetchAlbum(path, recursive);
+    data = await fetchAlbum(path, recursive, ctrl.signal);
   } catch (err: unknown) {
+    if (ctrl.signal.aborted || renderId !== _albumRenderId || !target.contains(albumView)) return;
     target.innerHTML = `<div class="album-view"><div class="error-banner"><p>アルバムの読み込みに失敗しました: ${esc(String(err instanceof Error ? err.message : err))}</p></div></div>`;
     return;
   }
+  if (ctrl.signal.aborted || renderId !== _albumRenderId || !target.contains(albumView)) return;
+  _albumAbortController = null;
 
   _currentImages = sortImages(data.images, getSortKey(), getSortDir());
 
@@ -1766,36 +1797,11 @@ function upsertPrintControls(toolbar: HTMLElement, images: AlbumImage[], dirPath
  * Call this when navigating away from album view.
  */
 export function disposeAlbum(): void {
+  _albumRenderId++;
+  _albumAbortController?.abort();
+  _albumAbortController = null;
   // Close lightbox without using history.back() to avoid unintended navigation
-  if (_lightboxOpen) {
-    _lightboxOpen = false;
-    document.body.classList.remove('lightbox-open');
-
-    if (_lightboxKeyHandler) {
-      document.removeEventListener('keydown', _lightboxKeyHandler);
-      _lightboxKeyHandler = null;
-    }
-    if (_lightboxPopstateHandler) {
-      window.removeEventListener('popstate', _lightboxPopstateHandler);
-      _lightboxPopstateHandler = null;
-    }
-    if (_lbMouseMoveHandler) {
-      document.removeEventListener('mousemove', _lbMouseMoveHandler);
-      _lbMouseMoveHandler = null;
-    }
-    if (_lbMouseUpHandler) {
-      document.removeEventListener('mouseup', _lbMouseUpHandler);
-      _lbMouseUpHandler = null;
-    }
-    for (const link of _preloadLinks) {
-      link.remove();
-    }
-    _preloadLinks = [];
-    if (_lightboxEl) {
-      _lightboxEl.remove();
-      _lightboxEl = null;
-    }
-  }
+  closeLightbox(false);
 
   if (_keyboardHandler) {
     document.removeEventListener('keydown', _keyboardHandler);
@@ -1809,6 +1815,10 @@ export function disposeAlbum(): void {
   _multiSelected.clear();
   _lastClickedIndex = -1;
   _compareCallback = null;
+  _currentAlbumPath = null;
+  _currentImages = [];
+  _selectedIndex = -1;
+  _albumTarget = null;
 }
 
 /**
@@ -1825,7 +1835,10 @@ export async function refreshAlbum(
   const wasSelected = _selectedIndex;
   // Preserve multi-selected paths across refresh (paths that still exist will be re-applied)
   const prevMultiSelected = new Set(_multiSelected);
-  await renderAlbum(path, target, openImage, recursive, onCompare);
+  const render = renderAlbum(path, target, openImage, recursive, onCompare);
+  const renderId = _albumRenderId;
+  await render;
+  if (renderId !== _albumRenderId) return;
   // Restore multi-selection for paths that still exist in the new image list
   const newPaths = new Set(_currentImages.map((img) => img.path));
   for (const p of prevMultiSelected) {

@@ -1,15 +1,26 @@
 import Papa from 'papaparse';
-import type { SecretMasker } from './secret-mask';
+import { maskSecretValue, type SecretMasker } from './secret-mask';
+
+/** Redact source cells using their header keys as well as token patterns. */
+export function maskCsvSecrets(content: string): string {
+  const parsed = Papa.parse<string[]>(content, { dynamicTyping: false });
+  const [fields, ...rows] = parsed.data;
+  if (!fields) return content;
+  return Papa.unparse([fields, ...rows.map((row) => row.map((cell, i) => maskSecretValue(cell, fields[i])))], {
+    delimiter: parsed.meta.delimiter,
+    newline: parsed.meta.linebreak,
+  });
+}
 
 export function renderCsvTable(content: string, path: string, maskValue?: SecretMasker): string {
   const result = Papa.parse(content, {
     header: true,
     skipEmptyLines: true,
-    dynamicTyping: true,
+    dynamicTyping: false,
   });
 
   if (!result.data.length || !result.meta.fields?.length) {
-    return `<p class="error-banner">No data found in ${path}</p>`;
+    return `<p class="error-banner">No data found in ${esc(path)}</p>`;
   }
 
   const fields = result.meta.fields;
@@ -48,25 +59,27 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const NUM_RE = /^-?[\d,]+\.?\d*$/;
+const NUM_RE = /^[+-]?(?:\d+(?:,\d{3})*(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 const DATE_RE = /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/;
 
 function parseNum(s: string): number {
-  return parseFloat(s.replace(/,/g, '')) || 0;
+  return NUM_RE.test(s) ? Number(s.replace(/,/g, '')) : NaN;
 }
 
 function detectColumnType(rows: Element[], colIndex: number): 'number' | 'date' | 'string' {
   let numCount = 0;
   let dateCount = 0;
+  let nonEmptyCount = 0;
   const sample = Math.min(rows.length, 20);
   for (let i = 0; i < sample; i++) {
     const text = (rows[i].children[colIndex]?.textContent ?? '').trim();
     if (!text) continue;
+    nonEmptyCount++;
     if (NUM_RE.test(text)) numCount++;
     else if (DATE_RE.test(text) && !isNaN(Date.parse(text))) dateCount++;
   }
-  if (numCount >= sample * 0.8) return 'number';
-  if (dateCount >= sample * 0.8) return 'date';
+  if (nonEmptyCount && numCount >= nonEmptyCount * 0.8) return 'number';
+  if (nonEmptyCount && dateCount >= nonEmptyCount * 0.8) return 'date';
   return 'string';
 }
 
@@ -91,8 +104,13 @@ function compareRows(
 ): number {
   const aText = (a.children[colIndex]?.textContent ?? '').trim();
   const bText = (b.children[colIndex]?.textContent ?? '').trim();
-  if (colType === 'number') return parseNum(aText) - parseNum(bText);
-  if (colType === 'date') return Date.parse(aText) - Date.parse(bText);
+  if (colType !== 'string') {
+    const aValue = colType === 'number' ? parseNum(aText) : Date.parse(aText);
+    const bValue = colType === 'number' ? parseNum(bText) : Date.parse(bText);
+    if (Number.isFinite(aValue) && Number.isFinite(bValue)) return aValue - bValue;
+    if (Number.isFinite(aValue)) return -1;
+    if (Number.isFinite(bValue)) return 1;
+  }
   return aText.localeCompare(bText);
 }
 

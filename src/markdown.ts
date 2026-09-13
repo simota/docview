@@ -1650,6 +1650,9 @@ function buildMermaidConfig(theme: Theme) {
     look: (handDrawn ? 'handDrawn' : 'classic') as 'handDrawn' | 'classic',
     handDrawnSeed: 1,
     securityLevel: 'strict' as const,
+    // The source block already serves as the error fallback. Mermaid's
+    // default error SVG otherwise remains in a temporary div under <body>.
+    suppressErrorRendering: true,
     ...(!useLibraryDefault && { fontFamily: palette.fontFamily, themeVariables: palette.vars }),
     flowchart: { curve: handDrawn ? ('linear' as const) : ('basis' as const), padding: 16 },
     sequence: { mirrorActors: false, bottomMarginAdj: 2 },
@@ -1850,7 +1853,12 @@ function wikiLinkPlugin(mdi: MarkdownIt) {
     const target = pipeIdx >= 0 ? content.slice(0, pipeIdx).trim() : content.trim();
     const display = pipeIdx >= 0 ? content.slice(pipeIdx + 1).trim() : target;
 
-    const href = target.includes('.') ? target : target + '.md';
+    const suffixStart = target.search(/[?#]/);
+    const path = suffixStart < 0 ? target : target.slice(0, suffixStart);
+    const suffix = suffixStart < 0 ? '' : target.slice(suffixStart);
+    const isUrl = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(target);
+    const filename = path.split('/').pop() || '';
+    const href = path && !isUrl && !filename.includes('.') ? `${path}.md${suffix}` : target;
     // Reject dangerous URL schemes (javascript:, vbscript:, data:) — render as plain text
     if (/^(javascript|vbscript|data):/i.test(href.replace(/[\u0000-\u0020]/g, ''))) {
       const tokenT = state.push('text', '', 0);

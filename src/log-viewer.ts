@@ -51,7 +51,7 @@ function parseRequest(req: string): { method: string; path: string; protocol: st
 }
 
 export function detectLogFormat(content: string): LogFormat {
-  const firstLines = content.split('\n').filter((l) => l.trim()).slice(0, 10);
+  const firstLines = content.split(/\r?\n/).filter((l) => l.trim()).slice(0, 10);
   let laravelHits = 0;
   for (const line of firstLines) {
     if (COMBINED_RE.test(line)) return 'combined';
@@ -118,7 +118,7 @@ interface LaravelEntry {
 }
 
 function parseLaravel(content: string): LaravelEntry[] {
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   const entries: LaravelEntry[] = [];
   let current: LaravelEntry | null = null;
   const bodyParts: string[] = [];

@@ -5,6 +5,7 @@
 
 import Papa from 'papaparse';
 import { detectLogFormat, type LogEntry, type LogFormat } from './log-viewer';
+import { isSecretSafeModeEnabled, maskSecretValue, type SecretMasker } from './secret-mask';
 
 type FileKind = 'csv' | 'jsonl' | 'log';
 
@@ -17,6 +18,7 @@ interface ChunkMeta {
 }
 
 interface SearchMatch {
+  /** Zero-based source line (or CSV record with records=1). */
   lineNum: number;
   text: string;
 }
@@ -37,13 +39,12 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** Escape HTML then wrap matching portions in <mark> */
+/** Match the source text before escaping so matches cannot split HTML entities. */
 function escWithHighlight(s: string, query: string): string {
-  const escaped = esc(s);
-  if (!query) return escaped;
-  const escapedQuery = esc(query);
-  const re = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  return escaped.replace(re, '<mark class="chunk-highlight">$1</mark>');
+  if (!query) return esc(s);
+  const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return s.split(re).map((part, i) => i % 2
+    ? `<mark class="chunk-highlight">${esc(part)}</mark>` : esc(part)).join('');
 }
 
 function statusClass(status: string): string {
@@ -60,17 +61,18 @@ function statusClass(status: string): string {
 interface CsvChunkResult {
   fields: string[];
   rows: Record<string, unknown>[];
+  delimiter: string;
 }
 
 function parseCsvChunk(text: string, hasHeader: boolean): CsvChunkResult {
   const result = Papa.parse(text, {
     header: hasHeader,
     skipEmptyLines: true,
-    dynamicTyping: true,
+    dynamicTyping: false,
   });
   const fields = result.meta.fields ?? [];
   const rows = (result.data as Record<string, unknown>[]) ?? [];
-  return { fields, rows };
+  return { fields, rows, delimiter: result.meta.delimiter };
 }
 
 // --- JSONL chunk parsing ---
@@ -79,19 +81,23 @@ interface JsonlChunkResult {
   fields: string[];
   rows: Record<string, unknown>[];
   parseErrors: number;
+  lineIndexes: number[];
 }
 
 function parseJsonlChunk(text: string): JsonlChunkResult {
-  const lines = text.split('\n').filter((l) => l.trim() !== '');
+  const lines = text.split('\n');
   const rows: Record<string, unknown>[] = [];
+  const lineIndexes: number[] = [];
   let parseErrors = 0;
   const fieldSet = new Map<string, true>();
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
+    if (!line.trim()) continue;
     try {
       const obj = JSON.parse(line);
       if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {
         rows.push(obj as Record<string, unknown>);
+        lineIndexes.push(index);
         for (const key of Object.keys(obj)) fieldSet.set(key, true);
       } else {
         parseErrors++;
@@ -101,7 +107,7 @@ function parseJsonlChunk(text: string): JsonlChunkResult {
     }
   }
 
-  return { fields: Array.from(fieldSet.keys()), rows, parseErrors };
+  return { fields: Array.from(fieldSet.keys()), rows, parseErrors, lineIndexes };
 }
 
 // --- Log chunk parsing ---
@@ -137,45 +143,49 @@ function parseLogLine(line: string, format: LogFormat): LogEntry | null {
 
 // --- Render helpers with optional highlighting ---
 
-function renderCsvRows(fields: string[], rows: Record<string, unknown>[], rowNums: number[], query = ''): string {
-  return rows.map((row, i) => {
-    const tds = fields.map((f) => `<td>${escWithHighlight(String(row[f] ?? ''), query)}</td>`).join('');
-    const n = rowNums[i];
-    return `<tr data-row-index="${i}" data-line="${n}"><td class="csv-row-num">${n}</td>${tds}</tr>`;
-  }).join('');
-}
-
-function renderJsonlRows(fields: string[], rows: Record<string, unknown>[], rowNums: number[], query = ''): string {
+function renderCsvRows(fields: string[], rows: Record<string, unknown>[], rowNums: number[], query = '', maskValue?: SecretMasker): string {
   return rows.map((row, i) => {
     const tds = fields.map((f) => {
-      const val = row[f];
-      const cell = val === undefined || val === null ? ''
-        : typeof val === 'object' ? JSON.stringify(val)
-        : String(val);
-      return `<td>${escWithHighlight(cell, query)}</td>`;
+      const value = String(Object.hasOwn(row, f) ? row[f] ?? '' : '');
+      return `<td>${escWithHighlight(maskValue ? maskValue(value, f) : value, query)}</td>`;
     }).join('');
     const n = rowNums[i];
     return `<tr data-row-index="${i}" data-line="${n}"><td class="csv-row-num">${n}</td>${tds}</tr>`;
   }).join('');
 }
 
-function renderLogRows(entries: LogEntry[], isCombined: boolean, query = ''): string {
+function renderJsonlRows(fields: string[], rows: Record<string, unknown>[], rowNums: number[], query = '', maskValue?: SecretMasker): string {
+  return rows.map((row, i) => {
+    const tds = fields.map((f) => {
+      const val = Object.hasOwn(row, f) ? row[f] : undefined;
+      const cell = val === undefined || val === null ? ''
+        : typeof val === 'object' ? JSON.stringify(val)
+        : String(val);
+      return `<td>${escWithHighlight(maskValue ? maskValue(cell, f) : cell, query)}</td>`;
+    }).join('');
+    const n = rowNums[i];
+    return `<tr data-row-index="${i}" data-line="${n}"><td class="csv-row-num">${n}</td>${tds}</tr>`;
+  }).join('');
+}
+
+function renderLogRows(entries: LogEntry[], isCombined: boolean, query = '', maskValue?: SecretMasker): string {
   return entries.map((e, i) => {
     const sc = statusClass(e.status);
-    const h = (s: string) => escWithHighlight(s, query);
+    const mask = (s: string) => maskValue ? maskValue(s) : s;
+    const h = (s: string) => escWithHighlight(mask(s), query);
     const tds = [
       `<td>${h(e.ip)}</td>`,
       `<td>${h(e.user)}</td>`,
       `<td class="log-ts">${h(e.timestamp)}</td>`,
       `<td><span class="log-method log-method-${esc(e.method.toLowerCase())}">${h(e.method)}</span></td>`,
-      `<td class="log-path" title="${esc(e.path)}">${h(e.path)}</td>`,
+      `<td class="log-path" title="${esc(mask(e.path))}">${h(e.path)}</td>`,
       `<td><span class="log-status ${sc}">${h(e.status)}</span></td>`,
       `<td class="log-num">${h(e.size)}</td>`,
     ];
     if (isCombined) {
       tds.push(
-        `<td class="log-referer" title="${esc(e.referer)}">${h(e.referer)}</td>`,
-        `<td class="log-ua" title="${esc(e.userAgent)}">${h(e.userAgent)}</td>`,
+        `<td class="log-referer" title="${esc(mask(e.referer))}">${h(e.referer)}</td>`,
+        `<td class="log-ua" title="${esc(mask(e.userAgent))}">${h(e.userAgent)}</td>`,
       );
     }
     return `<tr data-row-index="${i}">${tds.join('')}</tr>`;
@@ -213,6 +223,8 @@ function renderSearchBar(query: string, totalMatches: number | null): string {
 // --- Main chunked table class ---
 
 interface ChunkedOptions {
+  /** Ignore responses after the owning document navigation has changed. */
+  isCurrent?: () => boolean;
   /** Target line from URL hash. Used to open the page that contains it. */
   initialLine?: number | null;
   /** Retained for signature parity with the main viewer; currently unused
@@ -226,9 +238,13 @@ export class ChunkedTable {
   private currentPage = 1;
   private totalPages: number;
   private initialLine: number | null;
+  private isCurrent: () => boolean;
+  private requestId = 0;
+  private maskValue?: SecretMasker;
 
   // Cached header for CSV (first row parsed from first chunk)
   private csvFields: string[] | null = null;
+  private csvDelimiter = ',';
   // Cached log format
   private logFormat: LogFormat = 'unknown';
 
@@ -241,6 +257,8 @@ export class ChunkedTable {
     this.container = container;
     this.meta = meta;
     this.initialLine = options.initialLine ?? null;
+    this.isCurrent = options.isCurrent ?? (() => true);
+    this.maskValue = isSecretSafeModeEnabled() ? maskSecretValue : undefined;
     const dataLines = meta.kind === 'csv' ? Math.max(0, meta.totalLines - 1) : meta.totalLines;
     this.totalPages = Math.max(1, Math.ceil(dataLines / PAGE_SIZE));
   }
@@ -248,12 +266,15 @@ export class ChunkedTable {
   async init(): Promise<void> {
     if (this.meta.kind === 'csv') {
       const headerText = await this.fetchLines(0, 1);
+      if (!this.isCurrent()) return;
       const parsed = parseCsvChunk(headerText, true);
       this.csvFields = parsed.fields.length > 0 ? parsed.fields : null;
+      this.csvDelimiter = parsed.delimiter;
     }
 
     if (this.meta.kind === 'log') {
       const sampleText = await this.fetchLines(0, 5);
+      if (!this.isCurrent()) return;
       this.logFormat = detectLogFormat(sampleText);
       // Chunked rendering only supports the line-oriented Apache/nginx formats.
       // Laravel entries can span multiple lines (stack traces, var_dump output),
@@ -271,7 +292,7 @@ export class ChunkedTable {
     if (this.meta.kind === 'jsonl' && this.initialLine != null) {
       this.pendingHighlightRow = this.initialLine;
     }
-    await this.loadPage(this.computeInitialPage());
+    await this.loadPage(this.computeInitialPage(), true);
   }
 
   /** Page that contains `initialLine`. Falls back to 1 when unset. */
@@ -281,7 +302,9 @@ export class ChunkedTable {
     // CSV line 1 is the header; data rows span lines 2..N, so the data index
     // is (line - 1) and paging counts from there.
     const dataIdx = this.meta.kind === 'csv' ? Math.max(1, n - 1) : n;
-    return Math.max(1, Math.min(this.totalPages, Math.ceil(dataIdx / PAGE_SIZE)));
+    // Metadata is sampled for large files. The first range response supplies
+    // the exact count, so do not clamp a deep link against an estimate.
+    return Math.max(1, Math.ceil(dataIdx / PAGE_SIZE));
   }
 
   isLogUnknown(): boolean {
@@ -291,14 +314,16 @@ export class ChunkedTable {
     return this.meta.kind === 'log' && (this.logFormat === 'unknown' || this.logFormat === 'laravel');
   }
 
-  private async fetchLines(offset: number, limit: number): Promise<string> {
-    const url = `/api/file?path=${encodeURIComponent(this.meta.path)}&offset=${offset}&limit=${limit}`;
+  private async fetchLines(offset: number, limit: number, requestId = this.requestId): Promise<string> {
+    const records = this.meta.kind === 'csv' ? '&records=1' : '';
+    const url = `/api/file?path=${encodeURIComponent(this.meta.path)}&offset=${offset}&limit=${limit}${records}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+    if (requestId !== this.requestId || !this.isCurrent()) return '';
     const totalHeader = res.headers.get('X-Total-Lines');
     if (totalHeader) {
       const total = parseInt(totalHeader, 10);
-      if (!isNaN(total) && total > 0) {
+      if (!isNaN(total) && total >= 0) {
         const dataLines = this.meta.kind === 'csv' ? Math.max(0, total - 1) : total;
         if (!this.searchQuery) {
           this.totalPages = Math.max(1, Math.ceil(dataLines / PAGE_SIZE));
@@ -310,28 +335,42 @@ export class ChunkedTable {
   }
 
   private async fetchSearchResults(query: string, offset: number, limit: number): Promise<SearchResult> {
-    const url = `/api/file/search?path=${encodeURIComponent(this.meta.path)}&q=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}`;
+    const records = this.meta.kind === 'csv' ? '&records=1' : '';
+    const url = `/api/file/search?path=${encodeURIComponent(this.meta.path)}&q=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}${records}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Search failed: ${res.status}`);
     return res.json();
   }
 
-  private async loadPage(page: number): Promise<void> {
+  private async loadPage(page: number, initial = false): Promise<void> {
+    if (!this.isCurrent()) return;
     if (this.searchQuery) {
       await this.loadSearchPage(page);
       return;
     }
 
-    this.currentPage = Math.max(1, Math.min(page, this.totalPages));
+    const requestId = ++this.requestId;
+    this.currentPage = Math.max(1, initial ? page : Math.min(page, this.totalPages));
     const dataOffset = (this.currentPage - 1) * PAGE_SIZE;
     const lineOffset = this.meta.kind === 'csv' ? dataOffset + 1 : dataOffset;
 
     this.showLoading();
-    const text = await this.fetchLines(lineOffset, PAGE_SIZE);
-    this.renderTable(text);
+    try {
+      const text = await this.fetchLines(lineOffset, PAGE_SIZE);
+      if (requestId !== this.requestId || !this.isCurrent()) return;
+      if (this.currentPage > this.totalPages) {
+        await this.loadPage(this.totalPages);
+        return;
+      }
+      this.renderTable(text);
+    } catch (error) {
+      this.showError(error, requestId);
+    }
   }
 
   private async loadSearchPage(page: number): Promise<void> {
+    if (!this.isCurrent()) return;
+    const requestId = ++this.requestId;
     const searchPages = Math.max(1, Math.ceil(this.searchTotalMatches / PAGE_SIZE));
     this.currentPage = Math.max(1, Math.min(page, searchPages));
     this.totalPages = searchPages;
@@ -339,11 +378,34 @@ export class ChunkedTable {
     const offset = (this.currentPage - 1) * PAGE_SIZE;
     this.showLoading();
 
-    const result = await this.fetchSearchResults(this.searchQuery, offset, PAGE_SIZE);
-    this.searchTotalMatches = result.totalMatches;
-    this.totalPages = Math.max(1, Math.ceil(result.totalMatches / PAGE_SIZE));
+    try {
+      const result = await this.fetchSearchResults(this.searchQuery, offset, PAGE_SIZE);
+      if (requestId !== this.requestId || !this.isCurrent()) return;
+      this.searchTotalMatches = result.totalMatches;
+      this.totalPages = Math.max(1, Math.ceil(result.totalMatches / PAGE_SIZE));
+      if (this.currentPage > this.totalPages) {
+        await this.loadSearchPage(this.totalPages);
+        return;
+      }
+      this.renderSearchResults(result);
+    } catch (error) {
+      this.showError(error, requestId);
+    }
+  }
 
-    this.renderSearchResults(result);
+  private showError(error: unknown, requestId: number): void {
+    if (requestId !== this.requestId || !this.isCurrent()) return;
+    const message = esc(error instanceof Error ? error.message : 'Unable to load data');
+    const tbody = this.container.querySelector('.chunk-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="99" class="error-banner">${message}</td></tr>`;
+    else this.container.innerHTML = `<p class="error-banner">${message}</p>`;
+    this.container.querySelectorAll<HTMLInputElement>('.chunk-page-input').forEach((input) => {
+      input.value = String(this.currentPage);
+    });
+    this.container.querySelectorAll<HTMLButtonElement>('.chunk-page-btn').forEach((button) => {
+      const before = button.dataset.page === 'first' || button.dataset.page === 'prev';
+      button.disabled = before ? this.currentPage <= 1 : this.currentPage >= this.totalPages;
+    });
   }
 
   private showLoading(): void {
@@ -354,6 +416,8 @@ export class ChunkedTable {
   }
 
   private async executeSearch(query: string): Promise<void> {
+    if (!this.isCurrent()) return;
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchQuery = query;
     if (!query) {
       // Clear search — restore normal view
@@ -364,14 +428,7 @@ export class ChunkedTable {
       return;
     }
 
-    // Fetch first page of search results
-    this.showLoading();
-    const result = await this.fetchSearchResults(query, 0, PAGE_SIZE);
-    this.searchTotalMatches = result.totalMatches;
-    this.totalPages = Math.max(1, Math.ceil(result.totalMatches / PAGE_SIZE));
-    this.currentPage = 1;
-
-    this.renderSearchResults(result);
+    await this.loadSearchPage(1);
   }
 
   private renderSearchResults(result: SearchResult): void {
@@ -380,19 +437,15 @@ export class ChunkedTable {
     let theadHtml: string;
     let tbodyHtml: string;
 
-    // Sequential numbering within the result set (match ordinal across pages).
-    const matchOffset = (this.currentPage - 1) * PAGE_SIZE;
-    const matchNumbering = (rows: unknown[]): number[] => rows.map((_, i) => matchOffset + i + 1);
-
     if (kind === 'csv') {
       const fields = this.csvFields ?? [];
       if (fields.length && result.matches.length) {
         // Re-parse each matched line with the known header
-        const headerLine = result.headerLine || fields.join(',');
+        const headerLine = result.headerLine || fields.map((f) => `"${f.replace(/"/g, '""')}"`).join(this.csvDelimiter);
         const chunkText = headerLine + '\n' + result.matches.map((m) => m.text).join('\n');
         const parsed = parseCsvChunk(chunkText, true);
         theadHtml = this.buildThead(fields, true);
-        tbodyHtml = renderCsvRows(fields, parsed.rows, matchNumbering(parsed.rows), query);
+        tbodyHtml = renderCsvRows(fields, parsed.rows, result.matches.map((m) => m.lineNum), query, this.maskValue);
       } else {
         theadHtml = this.buildThead(fields, true);
         tbodyHtml = '';
@@ -401,7 +454,7 @@ export class ChunkedTable {
       const chunkText = result.matches.map((m) => m.text).join('\n');
       const parsed = parseJsonlChunk(chunkText);
       theadHtml = this.buildThead(parsed.fields, true);
-      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, matchNumbering(parsed.rows), query);
+      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, parsed.lineIndexes.map((i) => result.matches[i].lineNum + 1), query, this.maskValue);
     } else {
       // log
       const isCombined = this.logFormat === 'combined';
@@ -414,7 +467,7 @@ export class ChunkedTable {
         const entry = parseLogLine(m.text, this.logFormat);
         if (entry) entries.push(entry);
       }
-      tbodyHtml = renderLogRows(entries, isCombined, query);
+      tbodyHtml = renderLogRows(entries, isCombined, query, this.maskValue);
     }
 
     const startMatch = (this.currentPage - 1) * PAGE_SIZE + 1;
@@ -468,22 +521,21 @@ export class ChunkedTable {
         const parsed = parseCsvChunk(chunkText, true);
         this.csvFields = parsed.fields;
         theadHtml = this.buildThead(parsed.fields, true);
-        tbodyHtml = renderCsvRows(parsed.fields, parsed.rows, numbering(parsed.rows));
+        tbodyHtml = renderCsvRows(parsed.fields, parsed.rows, numbering(parsed.rows), '', this.maskValue);
       } else {
         // 合成ヘッダ行はクォート必須: フィールド名に区切り文字や引用符が
         // 含まれると Papa.parse が列をずらして解釈してしまう
-        const delim = this.meta.path.toLowerCase().endsWith('.tsv') ? '\t' : ',';
-        const headerLine = fields.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(delim);
+        const headerLine = fields.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(this.csvDelimiter);
         const parsed = parseCsvChunk(headerLine + '\n' + chunkText, true);
         theadHtml = this.buildThead(fields, true);
-        tbodyHtml = renderCsvRows(fields, parsed.rows, numbering(parsed.rows));
+        tbodyHtml = renderCsvRows(fields, parsed.rows, numbering(parsed.rows), '', this.maskValue);
       }
       const ext = this.meta.path.split('.').pop()?.toUpperCase() || 'CSV';
-      infoHtml = `${(this.meta.totalLines - 1).toLocaleString()} rows &mdash; ${ext} (chunked)`;
+      infoHtml = `${Math.max(0, this.meta.totalLines - 1).toLocaleString()} rows &mdash; ${ext} (chunked)`;
     } else if (kind === 'jsonl') {
       const parsed = parseJsonlChunk(chunkText);
       theadHtml = this.buildThead(parsed.fields, true);
-      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, numbering(parsed.rows));
+      tbodyHtml = renderJsonlRows(parsed.fields, parsed.rows, parsed.lineIndexes.map((i) => pageStartRow + i), '', this.maskValue);
       infoHtml = `${this.meta.totalLines.toLocaleString()} lines &mdash; JSONL (chunked)`;
     } else {
       const isCombined = this.logFormat === 'combined';
@@ -497,12 +549,13 @@ export class ChunkedTable {
         const entry = parseLogLine(line, this.logFormat);
         if (entry) entries.push(entry);
       }
-      tbodyHtml = renderLogRows(entries, isCombined);
+      tbodyHtml = renderLogRows(entries, isCombined, '', this.maskValue);
       infoHtml = `${this.meta.totalLines.toLocaleString()} lines &bull; Format: ${esc(this.logFormat)} (chunked)`;
     }
 
-    const startRow = (this.currentPage - 1) * PAGE_SIZE + 1;
-    const endRow = Math.min(this.currentPage * PAGE_SIZE, kind === 'csv' ? this.meta.totalLines - 1 : this.meta.totalLines);
+    const totalRows = Math.max(0, kind === 'csv' ? this.meta.totalLines - 1 : this.meta.totalLines);
+    const startRow = totalRows ? (this.currentPage - 1) * PAGE_SIZE + 1 : 0;
+    const endRow = Math.min(this.currentPage * PAGE_SIZE, totalRows);
     const rangeInfo = `Rows ${startRow.toLocaleString()}&ndash;${endRow.toLocaleString()}`;
 
     const sizeLabel = this.meta.fileSize >= 1024 * 1024
@@ -621,11 +674,12 @@ export class ChunkedTable {
     if (searchInput) {
       searchInput.addEventListener('input', () => {
         if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+        // Invalidate a pending response as soon as the query changes, before
+        // debounce elapses; otherwise it can replace the input being edited.
+        this.requestId++;
         this.searchDebounceTimer = setTimeout(() => {
           const val = searchInput.value.trim();
-          if (val.length >= 2 || val.length === 0) {
-            this.executeSearch(val);
-          }
+          void this.executeSearch(val);
         }, SEARCH_DEBOUNCE_MS);
       });
       searchInput.addEventListener('keydown', (e) => {

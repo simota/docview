@@ -142,7 +142,7 @@ docview ./docs --no-open
 
 ## Custom CSS
 
-Place a `.docview.css` file in the directory you are viewing (or any parent directory). DocView will automatically load it and apply your styles on top of the default theme.
+Place a `.docview.css` file in the directory you are viewing. DocView will automatically load it and apply your styles on top of the default theme. Symlinks must resolve inside the served directory.
 
 Set `--font-size-base` to customize the document size used at the 100% Text size setting.
 
@@ -178,6 +178,16 @@ fixtures/**        # everything under fixtures/
 
 `.gitignore` is intentionally **not** honored automatically, because files like
 `.env` are commonly git-ignored yet you usually want to view them here.
+
+## Development and verification
+
+Use `npm ci` to reproduce the dependencies in `npm-shrinkwrap.json`. Installation
+also builds the frontend. Run `npm run test:unit`, `npm run check:contrast`, and,
+after `npx playwright install chromium`, `npm run test:e2e` to verify changes.
+
+The C2PA native module is optional. If it cannot be installed, normal document
+viewing and byte-based provenance detection remain available; cryptographic
+C2PA verification is unavailable in that environment.
 
 ## Tech Stack
 

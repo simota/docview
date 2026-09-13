@@ -73,15 +73,24 @@ const child = fork(serverPath, filteredArgs, { stdio: ['inherit', 'pipe', 'inher
 
 child.stdout.on('data', (data) => {
   process.stdout.write(data);
-  const match = data.toString().match(/localhost:(\d+)/);
-  if (match && !noOpen) {
-    const actualPort = match[1];
-    const url = `http://localhost:${actualPort}/`;
-    const platform = process.platform;
-    const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
-    execFile(cmd, [url], () => {});
-  }
 });
+
+// The server already reports readiness over IPC. Parsing stdout can match a
+// document directory containing "localhost:1234", or miss a split log chunk.
+let opened = false;
+child.on('message', (message) => {
+  if (message?.type !== 'listening' || noOpen || opened) return;
+  opened = true;
+  const url = message.url || `http://localhost:${message.port}/`;
+  const platform = process.platform;
+  // `start` is a cmd.exe builtin, not an executable accepted by execFile.
+  const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'explorer.exe' : 'xdg-open';
+  execFile(cmd, [url], () => {});
+});
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => child.kill(signal));
+}
 
 child.on('error', (err) => {
   process.stderr.write(`Failed to start DocView server: ${err.message}\n`);

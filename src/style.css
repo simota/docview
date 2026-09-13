@@ -799,7 +799,7 @@
   --text-muted: #5f7273;
   --border: #d9d2b8;
   --border-subtle: #ebe3c8;
-  --border-strong: #93a1a1;
+  --border-strong: #829191;
   --accent: #268bd2;
   --accent-light: #4ba3df;
   --accent-lighter: #79bbe8;
@@ -9412,7 +9412,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --text-muted: #6f6f6b;
   --border: #d8d8d3;
   --border-subtle: #e6e6e2;
-  --border-strong: #a8a8a3;
+  --border-strong: #8b8b86;
   --accent: #3a3a37;
   --accent-light: #5a5a56;
   --accent-lighter: #9a9a95;
@@ -9638,7 +9638,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --text-muted: #9a9784;
   --border: #52655a;
   --border-subtle: #3f5247;
-  --border-strong: #7d9384;
+  --border-strong: #859b8c;
   --accent: #c9a24b;
   --accent-light: #dab96f;
   --accent-lighter: #ecd9a6;
@@ -9977,7 +9977,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --text-muted: #7d7d7d;
   --border: #d6d6d2;
   --border-subtle: #e8e8e4;
-  --border-strong: #9a9a96;
+  --border-strong: #91918d;
   --accent: #7d7d7d;
   --accent-light: #9a9a9a;
   --accent-lighter: #bcbcbc;
@@ -10100,7 +10100,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --text-muted: #6f6c64;
   --border: #cdc9bf;
   --border-subtle: #e0dcd3;
-  --border-strong: #979388;
+  --border-strong: #898579;
   --accent: #4a4640;
   --accent-light: #6a665e;
   --accent-lighter: #9a958a;
@@ -10684,10 +10684,10 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --bg-editor: #f7fafc;
   --text-primary: #334155;
   --text-secondary: #65717b;
-  --text-muted: #8f9faa;
+  --text-muted: #7d8d98;
   --border: #d6e3ed;
   --border-subtle: #e7eef4;
-  --border-strong: #8f9faa;
+  --border-strong: #7d8d98;
   --accent: #3ea8ff;
   --accent-light: #63bcff;
   --accent-lighter: #a8d9ff;
@@ -10708,7 +10708,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --table-stripe: #f8fafc;
   --table-border: #d6e3ed;
   --table-header-bg: linear-gradient(180deg, #edf2f7, #e3ecf3);
-  --link-color: #0f83fd;
+  --link-color: #0a6fd6;
   --link-hover: #0a6fd6;
   --hr-gradient: linear-gradient(90deg, transparent, var(--border), var(--accent-lighter), var(--border), transparent);
   --mark-bg: #fff3b8;
@@ -10809,7 +10809,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --text-muted: #8a8274;
   --border: #d9cfba;
   --border-subtle: #e5dcc9;
-  --border-strong: #a89f8c;
+  --border-strong: #8f8674;
   --accent: #8c3a32;
   --accent-light: #a85248;
   --accent-lighter: #cf9b94;
@@ -10843,7 +10843,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --color-info-bg: rgba(74, 90, 112, 0.06);
   --color-success: #5f7a4f;
   --color-success-bg: rgba(95, 122, 79, 0.06);
-  --color-warning: #b98b3e;
+  --color-warning: #a87b32;
   --color-warning-bg: rgba(185, 139, 62, 0.06);
   --color-danger: #8c3a32;
   --color-danger-bg: rgba(140, 58, 50, 0.06);

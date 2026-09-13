@@ -13,7 +13,7 @@ interface ImageMetaDimensions {
   width: number;
   height: number;
   aspectRatio: string;
-  megapixels: number | null;
+  megapixels: number | 'N/A' | null;
 }
 
 interface ImageMetaExif {
@@ -107,7 +107,8 @@ function buildBasicSection(meta: ImageMeta): string {
   if (d) {
     dims = `${d.width} × ${d.height} px`;
     aspect = sanitize(d.aspectRatio);
-    mp = d.megapixels != null ? `${d.megapixels.toFixed(2)} MP` : 'N/A';
+    mp = typeof d.megapixels === 'number' && Number.isFinite(d.megapixels)
+      ? `${d.megapixels.toFixed(2)} MP` : 'N/A';
   }
   const content = `<table class="imp-table">
     ${row('ファイルサイズ', b.sizeHuman)}
@@ -292,12 +293,16 @@ export class ImageMetaPanel {
     }
 
     // Copy buttons (FR-12) — delegate
-    panel.addEventListener('click', (e) => {
+    panel.addEventListener('click', async (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.imp-copy');
       if (!btn) return;
       const value = btn.dataset.value ?? '';
-      navigator.clipboard.writeText(value).catch(() => { /* ignore */ });
-      btn.textContent = '✓';
+      try {
+        await navigator.clipboard.writeText(value);
+        btn.textContent = '✓';
+      } catch {
+        btn.textContent = '✗';
+      }
       setTimeout(() => { btn.textContent = '⎘'; }, 1500);
     });
   }
@@ -342,6 +347,8 @@ export class ImageMetaPanel {
     // Unwrap imp-wrapper → restore children to original parent
     const wrapper = this.container.querySelector<HTMLElement>('.imp-wrapper');
     if (wrapper && wrapper.parentElement) {
+      wrapper.querySelector('.imp-toggle-btn')?.remove();
+      wrapper.querySelector('.imp-panel')?.remove();
       const parent = wrapper.parentElement;
       while (wrapper.firstChild) {
         parent.insertBefore(wrapper.firstChild, wrapper);

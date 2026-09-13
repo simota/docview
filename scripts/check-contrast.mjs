@@ -18,8 +18,13 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CSS_PATH = join(__dirname, '..', 'src', 'style.css');
 
-function hexToRgb(hex) {
-  let h = hex.replace('#', '');
+function colorToRgb(color, background = [255, 255, 255]) {
+  const rgba = color.match(/^rgba?\(([^)]+)\)$/);
+  if (rgba) {
+    const [r, g, b, alpha = 1] = rgba[1].split(',').map(Number);
+    return [r, g, b].map((channel, i) => channel * alpha + background[i] * (1 - alpha));
+  }
+  let h = color.replace('#', '');
   if (h.length === 3) h = h.split('').map((c) => c + c).join('');
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
@@ -33,8 +38,9 @@ function relativeLuminance([r, g, b]) {
 }
 
 function contrast(fg, bg) {
-  const lf = relativeLuminance(hexToRgb(fg));
-  const lb = relativeLuminance(hexToRgb(bg));
+  const background = colorToRgb(bg);
+  const lf = relativeLuminance(colorToRgb(fg, background));
+  const lb = relativeLuminance(background);
   const [hi, lo] = lf > lb ? [lf, lb] : [lb, lf];
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -48,7 +54,7 @@ function parseThemes(css) {
     const name = m[1];
     const body = m[2];
     themes[name] = themes[name] || {};
-    const varRe = /--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})\s*;/g;
+    const varRe = /--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6}|rgba?\([^;)]+\))\s*;/g;
     let v;
     while ((v = varRe.exec(body)) !== null) {
       themes[name][v[1]] = v[2];
@@ -60,7 +66,7 @@ function parseThemes(css) {
     const name = m[1];
     const body = m[2];
     themes[name] = themes[name] || {};
-    const varRe = /--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})\s*;/g;
+    const varRe = /--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6}|rgba?\([^;)]+\))\s*;/g;
     let v;
     while ((v = varRe.exec(body)) !== null) {
       themes[name][v[1]] = v[2];

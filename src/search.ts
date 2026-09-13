@@ -110,7 +110,8 @@ export class SearchModal {
     });
 
     this.input.addEventListener('input', () => {
-      if (this.debounceTimer) clearTimeout(this.debounceTimer);
+      this.invalidateSearch();
+      this.results.innerHTML = '';
       this.debounceTimer = setTimeout(() => this.search(), this.mode === 'fulltext' ? 300 : 50);
     });
 
@@ -139,6 +140,8 @@ export class SearchModal {
   }
 
   private switchMode(mode: 'files' | 'fulltext') {
+    this.invalidateSearch();
+    this.results.innerHTML = '';
     this.mode = mode;
     this.input.placeholder = mode === 'fulltext'
       ? 'Search content across all files...'
@@ -162,6 +165,7 @@ export class SearchModal {
   }
 
   close() {
+    this.invalidateSearch();
     this.overlay.style.display = 'none';
     this.input.value = '';
     this.results.innerHTML = '';
@@ -171,12 +175,21 @@ export class SearchModal {
     return this.overlay.style.display !== 'none';
   }
 
+  private invalidateSearch() {
+    ++this.searchSeq;
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = null;
+  }
+
   private async loadFileList() {
     try {
       const res = await fetch('/api/tree');
       if (!res.ok) return;
       const data = await res.json();
       this.fileList = this.flattenTree(data.tree);
+      if (this.isOpen && this.mode === 'files' && this.input.value.trim()) {
+        this.searchFiles(this.input.value.trim());
+      }
     } catch { /* ignore */ }
   }
 
@@ -192,6 +205,7 @@ export class SearchModal {
   }
 
   private async search() {
+    this.invalidateSearch();
     const query = this.input.value.trim();
     if (!query) {
       this.results.innerHTML = '';

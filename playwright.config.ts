@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   testDir: './tests',
+  testMatch: '**/*.spec.ts',
   timeout: 30000,
   globalSetup: './tests/setup.ts',
   use: {

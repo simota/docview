@@ -54,6 +54,10 @@ function parseHashFragment(hash: string): LocatorResult {
       }
     }
   }
+  if (line !== null && (!Number.isSafeInteger(line) || line < 1 || (lineEnd !== null && (!Number.isSafeInteger(lineEnd) || lineEnd < 1)))) {
+    line = null;
+    lineEnd = null;
+  }
   return { kind: 'local', path: normalizePath(path), line, lineEnd };
 }
 

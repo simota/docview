@@ -1,4 +1,4 @@
-import type { SecretMasker } from './secret-mask';
+import { isLikelySecretKey, REDACTED, type SecretMasker } from './secret-mask';
 
 export function renderJsonTree(json: string, maskValue?: SecretMasker): string {
   try {
@@ -10,7 +10,11 @@ export function renderJsonTree(json: string, maskValue?: SecretMasker): string {
 }
 
 function renderNode(value: unknown, key: string, isRoot = false, maskValue?: SecretMasker): string {
-  const keyHtml = key && !isRoot ? `<span class="jt-key">${escapeHtml(key)}</span><span class="jt-colon">: </span>` : '';
+  const keyHtml = !isRoot ? `<span class="jt-key">${escapeHtml(key)}</span><span class="jt-colon">: </span>` : '';
+
+  if (maskValue && isLikelySecretKey(key)) {
+    return `<div class="jt-line">${keyHtml}<span class="jt-str">${REDACTED}</span></div>`;
+  }
 
   if (value === null) return `<div class="jt-line">${keyHtml}<span class="jt-null">null</span></div>`;
   if (typeof value === 'boolean') return `<div class="jt-line">${keyHtml}<span class="jt-bool">${value}</span></div>`;
