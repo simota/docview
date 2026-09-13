@@ -111,8 +111,7 @@ test.describe('Line jump (URL hash &line=)', () => {
     const tsCells = page.locator('.laravel-table tbody tr.laravel-row .log-ts');
 
     // Initial natural order (file order, ascending by time).
-    const initial = await tsCells.allTextContents();
-    expect(initial).toEqual([
+    await expect(tsCells).toHaveText([
       '2026-05-21 11:36:17',
       '2026-05-21 11:36:22',
       '2026-05-21 11:36:30',
@@ -127,8 +126,7 @@ test.describe('Line jump (URL hash &line=)', () => {
     // Click → descending: rows must reverse.
     await timeHeader.click();
     await expect(timeHeader).toHaveAttribute('aria-sort', 'descending');
-    const desc = await tsCells.allTextContents();
-    expect(desc).toEqual([
+    await expect(tsCells).toHaveText([
       '2026-05-21 11:36:45',
       '2026-05-21 11:36:30',
       '2026-05-21 11:36:22',

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('JSONL table row numbers + jump (non-chunked)', () => {
-  test('renders a row-number column counting only valid rows', async ({ page }) => {
+  test('renders valid rows with their original source line numbers', async ({ page }) => {
     await page.goto('/#file=events-small.jsonl');
     await page.waitForSelector('.csv-table tbody tr');
 
@@ -11,12 +11,16 @@ test.describe('JSONL table row numbers + jump (non-chunked)', () => {
     // 10 valid rows (the invalid line is skipped).
     await expect(page.locator('.csv-table tbody tr')).toHaveCount(10);
 
-    // Row-number cells run 1..10 in order.
-    await expect(page.locator('.csv-table tbody tr').first().locator('.csv-row-num')).toHaveText('1');
-    await expect(page.locator('.csv-table tbody tr').last().locator('.csv-row-num')).toHaveText('10');
+    // The invalid source line 6 is skipped without renumbering lines 7..11.
+    await expect(page.locator('.csv-table tbody tr .csv-row-num')).toHaveText([
+      '1', '2', '3', '4', '5', '7', '8', '9', '10', '11',
+    ]);
+    await expect(page.locator('.csv-row-jump-input')).toHaveAttribute('max', '11');
+    await expect(page.locator('.csv-table tr[data-line="6"]')).toHaveCount(0);
+    await expect(page.locator('.csv-table tr[data-line="7"] td').nth(1)).toHaveText('6');
 
     // Skipped-line banner is shown.
-    await expect(page.locator('.csv-info--warn')).toContainText('Skipped 1 invalid line');
+    await expect(page.locator('.csv-info--warn')).toContainText('Skipped 1 invalid line(s): 6');
   });
 
   test('toolbar "行へ移動" input jumps to and highlights the row', async ({ page }) => {
@@ -54,13 +58,18 @@ test.describe('JSONL table row numbers + jump (non-chunked)', () => {
     await page.locator('.csv-row-jump-input').fill('999');
     await page.locator('.csv-row-jump-btn').click();
 
-    await expect(page.locator('.csv-table tr[data-line="10"]')).toHaveClass(/line-highlighted/);
+    const lastRow = page.locator('.csv-table tbody tr').last();
+    await expect(lastRow).toHaveAttribute('data-line', '11');
+    await expect(lastRow).toHaveClass(/line-highlighted/);
+    await expect(lastRow.locator('td').nth(1)).toHaveText('10');
   });
 
   test('deep link with &line=N highlights the matching JSONL row', async ({ page }) => {
     await page.goto('/#file=events-small.jsonl&line=7');
     await page.waitForSelector('.csv-table tr[data-line="7"]');
     await expect(page.locator('.csv-table tr[data-line="7"]')).toHaveClass(/line-highlighted/);
+    // Source line 7 contains event 6 because line 6 is invalid.
+    await expect(page.locator('.csv-table tr[data-line="7"] td').nth(2)).toHaveText('event-6');
   });
 });
 

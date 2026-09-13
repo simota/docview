@@ -185,6 +185,12 @@ Use `npm ci` to reproduce the dependencies in `npm-shrinkwrap.json`. Installatio
 also builds the frontend. Run `npm run test:unit`, `npm run check:contrast`, and,
 after `npx playwright install chromium`, `npm run test:e2e` to verify changes.
 
+To run the CLI using this checkout's fixed dependency tree, use
+`node bin/mdv.mjs /path/to/documents` after `npm ci`. In the npm 11.9 environment
+used for the audit, installing DocView as a dependency from GitHub or a tarball
+re-resolved upstream-pinned dependencies instead of using the bundled shrinkwrap;
+see [the audit record](docs/audit-2026-09-13.md) for the remaining dependency issue.
+
 The C2PA native module is optional. If it cannot be installed, normal document
 viewing and byte-based provenance detection remain available; cryptographic
 C2PA verification is unavailable in that environment.
