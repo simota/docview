@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { resolveLocator } from '../src/locator';
+import { TableOfContents } from '../src/toc';
 
 function deferred() {
   let resolve!: () => void;
@@ -282,11 +283,20 @@ test('a remote response cannot replace a subsequently selected local file', asyn
   await expect(page.locator('#viewer h1')).toContainText('Hello DocView');
 });
 
-test('TOC preserves heading IDs containing literal HTML entities', async ({ page }) => {
-  await page.route(fileRoute('entity-heading.md'), (route) => route.fulfill({ body: '<h2 id="literal&amp;copy;">Heading with entity</h2>' }));
-  await ready(page, 'entity-heading.md');
-  await expect(page.locator('#viewer h2')).toHaveAttribute('id', 'literal&copy;');
-  await expect(page.locator('.toc-link', { hasText: 'Heading with entity' })).toHaveAttribute('data-target', 'literal&copy;');
+test('TOC serializes literal entities in existing heading IDs safely', () => {
+  // Raw HTML is intentionally disabled in Markdown and its default slugifier
+  // removes ampersands. Exercise the TOC component's DOM input directly.
+  const heading = { tagName: 'H2', id: 'literal&copy;', textContent: 'Heading with entity' };
+  const viewer = { querySelectorAll: () => [heading] };
+  const container = {
+    innerHTML: '',
+    style: { display: '' },
+    querySelectorAll: () => [],
+  };
+  const toc = new TableOfContents(container as unknown as HTMLElement, viewer as unknown as HTMLElement);
+  toc.update();
+  expect(container.innerHTML).toContain('href="#literal&amp;copy;" data-target="literal&amp;copy;"');
+  expect(container.innerHTML).toContain('Heading with entity</a>');
 });
 
 test('renders video files in the right pane with a media player', async ({ page }) => {
