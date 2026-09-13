@@ -9,6 +9,8 @@ import { Readable } from 'node:stream';
 import { isIP } from 'node:net';
 import chokidar from 'chokidar';
 import jschardet from 'jschardet';
+import Papa from 'papaparse';
+import { createRegexSearch } from './lib/server-regex.mjs';
 import {
   parseDimensions, buildDimensions, parsePngTextChunksFromFile,
   extractExif, extractPngColorInfo, detectAiProvenance,
@@ -257,7 +259,7 @@ for (let i = 0; i < args.length; i++) {
       ));
     }
     const parsedSize = Number(raw);
-    if (parsedSize < 1) {
+    if (!Number.isSafeInteger(parsedSize) || parsedSize < 1) {
       reportAndExit(Object.assign(
         new Error(`--remote-max-size の値が範囲外です: "${raw}" (1 以上のバイト数を指定してください)`),
         { code: 'EINVALIDREMOTESIZE' },
@@ -321,7 +323,7 @@ function compileIgnorePattern(pattern) {
   const body = pattern.replace(/^\/+|\/+$/g, '');
   const rx = body
     .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*+/g, (m) => (m.length >= 2 ? '.*' : '[^/]*'));
+    .replace(/\*+|\?/g, (m) => (m === '?' ? '[^/]' : m.length >= 2 ? '.*' : '[^/]*'));
   return { hasSlash, re: new RegExp('^' + rx + '$') };
 }
 
@@ -427,21 +429,81 @@ const SEARCH_CONTEXT_LINES = 20;
 // files are skipped so a huge fixture can't block the event loop (see searchDir).
 const MAX_SEARCH_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const REDACTED = '[REDACTED]';
-const SECRET_KEY_VALUE_RE =
-  /(["']?)(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|authorization|auth[_-]?token|cookie|session)(\1\s*[:=]\s*)(["']?)([^"',\s}\]]{3,}|[^"',\n}\]]{8,})(\4)/gi;
-const BEARER_SECRET_RE = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi;
-const JWT_SECRET_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
+const SECRET_KEY_RE =
+  /(?:^|[_\-\s.])(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|authorization|auth[_-]?token|bearer|cookie|session)(?:$|[_\-\s.])/i;
+
+// Match keys separately so quoted and structured values can be consumed whole.
+const KEY_VALUE_RE = /(["']?)([A-Za-z_][A-Za-z0-9_.-]*)(\1[ \t]*[:=][ \t]*)/g;
+
+const BEARER_RE = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi;
+const JWT_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
 const HEX_SECRET_RE = /\b[a-f0-9]{32,}\b/gi;
-const TOKENISH_SECRET_RE = /\b(?=[A-Za-z0-9._~+/=-]{28,}\b)(?=[A-Za-z0-9._~+/=-]*[A-Za-z])(?=[A-Za-z0-9._~+/=-]*\d)[A-Za-z0-9._~+/=-]+\b/g;
+const TOKENISH_RE = /\b(?=[A-Za-z0-9._~+/=-]{28,}\b)(?=[A-Za-z0-9._~+/=-]*[A-Za-z])(?=[A-Za-z0-9._~+/=-]*\d)[A-Za-z0-9._~+/=-]+\b/g;
+
+
+function isLikelySecretKey(key) {
+  if (typeof key !== 'string') return false;
+  const normalized = key.replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2').replace(/([a-z0-9])([A-Z])/g, '$1_$2');
+  return SECRET_KEY_RE.test(normalized);
+}
+
+
+/** Redact the entire assigned value, including spaces, escapes and containers. */
+function maskKeyValues(text) {
+  const re = new RegExp(KEY_VALUE_RE.source, 'g');
+  let out = '';
+  let last = 0;
+  let match;
+  while ((match = re.exec(text)) !== null) {
+    if (!isLikelySecretKey(match[2])) continue;
+    const start = re.lastIndex;
+    const first = text[start];
+    if (first === undefined || /[\r\n]/.test(first)) continue;
+    let end = start;
+    let quote = '';
+    const stack = [];
+    if (first === '"' || first === "'") quote = first;
+    if (quote) {
+      end++;
+      while (end < text.length) {
+        if (text[end] === '\\') { end += 2; continue; }
+        if (text[end++] === quote) break;
+      }
+    } else if (first === '{' || first === '[') {
+      for (; end < text.length; end++) {
+        const ch = text[end];
+        if (quote) {
+          if (ch === '\\') { end++; continue; }
+          if (ch === quote) quote = '';
+        } else if (ch === '"' || ch === "'") quote = ch;
+        else if (ch === '{' || ch === '[') stack.push(ch);
+        else if (ch === '}' || ch === ']') {
+          stack.pop();
+          if (!stack.length) { end++; break; }
+        }
+      }
+    } else if (!match[1] && /(?:authorization|cookie)$/i.test(match[2])) {
+      // Header values include schemes and multiple cookies separated by spaces.
+      while (end < text.length && !/[\r\n]/.test(text[end])) end++;
+    } else {
+      while (end < text.length && !/[\s,;&}\]"']/.test(text[end])) end++;
+    }
+    if (end === start) continue;
+    const valueQuote = first === '"' || first === "'" ? first : '';
+    out += text.slice(last, start) + valueQuote + REDACTED + valueQuote;
+    last = end;
+    re.lastIndex = end;
+  }
+  return out + text.slice(last);
+}
 
 function maskSecrets(text) {
   if (!text) return text;
-  return text
-    .replace(SECRET_KEY_VALUE_RE, (_match, keyQuote, key, sep, valueQuote, _value, closeQuote) => `${keyQuote}${key}${sep}${valueQuote}${REDACTED}${closeQuote}`)
-    .replace(BEARER_SECRET_RE, (_match, prefix) => `${prefix}${REDACTED}`)
-    .replace(JWT_SECRET_RE, REDACTED)
+  return maskKeyValues(text)
+    .replace(BEARER_RE, (_match, prefix) => `${prefix}${REDACTED}`)
+    .replace(JWT_RE, REDACTED)
     .replace(HEX_SECRET_RE, REDACTED)
-    .replace(TOKENISH_SECRET_RE, (match) => {
+    .replace(TOKENISH_RE, (match) => {
       if (!/[A-Z]/.test(match) && !/[+/=_-]/.test(match)) return match;
       return REDACTED;
     });
@@ -483,12 +545,17 @@ function isPrivateIPv4(ip) {
 }
 
 function isPrivateIPv6(ip) {
-  const lower = ip.toLowerCase();
-  // Normalize IPv6 like ::ffff:127.0.0.1 to IPv4 form
-  const v4Mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (v4Mapped) return isPrivateIPv4(v4Mapped[1]);
+  // WHATWG URLs normalize expanded and dotted IPv6 spellings alike. Mapped
+  // IPv4 addresses become hexadecimal (::ffff:7f00:1), not dotted decimal.
+  const lower = new URL(`http://[${ip}]/`).hostname.slice(1, -1);
+  const v4Mapped = lower.match(/^::ffff:([\da-f]+):([\da-f]+)$/);
+  if (v4Mapped) {
+    const high = parseInt(v4Mapped[1], 16);
+    const low = parseInt(v4Mapped[2], 16);
+    return isPrivateIPv4(`${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`);
+  }
   if (lower === '::1' || lower === '::') return true;
-  if (lower.startsWith('fe80:') || lower.startsWith('fe80')) return true; // link-local
+  if ((parseInt(lower.split(':')[0], 16) & 0xffc0) === 0xfe80) return true; // link-local fe80::/10
   if (lower.startsWith('fc') || lower.startsWith('fd')) return true;      // ULA
   if (lower.startsWith('ff')) return true;                                 // multicast
   return false;
@@ -537,7 +604,8 @@ async function fetchRemoteUrl(rawUrl, config, hopsLeft = 3) {
   let address, family;
   try {
     const { lookup } = await import('node:dns/promises');
-    const result = await lookup(urlObj.hostname, { verbatim: true });
+    const hostname = urlObj.hostname.replace(/^\[|\]$/g, '');
+    const result = await lookup(hostname, { verbatim: true });
     address = result?.address;
     family = result?.family;
   } catch (err) {
@@ -566,12 +634,11 @@ async function fetchRemoteUrl(rawUrl, config, hopsLeft = 3) {
   // routing intact, and servername drives TLS SNI.
   const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
   const hostHeader = urlObj.port ? `${urlObj.hostname}:${urlObj.port}` : urlObj.hostname;
-  const connectHost = numericFamily === 6 ? `[${address}]` : address;
 
   return new Promise((resolve) => {
     const reqOptions = {
       method: 'GET',
-      host: connectHost,
+      host: address,
       path: urlObj.pathname + urlObj.search,
       port,
       headers: {
@@ -582,7 +649,7 @@ async function fetchRemoteUrl(rawUrl, config, hopsLeft = 3) {
         'Accept-Encoding': 'identity',
       },
       timeout: timeoutMs,
-      servername: urlObj.hostname, // TLS SNI
+      servername: isIP(urlObj.hostname.replace(/^\[|\]$/g, '')) ? '' : urlObj.hostname, // TLS SNI is for DNS names
     };
     if (urlObj.protocol === 'https:' && insecureTls) {
       // User opted into skipping cert verification — common when operating
@@ -839,17 +906,22 @@ function parseRange(header, total) {
 }
 
 async function readJsonRequestBody(req, maxBytes = 16 * 1024) {
-  let body = '';
-  for await (const chunk of req) {
-    body += chunk;
-    if (body.length > maxBytes) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of req.iterator({ destroyOnReturn: false })) {
+    bytes += chunk.length;
+    if (bytes > maxBytes) {
+      req.resume();
       const err = new Error('Request body too large');
       err.status = 413;
       throw err;
     }
+    chunks.push(chunk);
   }
   try {
-    return JSON.parse(body || '{}');
+    // A UTF-8 character may cross TCP chunks. Decode only after joining the
+    // bytes; converting each chunk separately corrupts non-ASCII filenames.
+    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
   } catch {
     const err = new Error('Invalid JSON');
     err.status = 400;
@@ -864,7 +936,7 @@ function getOpenCommand(filePath) {
   return null;
 }
 
-function launchDefaultApp(filePath) {
+async function launchDefaultApp(filePath) {
   const spec = getOpenCommand(filePath);
   if (!spec) {
     const err = new Error(`Opening files is not supported on ${process.platform}`);
@@ -875,6 +947,12 @@ function launchDefaultApp(filePath) {
     detached: true,
     stdio: 'ignore',
     windowsHide: true,
+  });
+  // Spawn failures (for example a missing xdg-open) are asynchronous. Handle
+  // them before reporting success instead of crashing the HTTP server later.
+  await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('spawn', resolve);
   });
   child.unref();
   return spec;
@@ -996,6 +1074,7 @@ async function buildTree(dir, base = dir) {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     const relPath = relative(base, fullPath).replace(/\\/g, '/');
+    if (entry.isSymbolicLink() && !await safePath(relPath)) continue;
 
     if (entry.isDirectory()) {
       if (isSupportedFilename(entry.name) && OFFICE_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
@@ -1126,6 +1205,42 @@ async function readLineRange(filePath, offset, limit) {
 }
 
 /**
+ * Paginate delimited files by complete records. Physical newlines can occur
+ * inside quoted fields, so the CSV table explicitly opts into this mode.
+ */
+async function readCsvRecords(filePath, offset, limit, query = null) {
+  const delimiter = extname(filePath).toLowerCase() === '.tsv' ? '\t' : '';
+  const input = await createTextReadStream(filePath);
+  const lowerQuery = query?.toLowerCase();
+  return new Promise((resolve, reject) => {
+    const lines = [];
+    const matches = [];
+    let totalLines = 0;
+    let totalMatches = 0;
+    let headerLine = null;
+    Papa.parse(input, {
+      delimiter,
+      skipEmptyLines: true,
+      step({ data, meta }) {
+        const text = Papa.unparse([data], { delimiter: meta.delimiter, newline: '\n' });
+        if (totalLines === 0) headerLine = text;
+        if (lowerQuery !== null && lowerQuery !== undefined) {
+          if (totalLines > 0 && text.toLowerCase().includes(lowerQuery)) {
+            if (totalMatches >= offset && matches.length < limit) matches.push({ lineNum: totalLines, text });
+            totalMatches++;
+          }
+        } else if (totalLines >= offset && lines.length < limit) {
+          lines.push(text);
+        }
+        totalLines++;
+      },
+      complete: () => resolve({ lines, matches, totalLines, totalMatches, headerLine }),
+      error: reject,
+    });
+  });
+}
+
+/**
  * Estimate total line count. For small files (< 1 MB) count exactly.
  * For larger files, sample the first 8 KB and extrapolate.
  */
@@ -1171,6 +1286,7 @@ async function estimateLineCount(filePath, fileSize) {
  */
 async function searchFileLines(filePath, query, offset, limit) {
   const lowerQuery = query.toLowerCase();
+  const hasHeader = ['.csv', '.tsv'].includes(extname(filePath).toLowerCase());
   const inputStream = await createTextReadStream(filePath);
   return new Promise((resolve, reject) => {
     const matches = [];
@@ -1189,7 +1305,7 @@ async function searchFileLines(filePath, query, offset, limit) {
         headerLine = line;
       }
 
-      if (line.toLowerCase().includes(lowerQuery)) {
+      if ((!hasHeader || lineNum > 0) && line.toLowerCase().includes(lowerQuery)) {
         if (totalMatches >= offset && matches.length < limit) {
           matches.push({ lineNum, text: line });
         }
@@ -1415,7 +1531,14 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname.startsWith('/api/raw/')) {
-    const rawPath = decodeURIComponent(url.pathname.slice('/api/raw/'.length));
+    let rawPath;
+    try {
+      rawPath = decodeURIComponent(url.pathname.slice('/api/raw/'.length));
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid path encoding' }));
+      return;
+    }
     await serveRawFile(req, res, rawPath);
     return;
   }
@@ -1480,7 +1603,10 @@ const server = createServer(async (req, res) => {
         // Streaming line-range read — never loads the full file into memory
         const offset = Math.max(0, parseInt(offsetParam || '0', 10) || 0);
         const limit = Math.max(1, parseInt(limitParam || '1000', 10) || 1000);
-        const { lines, totalLines } = await readLineRange(resolved, offset, limit);
+        const records = url.searchParams.get('records') === '1' && ['.csv', '.tsv'].includes(ext);
+        const { lines, totalLines } = records
+          ? await readCsvRecords(resolved, offset, limit)
+          : await readLineRange(resolved, offset, limit);
 
         const headers = {
           'Content-Type': 'text/plain; charset=utf-8',
@@ -1529,7 +1655,10 @@ const server = createServer(async (req, res) => {
     try {
       const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
       const limit = Math.max(1, parseInt(url.searchParams.get('limit') || '1000', 10) || 1000);
-      const { matches, totalMatches, totalLines, headerLine } = await searchFileLines(resolved, query, offset, limit);
+      const records = url.searchParams.get('records') === '1' && ['.csv', '.tsv'].includes(ext);
+      const { matches, totalMatches, totalLines, headerLine } = records
+        ? await readCsvRecords(resolved, offset, limit, query)
+        : await searchFileLines(resolved, query, offset, limit);
 
       const body = JSON.stringify({ matches, totalMatches, totalLines, headerLine });
       res.writeHead(200, {
@@ -1663,7 +1792,7 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      if (!data?.dryRun) launchDefaultApp(resolved);
+      if (!data?.dryRun) await launchDefaultApp(resolved);
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
         ok: true,
@@ -1719,7 +1848,7 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      if (!data?.dryRun) launchDefaultApp(resolved);
+      if (!data?.dryRun) await launchDefaultApp(resolved);
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
         ok: true,
@@ -1776,6 +1905,7 @@ const server = createServer(async (req, res) => {
       const lowerQuery = query.toLowerCase();
       matcher = { test: (s) => s.toLowerCase().includes(lowerQuery) };
     }
+    const regexSearch = useRegex ? createRegexSearch(query) : null;
 
     async function searchDir(dir) {
       if (results.length >= 100) return;
@@ -1784,6 +1914,7 @@ const server = createServer(async (req, res) => {
         if (results.length >= 100) return;
         const fullPath = join(dir, entry.name);
         const relPath = relative(targetDir, fullPath).replace(/\\/g, '/');
+        if (entry.isSymbolicLink() && !await safePath(relPath)) continue;
         if (entry.isDirectory()) {
           if (shouldSkipDir(entry.name, relPath)) continue;
           await searchDir(fullPath);
@@ -1800,8 +1931,11 @@ const server = createServer(async (req, res) => {
               if (st.size > MAX_SEARCH_FILE_BYTES) continue;
               const content = await readFileText(fullPath);
               const lines = content.split('\n');
+              const matchingLines = regexSearch
+                ? new Set(await regexSearch.findMatches(lines, 100 - results.length))
+                : null;
               for (let i = 0; i < lines.length && results.length < 100; i++) {
-                if (matcher.test(lines[i])) {
+                if (matchingLines ? matchingLines.has(i) : matcher.test(lines[i])) {
                   const start = Math.max(0, i - contextLines);
                   const end = Math.min(lines.length, i + contextLines + 1);
                   results.push({
@@ -1813,7 +1947,8 @@ const server = createServer(async (req, res) => {
                   });
                 }
               }
-            } catch {
+            } catch (err) {
+              if (err.regexSearch) throw err;
               // Skip unreadable files
             }
           }
@@ -1826,8 +1961,10 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(results));
     } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Internal server error' }));
+      res.writeHead(err.status || 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.status ? err.message : 'Internal server error' }));
+    } finally {
+      await regexSearch?.close();
     }
     return;
   }
@@ -1896,6 +2033,7 @@ const server = createServer(async (req, res) => {
         if (items.length >= limitNum) return true;
         const fullPath = join(dir, entry.name);
         const mediaRel = relative(targetDir, fullPath).replace(/\\/g, '/');
+        if (entry.isSymbolicLink() && !await safePath(mediaRel)) continue;
         if (entry.isDirectory()) {
           if (shouldSkipDir(entry.name, mediaRel)) continue;
           if (recursive) {
@@ -1973,7 +2111,12 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/custom-css') {
-    const cssPath = join(targetDir, '.docview.css');
+    const cssPath = await safePath('.docview.css');
+    if (!cssPath) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Access denied');
+      return;
+    }
     try {
       const content = await readFile(cssPath, 'utf-8');
       res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
@@ -2018,6 +2161,7 @@ const server = createServer(async (req, res) => {
         if (backlinks.length >= 50) return;
         const fullPath = join(dir, entry.name);
         const entryRel = relative(targetDir, fullPath).replace(/\\/g, '/');
+        if (entry.isSymbolicLink() && !await safePath(entryRel)) continue;
         if (entry.isDirectory()) {
           if (shouldSkipDir(entry.name, entryRel)) continue;
           await scanBacklinks(fullPath);
@@ -2066,26 +2210,13 @@ const server = createServer(async (req, res) => {
     const MAX_FILES = 500;
     const MAX_TOTAL_BYTES = 500 * 1024 * 1024;
 
-    let body = '';
-    try {
-      for await (const chunk of req) {
-        body += chunk;
-        if (body.length > MAX_BODY) {
-          res.writeHead(413, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Request body too large' }));
-          return;
-        }
-      }
-    } catch {
-      // Client aborted mid-body — connection is gone, nothing to answer.
-      res.destroy();
-      return;
-    }
-
     let data;
-    try { data = JSON.parse(body); } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+    try {
+      data = await readJsonRequestBody(req, MAX_BODY);
+    } catch (err) {
+      if (req.aborted) { res.destroy(); return; }
+      res.writeHead(err.status || 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message || 'Invalid JSON' }));
       return;
     }
 
@@ -2102,7 +2233,7 @@ const server = createServer(async (req, res) => {
     }
 
     const entries = [];
-    const usedNames = new Map();
+    const usedNames = new Set();
     let totalBytes = 0;
 
     for (const reqPath of paths) {
@@ -2134,17 +2265,17 @@ const server = createServer(async (req, res) => {
         }
         const content = await readFile(resolved);
 
-        let name = basename(resolved);
-        if (usedNames.has(name)) {
-          const n = usedNames.get(name) + 1;
-          usedNames.set(name, n);
-          const dot = name.lastIndexOf('.');
+        const originalName = basename(resolved);
+        let name = originalName;
+        let n = 0;
+        while (usedNames.has(name)) {
+          n++;
+          const dot = originalName.lastIndexOf('.');
           name = dot > 0
-            ? `${name.slice(0, dot)} (${n})${name.slice(dot)}`
-            : `${name} (${n})`;
-        } else {
-          usedNames.set(name, 0);
+            ? `${originalName.slice(0, dot)} (${n})${originalName.slice(dot)}`
+            : `${originalName} (${n})`;
         }
+        usedNames.add(name);
         entries.push({ name, data: content });
       } catch {
         res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -2175,31 +2306,18 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/diagram') {
     // Body size limit (1 MB) to prevent memory exhaustion
     const MAX_BODY = 1024 * 1024;
-    let body = '';
-    try {
-      for await (const chunk of req) {
-        body += chunk;
-        if (body.length > MAX_BODY) {
-          res.writeHead(413, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Request body too large' }));
-          return;
-        }
-      }
-    } catch {
-      // Client aborted mid-body — connection is gone, nothing to answer.
-      res.destroy();
-      return;
-    }
-
     let data;
-    try { data = JSON.parse(body); } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+    try {
+      data = await readJsonRequestBody(req, MAX_BODY);
+    } catch (err) {
+      if (req.aborted) { res.destroy(); return; }
+      res.writeHead(err.status || 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message || 'Invalid JSON' }));
       return;
     }
 
-    const { type, source } = data;
-    if (!type || !source) {
+    const { type, source } = data ?? {};
+    if (typeof type !== 'string' || typeof source !== 'string' || !type || !source) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Missing type or source' }));
       return;
@@ -2275,8 +2393,10 @@ function tryLocalDiagramCLI(type, source) {
       const proc = spawn(cmd[0], cmd[1], { timeout: 15000 });
       let out = '';
       proc.stdout.on('data', (d) => { out += d; });
+      proc.stderr.resume();
       proc.on('close', (code) => { resolve(code === 0 && out ? out : null); });
       proc.on('error', () => resolve(null));
+      proc.stdin.on('error', () => resolve(null));
       proc.stdin.write(source);
       proc.stdin.end();
     } catch { resolve(null); }
@@ -2286,24 +2406,27 @@ function tryLocalDiagramCLI(type, source) {
 // File watcher — chokidar v5 has no glob support, so watch the directory
 // itself, prune ignored paths via the `ignored` function, and filter events
 // by extension before broadcasting.
-function isWatchIgnored(path) {
+function isWatchIgnored(path, stats) {
   const rel = relative(targetDir, resolve(targetDir, path));
   if (!rel || rel.startsWith('..')) return false;
-  for (const seg of rel.split(sep)) {
-    if (seg.startsWith('.') || DEFAULT_IGNORED_DIRS.has(seg)) return true;
+  const segments = rel.split(sep);
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const isDirectory = i < segments.length - 1 || stats?.isDirectory();
+    if (isDirectory && (seg.startsWith('.') || DEFAULT_IGNORED_DIRS.has(seg))) return true;
   }
   return matchesIgnorePattern(basename(rel), rel);
 }
 
 function isWatchTarget(relPath) {
   const name = basename(relPath).toLowerCase();
-  return SUPPORTED_EXTENSIONS.has(extname(name)) || CRON_FILENAMES.has(name);
+  return isSupportedFilename(name);
 }
 
 const watcher = chokidar.watch(targetDir, {
   cwd: targetDir,
   ignoreInitial: true,
-  ignored: (path) => isWatchIgnored(path),
+  ignored: (path, stats) => isWatchIgnored(path, stats),
 });
 
 function broadcast(event, filePath) {
@@ -2379,12 +2502,16 @@ function pickTip() {
 }
 
 server.listen(port, host, () => {
+  // Preserve the default localhost origin so saved tabs/preferences survive an
+  // upgrade, while custom bind addresses and IPv6 get a reachable URL.
+  const browserHost = host === '127.0.0.1' || host === '0.0.0.0' ? 'localhost' : host === '::' ? '::1' : host;
+  const browserUrl = `http://${isIP(browserHost) === 6 ? `[${browserHost}]` : browserHost}:${port}/`;
   console.log('');
   console.log(BANNER);
   console.log(`  ─────────────────────────────────────────────`);
   console.log(`  Watching:  ${targetDir}`);
   if (initialFile) console.log(`  File:      ${initialFile}`);
-  console.log(`  Server:    http://localhost:${port}/`);
+  console.log(`  Server:    ${browserUrl}`);
   if (remoteEnabled) {
     const priv = allowPrivateRemote ? ' (incl. private IPs)' : '';
     const tls = remoteInsecureTls ? ' · TLS verify off' : ' · TLS strict';
@@ -2395,5 +2522,5 @@ server.listen(port, host, () => {
   console.log(`  ─────────────────────────────────────────────`);
   console.log(`  Tip:       ${pickTip()}`);
   console.log('');
-  if (process.send) process.send({ type: 'listening', port });
+  if (process.send) process.send({ type: 'listening', port, url: browserUrl });
 });

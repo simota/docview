@@ -5,9 +5,9 @@ import { FileTree, initSidebarResize } from './filetree';
 import { TableOfContents } from './toc';
 import { SearchModal } from './search';
 import { renderJsonTree } from './json-tree';
-import { renderYamlTree } from './yaml-tree';
+import { renderYamlTree, maskYamlSecrets } from './yaml-tree';
 import { TabBar, addRecent, getRecent } from './tabs';
-import { renderCsvTable, initCsvSort, initCsvColumnCopy } from './csv-viewer';
+import { renderCsvTable, maskCsvSecrets, initCsvSort, initCsvColumnCopy } from './csv-viewer';
 import { renderJsonlTable } from './jsonl-viewer';
 import { renderHtmlView, initHtmlScriptsToggle, initHtmlScreenshotToggle, captureHtmlFullPage } from './html-viewer';
 import { renderLogTable, initLaravelSort } from './log-viewer';
@@ -41,6 +41,15 @@ const exportMode = new URLSearchParams(location.search).has('export');
 if (exportMode) document.documentElement.classList.add('export-mode');
 
 let currentFilePath: string | null = null;
+let leftLoadSeq = 0;
+let rightLoadSeq = 0;
+let disposeCurrentAlbum: (() => void) | null = null;
+
+function isCurrentPaneLoad(pane: PaneId, seq: number, target: HTMLElement): boolean {
+  return pane === 'left'
+    ? seq === leftLoadSeq && target === viewer
+    : seq === rightLoadSeq && target === splitViewer && splitActive;
+}
 let sidebarVisible = false;
 let tocVisible = localStorage.getItem('docview.tocVisible') !== 'false';
 let wordWrap = false; // (#7)
@@ -570,6 +579,10 @@ function parseHash(hash: string = location.hash): ParsedHash {
       }
     }
   }
+  if (line !== null && (!Number.isSafeInteger(line) || line < 1 || (lineEnd !== null && (!Number.isSafeInteger(lineEnd) || lineEnd < 1)))) {
+    line = null;
+    lineEnd = null;
+  }
   return { path, line, lineEnd, albumPath: null, albumRecursive: false, comparePaths: null };
 }
 
@@ -603,7 +616,7 @@ function updateHash(path: string | null, line?: number | null, lineEnd?: number 
   if (path) {
     history.replaceState(null, '', buildHash(path, line, lineEnd));
   } else {
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', location.pathname + location.search);
   }
 }
 
@@ -612,13 +625,14 @@ function openFileLocation(path: string, line: number | null = null, lineEnd: num
     if (line != null) {
       setPendingLineJump('right', { line, lineEnd });
       if (path === splitFilePath) {
-        scrollToLine(line, lineEnd, splitViewer, 'right');
+        if (scrollToLine(line, lineEnd, splitViewer, 'right')) setPendingLineJump('right', null);
         return;
       }
       void loadIntoSplit(path);
       return;
     }
 
+    setPendingLineJump('right', null);
     if (path !== splitFilePath) void loadIntoSplit(path);
     return;
   }
@@ -628,7 +642,7 @@ function openFileLocation(path: string, line: number | null = null, lineEnd: num
     updateHash(path, line, lineEnd);
 
     if (path === currentFilePath) {
-      scrollToLine(line, lineEnd, viewer, 'left');
+      if (scrollToLine(line, lineEnd, viewer, 'left')) setPendingLineJump('left', null);
       return;
     }
 
@@ -636,6 +650,7 @@ function openFileLocation(path: string, line: number | null = null, lineEnd: num
     return;
   }
 
+  setPendingLineJump('left', null);
   updateHash(path, null, null);
   if (path !== currentFilePath) void loadServerFile(path);
 }
@@ -651,13 +666,10 @@ function clearLineHighlights(target: HTMLElement = viewer) {
 function highlightLines(start: number, end: number | null, target: HTMLElement = viewer) {
   clearLineHighlights(target);
   const last = end ?? start;
-  for (let n = start; n <= last; n++) {
-    target.querySelectorAll(`[data-line="${n}"]`).forEach((el) => {
-      if (el.classList.contains('line-row') || el.tagName === 'TR') {
-        el.classList.add('line-highlighted');
-      }
-    });
-  }
+  target.querySelectorAll<HTMLElement>('.line-row[data-line], tr[data-line]').forEach((el) => {
+    const line = Number(el.dataset.line);
+    if (line >= start && line <= last) el.classList.add('line-highlighted');
+  });
 }
 
 function scrollToLine(line: number, lineEnd: number | null, target: HTMLElement = viewer, pane: PaneId = 'left') {
@@ -813,28 +825,59 @@ function bindLineInteractions(target: HTMLElement, pane: PaneId) {
 // Delegated line-number click handler on the viewer.
 bindLineInteractions(viewer, 'left');
 
+// Resolve URI-encoded Markdown resources against the current document directory.
+function resolveDocumentResource(href: string, currentPath: string): { path: string; heading: string } | null {
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(href)) return null;
+  try {
+    const base = currentPath.split('/').map(encodeURIComponent).join('/');
+    const url = new URL(href, `https://docview.invalid/${base}`);
+    return { path: decodeURIComponent(url.pathname.slice(1)), heading: decodeURIComponent(url.hash.slice(1)) };
+  } catch { return null; }
+}
+
+const pendingHeadings = new Map<PaneId, { path: string; heading: string; seq: number }>();
+
 // --- Relative link navigation (#10) ---
 function interceptRelativeLinks(currentPath: string, target: HTMLElement = viewer, pane: PaneId = 'left') {
   target.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => {
     const href = a.getAttribute('href');
-    if (!href || href.startsWith('http') || href.startsWith('#')) return;
-    // Relative link to another file
+    if (!href) return;
+    if (href.startsWith('#')) {
+      // Shared DocView links are application routes, handled by hashchange.
+      const params = new URLSearchParams(href.slice(1));
+      if (params.has('file') || params.has('album') || params.has('compare')) return;
+      a.addEventListener('click', (e) => {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        if (href === '#') { target.scrollTop = 0; return; }
+        try { target.querySelector(`#${CSS.escape(decodeURIComponent(href.slice(1)))}`)?.scrollIntoView({ block: 'start' }); } catch { /* ignore malformed fragments */ }
+      });
+      return;
+    }
+    if (/^https?:\/\//i.test(currentPath)) {
+      try { a.href = new URL(href, currentPath).href; } catch { /* leave invalid links unchanged */ }
+      return;
+    }
+    const resource = resolveDocumentResource(href, currentPath);
+    if (!resource) return;
     a.addEventListener('click', (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       e.preventDefault();
-      let targetPath = href;
-      if (!href.startsWith('/')) {
-        const dir = currentPath.includes('/') ? currentPath.replace(/\/[^/]+$/, '/') : '';
-        targetPath = dir + href;
+      const previousPath = getPanePath(pane);
+      pendingHeadings.delete(pane);
+      openFileLocation(resource.path, null, null, pane);
+      if (resource.heading) {
+        const heading = previousPath === resource.path
+          ? target.querySelector(`#${CSS.escape(resource.heading)}`) : null;
+        if (heading) heading.scrollIntoView({ block: 'start' });
+        else pendingHeadings.set(pane, { ...resource, seq: pane === 'left' ? leftLoadSeq : rightLoadSeq });
       }
-      // Normalize path (remove ./)
-      targetPath = targetPath.replace(/^\.\//, '');
-      openFileLocation(targetPath, null, null, pane);
     });
   });
 }
 
 // --- Rendering ---
-function renderContent(content: string, path: string, target: HTMLElement = viewer) {
+function renderContent(content: string, path: string, target: HTMLElement = viewer, sourceUrl?: string) {
   const pane = getPaneIdForTarget(target) ?? 'left';
   // Replacing the viewer's innerHTML below detaches any nodes the find bar
   // holds Ranges into, leaving it pointing at stale content. Close it first.
@@ -862,12 +905,12 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       initToggleButtons(target);
       renderMermaidDiagrams(target);
       renderExternalDiagrams(target);
-      fixRelativeImages(path, target);
+      fixRelativeImages(sourceUrl ?? path, target);
       if (target === viewer) {
         toc.update();
         toc.loadBacklinks(path);
       }
-      interceptRelativeLinks(path, target, pane);
+      interceptRelativeLinks(sourceUrl ?? path, target, pane);
       addHeadingCopyButtons(target, path);
       if (target === viewer) refreshSlidesButton(displayContent);
       break;
@@ -912,7 +955,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       } else if (path.endsWith('.yaml') || path.endsWith('.yml')) {
         const treeHtml = renderYamlTree(content, secretSafe ? maskSecretValue : undefined);
         if (treeHtml) {
-          const highlighted = hljs.highlight(displayContent, { language: 'yaml' }).value;
+          const highlighted = hljs.highlight(secretSafe ? maskYamlSecrets(content) : content, { language: 'yaml' }).value;
           target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
@@ -934,7 +977,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
     case 'csv': {
       const tableHtml = renderCsvTable(content, path, secretSafe ? maskSecretValue : undefined);
       const ext = path.split('.').pop()?.toUpperCase() || 'CSV';
-      const escaped = escapeHtml(displayContent);
+      const escaped = escapeHtml(secretSafe ? maskCsvSecrets(content) : content);
       target.innerHTML = `
         <div class="json-view-toggle">
           <button class="json-toggle-btn active" data-view="tree">Table</button>
@@ -1002,7 +1045,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       const htmlSource = hljs.getLanguage('xml')
         ? hljs.highlight(displayContent, { language: 'xml' }).value
         : escapeHtml(displayContent);
-      target.innerHTML = renderHtmlView(displayContent, htmlExt, htmlSource, path);
+      target.innerHTML = renderHtmlView(displayContent, htmlExt, htmlSource, sourceUrl ?? path);
       initToggleButtons(target);
       if (target === viewer) toc.clear();
       break;
@@ -1022,10 +1065,18 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       break;
 
     default:
-      target.innerHTML = `<pre class="hljs"><code>${escapeHtml(content)}</code></pre>`;
+      target.innerHTML = `<pre class="hljs"><code>${escapeHtml(displayContent)}</code></pre>`;
       if (target === viewer) toc.clear();
   }
 
+  const heading = pendingHeadings.get(pane);
+  const hasPendingHeading = heading?.path === path && isCurrentPaneLoad(pane, heading.seq, target);
+  if (hasPendingHeading) {
+    pendingHeadings.delete(pane);
+    requestAnimationFrame(() => {
+      if (isCurrentPaneLoad(pane, heading.seq, target)) target.querySelector(`#${CSS.escape(heading.heading)}`)?.scrollIntoView({ block: 'start' });
+    });
+  }
   addCopyButtons(target);
   addCollapseButtons(target);
   initImageZoom(target);
@@ -1035,7 +1086,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
     setPendingLineJump(pane, null);
     scrollToLine(line, lineEnd, target, pane);
   } else {
-    restoreScrollPosition(path, pane);
+    if (!hasPendingHeading) restoreScrollPosition(path, pane);
   }
 }
 
@@ -1077,6 +1128,7 @@ function officeKind(path: string): 'Excel' | 'PowerPoint' | 'Numbers' | 'Pages' 
 
 async function renderOfficeUnsupported(path: string, target: HTMLElement = viewer, options: { localFile?: File; remote?: boolean } = {}) {
   const pane = getPaneIdForTarget(target) ?? 'left';
+  const seq = pane === 'left' ? leftLoadSeq : rightLoadSeq;
   const kind = officeKind(path);
   const ext = getExt(path).replace('.', '').toUpperCase();
   let sizeText = '';
@@ -1097,6 +1149,7 @@ async function renderOfficeUnsupported(path: string, target: HTMLElement = viewe
     } catch { /* ignore */ }
   }
 
+  if (!isCurrentPaneLoad(pane, seq, target)) return;
   if (target === viewer) updateBreadcrumb(path, mtime);
 
   const canOpenInApp = !options.remote && !options.localFile;
@@ -1140,6 +1193,7 @@ async function renderOfficeUnsupported(path: string, target: HTMLElement = viewe
 // drag-and-dropped files are shown from a blob: URL (CSP frame-src allows it).
 async function renderPdf(path: string, target: HTMLElement = viewer, options: { src?: string; localFile?: File; remote?: boolean } = {}) {
   const pane = getPaneIdForTarget(target) ?? 'left';
+  const seq = pane === 'left' ? leftLoadSeq : rightLoadSeq;
   const isServerFile = !options.remote && !options.localFile;
   const src = options.src ?? `/api/file?path=${encodeURIComponent(path)}`;
   const fileName = path.split('/').pop() || path;
@@ -1147,10 +1201,12 @@ async function renderPdf(path: string, target: HTMLElement = viewer, options: { 
   if (target === viewer && isServerFile) {
     try {
       const headRes = await fetch(src, { method: 'HEAD' });
+      if (!isCurrentPaneLoad(pane, seq, target)) return;
       updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));
     } catch { /* ignore */ }
   }
 
+  if (!isCurrentPaneLoad(pane, seq, target)) return;
   const actions = [
     `<a class="pdf-view__action" href="${escapeHtml(src)}" target="_blank" rel="noopener">新しいタブで開く</a>`,
     isServerFile ? '<button class="pdf-view__action pdf-view-open-app" type="button">アプリで開く</button>' : '',
@@ -1173,11 +1229,11 @@ async function renderPdf(path: string, target: HTMLElement = viewer, options: { 
   setPendingLineJump(pane, null);
 }
 
-async function renderVideo(path: string) {
-  const url = `/api/file?path=${encodeURIComponent(path)}`;
+async function renderVideo(path: string, target: HTMLElement = viewer, src?: string) {
+  const url = src ?? `/api/file?path=${encodeURIComponent(path)}`;
   // Single-file mode: just show a controlled <video> inline. The album-style
   // Lightbox (with prev/next nav) is reserved for gallery openings.
-  viewer.innerHTML = `<div class="video-view">
+  target.innerHTML = `<div class="video-view">
     <video class="video-view__player"
            src="${url}"
            controls
@@ -1185,7 +1241,7 @@ async function renderVideo(path: string) {
            playsinline></video>
     <p class="image-caption">${escapeHtml(path)}</p>
   </div>`;
-  const v = viewer.querySelector<HTMLVideoElement>('.video-view__player');
+  const v = target.querySelector<HTMLVideoElement>('.video-view__player');
   v?.addEventListener('error', () => {
     if (!v.parentElement) return;
     v.parentElement.insertAdjacentHTML(
@@ -1196,12 +1252,14 @@ async function renderVideo(path: string) {
 }
 
 async function renderImage(path: string) {
+  const seq = leftLoadSeq;
   const url = `/api/file?path=${encodeURIComponent(path)}`;
   if (path.toLowerCase().endsWith('.svg')) {
     try {
       const res = await fetch(url);
       if (!res.ok) return;
       const svgText = await res.text();
+      if (seq !== leftLoadSeq) return;
       const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
       viewer.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div><p class="image-caption">${escapeHtml(path)}</p></div>`;
       const svgEl = viewer.querySelector('.svg-container svg') as SVGElement | null;
@@ -1222,12 +1280,17 @@ async function renderImage(path: string) {
 
 // Relative images in Markdown (#5)
 function fixRelativeImages(currentPath: string, target: HTMLElement = viewer) {
-  const dir = currentPath.includes('/') ? currentPath.replace(/\/[^/]+$/, '/') : '';
   target.querySelectorAll<HTMLImageElement>('img[src]').forEach((img) => {
     const src = img.getAttribute('src') || '';
-    if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('/api/')) return;
-    const resolved = (dir + src).replace(/^\.\//, '');
-    img.src = `/api/file?path=${encodeURIComponent(resolved)}`;
+    if (!src) return;
+    if (/^https?:\/\//i.test(currentPath)) {
+      try { img.src = new URL(src, currentPath).href; } catch { /* leave invalid sources unchanged */ }
+      return;
+    }
+    if (src.startsWith('/api/')) return;
+    const resource = resolveDocumentResource(src, currentPath);
+    if (!resource) return;
+    img.src = `/api/file?path=${encodeURIComponent(resource.path)}`;
   });
 }
 
@@ -1392,6 +1455,8 @@ function refreshSlidesButton(source: string | null) {
 }
 
 async function enterMarpSlideMode(source: string) {
+  const seq = leftLoadSeq;
+  const path = currentFilePath;
   let deck: Awaited<ReturnType<typeof renderMarpDeck>>;
   try {
     deck = await renderMarpDeck(source);
@@ -1399,7 +1464,7 @@ async function enterMarpSlideMode(source: string) {
     showCopyToast('Marp スライドの生成に失敗しました');
     return;
   }
-  if (deck.slideCount === 0) return;
+  if (deck.slideCount === 0 || seq !== leftLoadSeq || document.querySelector('.marp-slide-overlay')) return;
 
   const overlay = document.createElement('div');
   overlay.className = 'marp-slide-overlay';
@@ -1411,6 +1476,7 @@ async function enterMarpSlideMode(source: string) {
   const stage = document.createElement('div');
   stage.className = 'marp-slide-stage';
   stage.innerHTML = deck.html;
+  if (path) fixRelativeImages(path, stage);
   overlay.appendChild(stage);
 
   const slides = Array.from(stage.querySelectorAll<HTMLElement>('.marpit > svg[data-marpit-svg]'));
@@ -1476,6 +1542,7 @@ function leaveCompareViewForNavigation(): void {
 }
 
 function clearAlbumTracking(): void {
+  disposeCurrentAlbum?.();
   _currentAlbumPath = null;
   _currentAlbumRecursive = false;
   if (_albumSseDebounce) {
@@ -1491,6 +1558,7 @@ function isAlbumEventPath(path: string, albumPath: string): boolean {
 
 // --- Album view ---
 async function loadAlbumView(albumPath: string, recursive = false): Promise<void> {
+  const seq = ++leftLoadSeq;
   leaveCompareViewForNavigation();
   clearAlbumTracking();
   saveScrollPosition('left');
@@ -1507,7 +1575,8 @@ async function loadAlbumView(albumPath: string, recursive = false): Promise<void
   viewer.innerHTML = `<div class="loading-skeleton">${'<div class="skel-line"></div>'.repeat(6)}</div>`;
 
   const { renderAlbum, disposeAlbum } = await import('./album-viewer.js');
-  disposeAlbum();
+  if (seq !== leftLoadSeq) return;
+  disposeCurrentAlbum = disposeAlbum;
 
   await renderAlbum(
     albumPath,
@@ -1525,9 +1594,13 @@ async function loadAlbumView(albumPath: string, recursive = false): Promise<void
 
 async function reloadCurrentAlbum(): Promise<void> {
   if (_currentAlbumPath === null || currentFilePath !== null || compareActive) return;
-  const { refreshAlbum } = await import('./album-viewer.js');
+  const seq = leftLoadSeq;
+  const albumPath = _currentAlbumPath;
+  const { refreshAlbum, disposeAlbum } = await import('./album-viewer.js');
+  if (seq !== leftLoadSeq || _currentAlbumPath !== albumPath || currentFilePath !== null || compareActive) return;
+  disposeCurrentAlbum = disposeAlbum;
   await refreshAlbum(
-    _currentAlbumPath,
+    albumPath,
     viewer,
     (imagePath: string) => {
       _currentAlbumPath = null;
@@ -1574,9 +1647,8 @@ function closeCompareView(opts: CloseCompareOptions = {}): void {
   if (_currentAlbumPath !== null) {
     void loadAlbumView(_currentAlbumPath, _currentAlbumRecursive);
   } else if (currentFilePath) {
-    // Re-activate the current file tab
-    tabBar.setActive(currentFilePath);
-    history.replaceState(null, '', buildHash(currentFilePath));
+    // The file load may have been superseded while the comparison was open.
+    void loadServerFile(currentFilePath);
   } else {
     history.replaceState(null, '', location.pathname + location.search);
     showWelcome();
@@ -1626,6 +1698,8 @@ let _currentComparePaths: string[] = [];
 
 async function renderCompare(paths: string[], opts: RenderCompareOptions = {}): Promise<void> {
   if (paths.length < 2 || paths.length > 4) return;
+  ++leftLoadSeq;
+  disposeCurrentAlbum?.();
 
   // Close any existing compare view (but keep the tab slot for replacement)
   if (compareActive) closeCompareView({ skipAlbumRestore: true, skipTabRemoval: true });
@@ -1846,6 +1920,7 @@ function initComparePaneZoom(wrap: HTMLElement, paneIndex: number): void {
 }
 
 function showWelcome() {
+  ++leftLoadSeq;
   leaveCompareViewForNavigation();
   saveScrollPosition('left');
   currentFilePath = null;
@@ -1890,6 +1965,7 @@ function showWelcome() {
   toc.clear();
   updateBreadcrumb(null);
   updatePaneLabels();
+  updateHash(null);
 }
 
 // --- Chunked file type check ---
@@ -1904,6 +1980,9 @@ function fileTypeToChunkKind(type: FileType): 'csv' | 'jsonl' | 'log' | null {
 
 // --- File loading ---
 async function loadServerFile(path: string) {
+  const seq = ++leftLoadSeq;
+  refreshSlidesButton(null);
+  findBar.close();
   leaveCompareViewForNavigation();
   clearAlbumTracking();
   imageMetaPanel.destroy(); // tear down panel when navigating away
@@ -1931,11 +2010,14 @@ async function loadServerFile(path: string) {
 
   if (type === 'image') {
     await renderImage(path);
+    if (seq !== leftLoadSeq) return;
     // Fetch mtime for images too
     try {
       const headRes = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'HEAD' });
+      if (seq !== leftLoadSeq) return;
       updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));
     } catch { /* ignore */ }
+    if (seq !== leftLoadSeq) return;
     toc.clear();
     fileTree?.setActive(path);
     return;
@@ -1943,10 +2025,13 @@ async function loadServerFile(path: string) {
 
   if (type === 'video') {
     await renderVideo(path);
+    if (seq !== leftLoadSeq) return;
     try {
       const headRes = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'HEAD' });
+      if (seq !== leftLoadSeq) return;
       updateBreadcrumb(path, headRes.headers.get('X-File-Mtime'));
     } catch { /* ignore */ }
+    if (seq !== leftLoadSeq) return;
     toc.clear();
     fileTree?.setActive(path);
     return;
@@ -1954,6 +2039,7 @@ async function loadServerFile(path: string) {
 
   if (type === 'office') {
     await renderOfficeUnsupported(path);
+    if (seq !== leftLoadSeq) return;
     fileTree?.setActive(path);
     setPaneProgress('left', 0);
     return;
@@ -1961,6 +2047,7 @@ async function loadServerFile(path: string) {
 
   if (type === 'pdf') {
     await renderPdf(path);
+    if (seq !== leftLoadSeq) return;
     fileTree?.setActive(path);
     setPaneProgress('left', 0);
     return;
@@ -1974,8 +2061,10 @@ async function loadServerFile(path: string) {
     const chunkKind = fileTypeToChunkKind(type);
     if (chunkKind && CHUNKED_TYPES.has(type)) {
       const metaRes = await fetch(`/api/file/meta?path=${encodeURIComponent(path)}`);
+      if (seq !== leftLoadSeq) return;
       if (metaRes.ok) {
         const meta = await metaRes.json();
+        if (seq !== leftLoadSeq) return;
         updateBreadcrumb(path, meta.mtime);
 
         if (meta.size > CHUNK_THRESHOLD) {
@@ -1990,14 +2079,16 @@ async function loadServerFile(path: string) {
             fileSize: meta.size,
             mtime: meta.mtime,
           }, {
+            isCurrent: () => seq === leftLoadSeq,
             initialLine: pendingLineJump?.line ?? null,
             initialLineEnd: pendingLineJump?.lineEnd ?? null,
           });
           await chunked.init();
+          if (seq !== leftLoadSeq) return;
 
           // If log format is unknown, fall back to plain chunked text
           if (chunked.isLogUnknown()) {
-            await loadFullFile(path);
+            await loadFullFile(path, seq);
           } else {
             // ChunkedTable consumed the line target (page navigation). Clear
             // it so a later non-chunked render doesn't try to re-apply.
@@ -2012,11 +2103,13 @@ async function loadServerFile(path: string) {
     }
 
     // Standard full-file loading
-    await loadFullFile(path);
+    await loadFullFile(path, seq);
   } catch {
+    if (seq !== leftLoadSeq) return;
     showError(`Connection error loading: ${path}`);
   }
 
+  if (seq !== leftLoadSeq) return;
   fileTree?.setActive(path);
   // Reset progress bar
   setPaneProgress('left', 0);
@@ -2026,6 +2119,10 @@ async function loadServerFile(path: string) {
 // Remote views are stateless: no tab entry, no hash update, no SSE tracking,
 // no scroll memory — each open is a fresh read through /api/remote.
 async function loadRemoteUrl(rawUrl: string) {
+  const seq = ++leftLoadSeq;
+  refreshSlidesButton(null);
+  findBar.close();
+  imageMetaPanel.destroy();
   leaveCompareViewForNavigation();
   clearAlbumTracking();
   saveScrollPosition('left');
@@ -2041,8 +2138,10 @@ async function loadRemoteUrl(rawUrl: string) {
 
   try {
     const res = await fetch(`/api/remote?url=${encodeURIComponent(rawUrl)}`);
+    if (seq !== leftLoadSeq) return;
     if (!res.ok) {
       const detail = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      if (seq !== leftLoadSeq) return;
       showError(`Remote fetch failed: ${detail.error ?? res.status}`);
       return;
     }
@@ -2050,6 +2149,7 @@ async function loadRemoteUrl(rawUrl: string) {
 
     if (type === 'image') {
       const blob = await res.blob();
+      if (seq !== leftLoadSeq) return;
       const blobUrl = URL.createObjectURL(blob);
       viewer.innerHTML = `<div class="image-view"><img src="${blobUrl}" alt="${escapeHtml(rawUrl)}" /><p class="image-caption">${escapeHtml(rawUrl)}</p></div>`;
       initImageZoom(viewer);
@@ -2064,16 +2164,19 @@ async function loadRemoteUrl(rawUrl: string) {
 
     if (type === 'pdf') {
       const blob = await res.blob();
+      if (seq !== leftLoadSeq) return;
       const blobUrl = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       await renderPdf(displayName, viewer, { src: blobUrl, remote: true });
       return;
     }
 
     const content = await res.text();
-    renderContent(content, displayName);
+    if (seq !== leftLoadSeq) return;
+    renderContent(content, displayName, viewer, rawUrl);
     const mtime = res.headers.get('X-File-Mtime');
     updateBreadcrumb(rawUrl, mtime);
   } catch (err) {
+    if (seq !== leftLoadSeq) return;
     showError(`Remote fetch error: ${String(err)}`);
   }
 }
@@ -2088,11 +2191,11 @@ function remoteDisplayName(rawUrl: string): string {
   }
 }
 
-async function loadFullFile(path: string) {
+async function loadFullFile(path: string, seq: number) {
   const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
   // The user may have navigated elsewhere while this was in flight — don't let
   // a slow response for an old file clobber a newer view.
-  if (currentFilePath !== path) return;
+  if (seq !== leftLoadSeq) return;
   if (!res.ok) {
     showError(`Failed to load: ${path} (${res.status})`);
     return;
@@ -2100,7 +2203,7 @@ async function loadFullFile(path: string) {
   const mtime = res.headers.get('X-File-Mtime');
   updateBreadcrumb(path, mtime);
   const content = await res.text();
-  if (currentFilePath !== path) return;
+  if (seq !== leftLoadSeq) return;
 
   // Large file warning
   if (content.length > MAX_FILE_SIZE) {
@@ -2126,6 +2229,10 @@ async function reloadCurrentFile() {
 }
 
 function loadLocalFile(file: File) {
+  const seq = ++leftLoadSeq;
+  refreshSlidesButton(null);
+  findBar.close();
+  imageMetaPanel.destroy();
   leaveCompareViewForNavigation();
   clearAlbumTracking();
   saveScrollPosition('left');
@@ -2142,6 +2249,12 @@ function loadLocalFile(file: File) {
     return;
   }
 
+  if (type === 'video') {
+    void renderVideo(file.name, viewer, URL.createObjectURL(file));
+    toc.clear();
+    return;
+  }
+
   if (type === 'office') {
     void renderOfficeUnsupported(file.name, viewer, { localFile: file });
     return;
@@ -2154,7 +2267,9 @@ function loadLocalFile(file: File) {
   }
 
   const reader = new FileReader();
-  reader.onload = () => renderContent(reader.result as string, file.name);
+  reader.onload = () => {
+    if (seq === leftLoadSeq) renderContent(reader.result as string, file.name);
+  };
   reader.readAsText(file);
 }
 
@@ -2558,6 +2673,7 @@ function renderSplitEmptyState() {
 }
 
 function resetSplitPane() {
+  ++rightLoadSeq;
   splitFilePath = null;
   splitPendingLineJump = null;
   splitCurrentHighlightedLine = null;
@@ -2567,6 +2683,8 @@ function resetSplitPane() {
 }
 
 function toggleSplitView() {
+  ++rightLoadSeq;
+  splitFindBar?.close();
   splitActive = !splitActive;
 
   if (splitActive) {
@@ -2646,6 +2764,10 @@ function toggleSplitView() {
 
 async function loadIntoSplit(path: string) {
   if (!splitViewer) return;
+  const target = splitViewer;
+  const seq = ++rightLoadSeq;
+  const isCurrent = () => isCurrentPaneLoad('right', seq, target);
+  splitFindBar?.close();
   saveScrollPosition('right');
   const fileChanged = splitFilePath !== path;
   splitFilePath = path;
@@ -2661,27 +2783,34 @@ async function loadIntoSplit(path: string) {
     if (path.toLowerCase().endsWith('.svg')) {
       try {
         const res = await fetch(url);
+        if (!res.ok || !isCurrent()) return;
         const svgText = await res.text();
+        if (!isCurrent()) return;
         const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
-        splitViewer.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div></div>`;
+        target.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div></div>`;
       } catch { /* ignore */ }
     } else {
-      splitViewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /></div>`;
+      target.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /></div>`;
     }
-    initImageZoom(splitViewer);
-    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
+    initImageZoom(target);
+    if (syncSplitScroll) requestAnimationFrame(() => { if (isCurrent()) syncScrollFrom('left'); });
+    return;
+  }
+
+  if (type === 'video') {
+    await renderVideo(path, target);
     return;
   }
 
   if (type === 'office') {
-    await renderOfficeUnsupported(path, splitViewer);
-    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
+    await renderOfficeUnsupported(path, target);
+    if (syncSplitScroll) requestAnimationFrame(() => { if (isCurrent()) syncScrollFrom('left'); });
     return;
   }
 
   if (type === 'pdf') {
-    await renderPdf(path, splitViewer);
-    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
+    await renderPdf(path, target);
+    if (syncSplitScroll) requestAnimationFrame(() => { if (isCurrent()) syncScrollFrom('left'); });
     return;
   }
 
@@ -2689,9 +2818,10 @@ async function loadIntoSplit(path: string) {
     const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
     if (!res.ok) return;
     const content = await res.text();
-    renderContent(content, path, splitViewer);
-    initImageZoom(splitViewer);
-    if (syncSplitScroll) requestAnimationFrame(() => syncScrollFrom('left'));
+    if (!isCurrent()) return;
+    renderContent(content, path, target);
+    initImageZoom(target);
+    if (syncSplitScroll) requestAnimationFrame(() => { if (isCurrent()) syncScrollFrom('left'); });
   } catch { /* ignore */ }
 }
 

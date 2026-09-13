@@ -1,4 +1,4 @@
-import cronstrue from 'cronstrue/i18n';
+import cronstrue from 'cronstrue/i18n.js';
 import { CronExpressionParser } from 'cron-parser';
 import type { SecretMasker } from './secret-mask';
 
@@ -33,7 +33,7 @@ function parseCrontab(content: string): { jobs: CronJob[]; envs: CronEnv[] } {
     if (!line || line.startsWith('#')) return; // 空行・コメント行はスキップ
 
     // @reboot: 起動時実行。cron-parser/cronstrue が解釈できないため特別扱い
-    if (/^@reboot\b/.test(line)) {
+    if (/^@reboot(?:\s|$)/.test(line)) {
       jobs.push({ line: lineNo, schedule: '@reboot', command: line.replace(/^@reboot\s*/, ''), isReboot: true });
       return;
     }
@@ -58,9 +58,9 @@ function parseCrontab(content: string): { jobs: CronJob[]; envs: CronEnv[] } {
 
     // 標準の 5 フィールド + コマンド。
     // 注: /etc/crontab 形式 (6 番目が実行ユーザー) は特別扱いせず、ユーザー名はコマンド側に含めて表示する。
-    const parts = line.split(/\s+/);
-    if (parts.length >= 6) {
-      jobs.push({ line: lineNo, schedule: parts.slice(0, 5).join(' '), command: parts.slice(5).join(' '), isReboot: false });
+    const standard = line.match(/^(\S+\s+\S+\s+\S+\s+\S+\s+\S+)\s+(.+)$/);
+    if (standard) {
+      jobs.push({ line: lineNo, schedule: standard[1].replace(/\s+/g, ' '), command: standard[2], isReboot: false });
     } else {
       // 5 フィールド以下: コマンドなし、あるいは不正な行。スケジュールとしてそのまま解析を試みる。
       jobs.push({ line: lineNo, schedule: line, command: '', isReboot: false });
@@ -115,6 +115,9 @@ function computeRuns(schedule: string, now: Date, tz: string): string[] {
 }
 
 function analyzeJob(job: CronJob, now: Date): JobAnalysis {
+  if (!job.command) {
+    return { descJa: '解析できないスケジュール', descEn: 'Unable to parse schedule', runsJst: [], runsUtc: [], timeline: null, valid: false };
+  }
   if (job.isReboot) {
     return { descJa: 'システム起動時に実行', descEn: 'At system startup', runsJst: [], runsUtc: [], timeline: null, valid: true };
   }
@@ -122,6 +125,8 @@ function analyzeJob(job: CronJob, now: Date): JobAnalysis {
   let descJa: string;
   let descEn: string;
   try {
+    // The description formatter accepts expressions the scheduler rejects.
+    CronExpressionParser.parse(job.schedule);
     descJa = cronstrue.toString(job.schedule, { locale: 'ja', use24HourTimeFormat: true });
     descEn = cronstrue.toString(job.schedule, { locale: 'en', use24HourTimeFormat: true });
   } catch {
@@ -208,7 +213,7 @@ function computeHeatmap(jobs: CronJob[]): { grid: number[][]; max: number } | nu
   const grid: number[][] = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
   let max = 0;
   for (const job of jobs) {
-    if (job.isReboot) continue;
+    if (job.isReboot || !job.command) continue;
     try {
       const e = CronExpressionParser.parse(job.schedule);
       const dows = new Set<number>();
@@ -272,10 +277,12 @@ interface JobRuns {
 function gatherRuns(jobs: CronJob[], now: Date): JobRuns[] {
   const horizon = now.getTime() + FREQ_HORIZON_DAYS * DAY_MS;
   return jobs.map((job, idx) => {
-    if (job.isReboot) return { idx, job, runs: [], perDay: 0 };
+    if (job.isReboot || !job.command) return { idx, job, runs: [], perDay: 0 };
     const runs: Date[] = [];
     try {
-      const it = CronExpressionParser.parse(job.schedule, { currentDate: now });
+      // Collision timestamps are labelled JST, so interpret schedules in JST
+      // regardless of the browser's own timezone.
+      const it = CronExpressionParser.parse(job.schedule, { currentDate: now, tz: 'Asia/Tokyo' });
       while (runs.length < FREQ_CAP && it.hasNext()) {
         const d = it.next().toDate();
         if (d.getTime() > horizon) break;
@@ -371,7 +378,7 @@ function renderFrequency(jr: JobRuns[]): string {
 
 function renderCollisions(cols: Collision[], jr: JobRuns[], maskValue?: SecretMasker): string {
   if (!cols.length) {
-    return `<div class="cron-collide cron-collide--ok">同時刻に重なるジョブはありません（今後 ${FREQ_HORIZON_DAYS} 日間）</div>`;
+    return `<div class="cron-collide cron-collide--ok">先読みした範囲では重複はありません（最大 ${FREQ_HORIZON_DAYS} 日間・各ジョブ ${FREQ_CAP} 回まで · JST）</div>`;
   }
   const MAX = 8;
   const items = cols
@@ -383,7 +390,7 @@ function renderCollisions(cols: Collision[], jr: JobRuns[], maskValue?: SecretMa
     .join('');
   const more = cols.length > MAX ? `<li class="cron-col-more">ほか ${cols.length - MAX} 件</li>` : '';
   return `<div class="cron-collide cron-collide--warn">
-    <div class="cron-collide-head">⚠ 同時実行の重複 <span class="cron-collide-sub">(${cols.length} 件 · 今後 ${FREQ_HORIZON_DAYS} 日間 · JST)</span></div>
+    <div class="cron-collide-head">⚠ 同時実行の重複 <span class="cron-collide-sub">(${cols.length} 件 · 最大 ${FREQ_HORIZON_DAYS} 日間・各ジョブ ${FREQ_CAP} 回まで · JST)</span></div>
     <ul class="cron-col-list">${items}${more}</ul>
   </div>`;
 }

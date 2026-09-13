@@ -1,20 +1,23 @@
 import type { SecretMasker } from './secret-mask';
 
 export function renderJsonlTable(content: string, path: string, maskValue?: SecretMasker): string {
-  const lines = content.split('\n').filter((l) => l.trim() !== '');
+  const lines = content.split('\n');
 
-  if (!lines.length) {
+  if (!content.trim()) {
     return `<p class="error-banner">No data found in ${esc(path)}</p>`;
   }
 
   const rows: Record<string, unknown>[] = [];
   const parseErrors: number[] = [];
+  const rowLines: number[] = [];
 
   lines.forEach((line, i) => {
+    if (!line.trim()) return;
     try {
       const obj = JSON.parse(line);
       if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {
         rows.push(obj as Record<string, unknown>);
+        rowLines.push(i + 1);
       } else {
         parseErrors.push(i + 1);
       }
@@ -56,7 +59,7 @@ export function renderJsonlTable(content: string, path: string, maskValue?: Secr
     .map((row, i) => {
       const tds = fields
         .map((f) => {
-          const val = row[f];
+          const val = Object.hasOwn(row, f) ? row[f] : undefined;
           const cell =
             val === undefined || val === null
               ? ''
@@ -66,9 +69,8 @@ export function renderJsonlTable(content: string, path: string, maskValue?: Secr
           return `<td>${cell}</td>`;
         })
         .join('');
-      // `data-line` (1-based table row number) lets the shared line-jump
-      // machinery (URL `&line=N` + the row-jump input) target this row.
-      return `<tr data-row-index="${i}" data-line="${i + 1}"><td class="csv-row-num">${i + 1}</td>${tds}</tr>`;
+      // Keep source line numbers even when blank or invalid lines were skipped.
+      return `<tr data-row-index="${i}" data-line="${rowLines[i]}"><td class="csv-row-num">${rowLines[i]}</td>${tds}</tr>`;
     })
     .join('');
 
@@ -77,7 +79,7 @@ export function renderJsonlTable(content: string, path: string, maskValue?: Secr
       <span>${rows.length} rows &times; ${fields.length} columns</span>
       <span class="csv-row-jump">
         <label class="csv-row-jump-label">行へ移動
-          <input class="csv-row-jump-input" type="number" min="1" max="${rows.length}" inputmode="numeric" placeholder="#" aria-label="移動する行番号">
+          <input class="csv-row-jump-input" type="number" min="1" max="${rowLines[rowLines.length - 1]}" inputmode="numeric" placeholder="#" aria-label="移動する行番号">
         </label>
         <button class="csv-row-jump-btn" type="button">移動</button>
       </span>

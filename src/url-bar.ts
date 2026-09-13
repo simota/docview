@@ -39,6 +39,7 @@ export class UrlBar {
   private suggestList: HTMLElement;
   private onOpen: OpenCallback;
   private activeSuggestIdx = -1;
+  private submitSeq = 0;
   private suggestions: Suggestion[] = [];
 
   // Lazy-loaded file index.
@@ -124,6 +125,7 @@ export class UrlBar {
     });
 
     this.input.addEventListener('input', () => {
+      ++this.submitSeq;
       this.activeSuggestIdx = -1;
       this.renderSuggestions();
       this.scheduleValidate();
@@ -142,6 +144,9 @@ export class UrlBar {
   }
 
   open(): void {
+    ++this.submitSeq;
+    this.existsCache.clear();
+    this.fileListLoaded = false;
     this.input.value = '';
     this.clearStatus();
     this.activeSuggestIdx = -1;
@@ -154,6 +159,7 @@ export class UrlBar {
   }
 
   close(): void {
+    ++this.submitSeq;
     this.cancelValidate();
     this.overlay.style.display = 'none';
   }
@@ -165,6 +171,7 @@ export class UrlBar {
   // --- Clipboard ---
 
   private async pasteFromClipboard(): Promise<void> {
+    const seq = ++this.submitSeq;
     try {
       if (!navigator.clipboard?.readText) {
         this.setWarn('Clipboard access unavailable — paste manually with Cmd+V');
@@ -172,13 +179,14 @@ export class UrlBar {
         return;
       }
       const text = await navigator.clipboard.readText();
-      if (!text) return;
+      if (!text || seq !== this.submitSeq || !this.isOpen) return;
       this.input.value = text.trim();
       this.input.focus();
       this.activeSuggestIdx = -1;
       this.renderSuggestions();
       this.scheduleValidate();
     } catch {
+      if (seq !== this.submitSeq || !this.isOpen) return;
       this.setWarn('Clipboard permission denied — paste manually with Cmd+V');
       this.input.focus();
     }
@@ -254,6 +262,8 @@ export class UrlBar {
   // --- Submit ---
 
   private async submit(): Promise<void> {
+    const seq = ++this.submitSeq;
+    this.cancelValidate();
     // If a suggestion is active, use its entry verbatim.
     if (this.activeSuggestIdx >= 0 && this.suggestions[this.activeSuggestIdx]) {
       this.input.value = this.suggestions[this.activeSuggestIdx].entry;
@@ -281,6 +291,7 @@ export class UrlBar {
 
     if (result.kind === 'remote') {
       await this.ensureRemoteInfoLoaded();
+      if (seq !== this.submitSeq || !this.isOpen) return;
       if (this.remoteInfo?.enabled === false) {
         this.setError('Remote URLs are disabled on this server');
         return;
@@ -292,6 +303,7 @@ export class UrlBar {
     }
 
     const exists = await this.verifyPath(result.path);
+    if (seq !== this.submitSeq || !this.isOpen) return;
     if (!exists) { this.setError(`File not found: ${result.path}`); return; }
 
     this.pushHistory(raw);
@@ -300,8 +312,7 @@ export class UrlBar {
   }
 
   private async verifyPath(path: string): Promise<boolean> {
-    const cached = this.existsCache.get(path);
-    if (cached !== undefined) return cached;
+    // Re-check at submission: files can be created or removed after validation.
     try {
       const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'HEAD' });
       this.existsCache.set(path, res.ok);
@@ -346,6 +357,7 @@ export class UrlBar {
       }
     })();
     await this.remoteInfoLoading;
+    this.remoteInfoLoading = null;
   }
 
   // --- File list (lazy) ---
@@ -366,6 +378,7 @@ export class UrlBar {
       }
     })();
     await this.fileListLoading;
+    this.fileListLoading = null;
   }
 
   // --- Suggestions ---
@@ -445,6 +458,7 @@ export class UrlBar {
     this.updateSuggestSelection();
     const active = this.suggestions[this.activeSuggestIdx];
     if (active) {
+      ++this.submitSeq;
       this.input.value = active.entry;
       this.scheduleValidate();
       this.suggestList.querySelectorAll<HTMLButtonElement>('.url-bar-suggest-item')[this.activeSuggestIdx]

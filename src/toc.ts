@@ -35,7 +35,7 @@ export class TableOfContents {
       const id = h.id || h.querySelector('.header-anchor')?.parentElement?.id || '';
       const text = h.textContent?.replace(/^#\s*/, '').trim() || '';
       if (!text) return;
-      const safeId = id.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      const safeId = id.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       html += `<a class="toc-link toc-level-${level}" href="#${safeId}" data-target="${safeId}">${safeText}</a>`;
     });

@@ -12,6 +12,8 @@
 // through DOMPurify — doing so strips the HTML children inside <foreignObject>
 // and blanks every slide (see the note in markdown.ts renderMermaidDiagrams).
 
+import { parse as parseYaml } from 'yaml';
+
 export interface MarpDeck {
   /** The `<div class="marpit">…</div>` markup containing one <svg> per slide. */
   html: string;
@@ -29,13 +31,19 @@ function extractFrontMatter(source: string): string | null {
 
 /**
  * Detect a Marp document: YAML front matter containing the global directive
- * `marp: true`. Matched without a full YAML parse so it stays cheap to call on
- * every markdown render.
+ * `marp: true`. Parse YAML so comments and quoted keys work, while nested
+ * fields and text inside block scalars cannot enable slide mode accidentally.
  */
 export function isMarpMarkdown(source: string): boolean {
   const fm = extractFrontMatter(source);
   if (!fm) return false;
-  return /^[ \t]*marp[ \t]*:[ \t]*true[ \t]*$/im.test(fm);
+  try {
+    const data: unknown = parseYaml(fm);
+    return typeof data === 'object' && data !== null && !Array.isArray(data)
+      && 'marp' in data && data.marp === true;
+  } catch {
+    return false;
+  }
 }
 
 // @marp-core pulls in markdown-it, postcss and the bundled themes (~hundreds of

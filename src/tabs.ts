@@ -120,6 +120,7 @@ export class TabBar {
         e.dataTransfer!.effectAllowed = 'move';
       });
       el.addEventListener('dragend', () => {
+        this.dragSrcIdx = -1;
         el.classList.remove('tab-dragging');
         this.container.querySelectorAll('.tab-drop-before, .tab-drop-after').forEach((d) => {
           d.classList.remove('tab-drop-before', 'tab-drop-after');
@@ -181,6 +182,7 @@ export function addRecent(path: string) {
 
 export function getRecent(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    const value: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    return Array.isArray(value) ? value.filter((path): path is string => typeof path === 'string').slice(0, MAX_RECENT) : [];
   } catch { return []; }
 }

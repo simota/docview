@@ -60,18 +60,28 @@ function splitLocalUrl(raw: string): { path: string; suffix: string } | null {
 
 function resolveResourceUrl(currentPath: string, raw: string): string | null {
   if (isExternalOrSpecialUrl(raw)) return null;
+  if (/^https?:\/\//i.test(currentPath)) {
+    try { return new URL(raw, currentPath).href; } catch { return null; }
+  }
   const split = splitLocalUrl(raw);
   if (!split) return null;
 
+  // Resource attributes contain URLs, whereas currentPath is a filesystem
+  // path. Decode the URL once before encoding the raw-file endpoint path so
+  // spaces, Unicode and literal percent signs are not double-encoded.
+  let resourcePath = split.path;
+  try { resourcePath = decodeURIComponent(resourcePath); } catch { /* literal percent sign */ }
+
   const baseDir = currentPath.includes('/') ? currentPath.replace(/\/[^/]+$/, '') : '';
-  const candidate = split.path.startsWith('/')
-    ? split.path.slice(1)
-    : `${baseDir ? `${baseDir}/` : ''}${split.path}`;
+  const candidate = resourcePath.startsWith('/')
+    ? resourcePath.slice(1)
+    : `${baseDir ? `${baseDir}/` : ''}${resourcePath}`;
   const normalized = normalizeLocalPath(candidate);
   if (!normalized) return null;
 
-  const resourceUrl = `/api/raw/${normalized.split('/').map(encodeURIComponent).join('/')}`;
-  if (split.suffix.startsWith('?')) return `${resourceUrl}${split.suffix}`;
+  const resourceUrl = `/api/raw/${normalized.split('/').map((part) =>
+    encodeURIComponent(part).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`),
+  ).join('/')}`;
   return `${resourceUrl}${split.suffix}`;
 }
 
@@ -125,8 +135,67 @@ function buildPreviewHtml(displayContent: string, currentPath: string): string {
     if (raw) el.setAttribute('style', rewriteCssResourceUrls(raw, currentPath));
   });
 
+  // Read the rendered document through messaging while its origin remains
+  // opaque. Capturing this snapshot preserves script-generated HTML without
+  // ever replaying document scripts in the application's origin.
+  const captureBridge = doc.createElement('script');
+  captureBridge.textContent = `window.addEventListener('message', (event) => {
+    if (event.source !== parent || event.data?.type !== 'docview-capture-request'
+      || typeof event.data.requestId !== 'string') return;
+    const snapshot = document.documentElement.cloneNode(true);
+    const canvases = document.querySelectorAll('canvas');
+    snapshot.querySelectorAll('canvas').forEach((node, index) => {
+      const original = canvases[index];
+      try {
+        const image = document.createElement('img');
+        for (const attribute of node.attributes) image.setAttribute(attribute.name, attribute.value);
+        image.src = original.toDataURL();
+        // Canvas pixels are not part of outerHTML. Preserve their rendered
+        // appearance as an image without rerunning scripts during capture.
+        const styles = getComputedStyle(original);
+        for (let i = 0; i < styles.length; i++) {
+          const name = styles[i];
+          image.style.setProperty(name, styles.getPropertyValue(name), styles.getPropertyPriority(name));
+        }
+        node.replaceWith(image);
+      } catch { /* Cross-origin canvas pixels may be unreadable. */ }
+    });
+    snapshot.querySelectorAll('script, noscript').forEach((node) => node.remove());
+    parent.postMessage({ type: 'docview-capture-response', requestId: event.data.requestId,
+      html: '<!doctype html>\\n' + snapshot.outerHTML }, '*');
+  });`;
+  doc.body.appendChild(captureBridge);
+
   const doctype = doc.doctype ? `<!doctype ${doc.doctype.name}>` : '<!doctype html>';
   return `${doctype}\n${doc.documentElement.outerHTML}`;
+}
+
+function snapshotPreviewHtml(frame: HTMLIFrameElement): Promise<string> {
+  const fallback = frame.getAttribute('srcdoc') || '';
+  const previewWindow = frame.contentWindow;
+  if (!previewWindow || !frame.sandbox.contains('allow-scripts')) return Promise.resolve(fallback);
+
+  return new Promise((resolve) => {
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const finish = (html: string) => {
+      clearTimeout(timeout);
+      window.removeEventListener('message', onMessage);
+      resolve(html);
+    };
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== previewWindow || event.data?.type !== 'docview-capture-response'
+        || event.data.requestId !== requestId || typeof event.data.html !== 'string') return;
+      finish(event.data.html);
+    };
+    // Disabled scripts, document CSP or navigation can prevent a response.
+    const timeout = setTimeout(() => finish(fallback), 1000);
+    window.addEventListener('message', onMessage);
+    try {
+      previewWindow.postMessage({ type: 'docview-capture-request', requestId }, '*');
+    } catch {
+      finish(fallback);
+    }
+  });
 }
 
 /**
@@ -184,10 +253,12 @@ export function initHtmlScriptsToggle(): void {
 export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilename = 'html-screenshot.png'): Promise<void> {
   const { domToCanvas } = await import('modern-screenshot');
 
-  const srcdoc = frame.getAttribute('srcdoc') || '';
+  const srcdoc = await snapshotPreviewHtml(frame);
   const width = Math.max(frame.clientWidth || 1200, 800);
 
-  // Create a temporary same-origin iframe to render full document with body styles
+  // Same-origin access is needed by the DOM capture library, so scripts MUST
+  // remain disabled here. Replaying untrusted srcdoc with both allow-scripts
+  // and allow-same-origin would let a captured document access the parent app.
   const tempFrame = document.createElement('iframe');
   tempFrame.className = 'html-capture-temp-frame';
   tempFrame.style.cssText = `
@@ -205,7 +276,7 @@ export async function captureHtmlFullPage(frame: HTMLIFrameElement, defaultFilen
     pointer-events: none;
     overflow: visible;
   `;
-  tempFrame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+  tempFrame.setAttribute('sandbox', 'allow-same-origin');
   tempFrame.setAttribute('srcdoc', srcdoc);
 
   document.body.appendChild(tempFrame);
@@ -388,4 +459,3 @@ export function initHtmlScreenshotToggle(): void {
     }
   });
 }
-
