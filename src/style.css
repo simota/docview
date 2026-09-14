@@ -3180,6 +3180,17 @@ body.dragging::after {
   --syn-deletion: #e2777a;
 }
 
+/* note — GitHub-light-like palette for the soft grey code block */
+[data-theme='note'] {
+  --syn-keyword: #8250df;
+  --syn-string: #0a7d5f;
+  --syn-title: #0969da;
+  --syn-attr: #953800;
+  --syn-variable: #cf222e;
+  --syn-comment: #6e7781;
+  --syn-deletion: #cf222e;
+}
+
 /* Comment ink overrides where the code surface differs enough from the page bg
    that the inherited --text-muted dips below AA on code comments. */
 [data-theme='dark'] { --syn-comment: #828ba6; }
@@ -7622,6 +7633,7 @@ a.wiki-link:hover {
 .theme-menu-item-swatch-qiita { background: linear-gradient(135deg, #ffffff 50%, #55c500 50%); }
 .theme-menu-item-swatch-zenn { background: linear-gradient(135deg, #ffffff 50%, #3ea8ff 50%); }
 .theme-menu-item-swatch-novel { background: linear-gradient(135deg, #f5efe2 50%, #8c3a32 50%); }
+.theme-menu-item-swatch-note { background: linear-gradient(135deg, #ffffff 50%, #41c9b4 50%); }
 
 .theme-menu-item-check {
   margin-left: auto;
@@ -10922,6 +10934,140 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   border-left-color: var(--blockquote-border);
   background: var(--blockquote-bg);
   color: var(--text-secondary);
+}
+
+/* note — airy essay surface: pure white, narrow column, bold rule-less headings, note-teal accents */
+[data-theme='note'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f7;
+  --bg-tertiary: #f0f0f0;
+  --bg-editor: #fafafa;
+  --text-primary: #08131a;
+  --text-secondary: #5f6b70;
+  --text-muted: #8c979c;
+  --border: #e6e6e6;
+  --border-subtle: #efefef;
+  --border-strong: #8c979c;
+  --accent: #41c9b4;
+  --accent-light: #6ad6c6;
+  --accent-lighter: #b6ebe2;
+  --accent-bg: rgba(65, 201, 180, 0.09);
+  --accent-border: rgba(65, 201, 180, 0.32);
+  --accent-gradient: linear-gradient(135deg, #2bb59f, #41c9b4, #6ad6c6);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(43, 181, 159, 0.12), rgba(65, 201, 180, 0.07));
+  --gutter-bg: #f0f0f0;
+  --gutter-hover: #e4e4e4;
+  --shadow-sm: 0 1px 3px rgba(8, 19, 26, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(8, 19, 26, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(8, 19, 26, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --code-bg: #f0f0f0;
+  --code-text: #08131a;
+  --code-block-bg: #f5f5f5;
+  --blockquote-border: #d6d6d6;
+  --blockquote-bg: transparent;
+  --table-stripe: #fafafa;
+  --table-border: #e6e6e6;
+  --table-header-bg: linear-gradient(180deg, #f5f5f5, #efefef);
+  --link-color: #2bb59f;
+  --link-hover: #1f9c88;
+  --hr-gradient: linear-gradient(90deg, var(--border), var(--border));
+  --mark-bg: #fff3b8;
+  --scrollbar-thumb: #d0d5d8;
+  --scrollbar-track: transparent;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  /* Semantic colors — mirror the AA-hardened light set (shared white page bg) */
+  --color-info: #1d4ed8;
+  --color-info-bg: rgba(29, 78, 216, 0.06);
+  --color-success: #15803d;
+  --color-success-bg: rgba(21, 128, 61, 0.06);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(180, 83, 9, 0.06);
+  --color-danger: #b91c1c;
+  --color-danger-bg: rgba(185, 28, 28, 0.06);
+  --color-important: #7c3aed;
+  --color-important-bg: rgba(124, 58, 237, 0.06);
+  --icon-markdown: #41c9b4;
+  --icon-data: #15803d;
+  --icon-config: #b45309;
+  --icon-image: #b91c1c;
+  --icon-video: #7c3aed;
+  --icon-default: #9aa0a2;
+}
+[data-theme='note'] body,
+[data-theme='note'] .markdown-body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  line-height: 2;
+  letter-spacing: 0.02em;
+}
+/* note reads as a single narrow essay column */
+[data-theme='note'] .markdown-body {
+  max-width: 680px;
+  margin-inline: auto;
+}
+/* note headings — bold, no rules, no accent colour, wide top spacing */
+[data-theme='note'] .markdown-body h1,
+[data-theme='note'] .markdown-body h2,
+[data-theme='note'] .markdown-body h3,
+[data-theme='note'] .markdown-body h4,
+[data-theme='note'] .markdown-body h5,
+[data-theme='note'] .markdown-body h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.5;
+  border-bottom: none;
+  padding-bottom: 0;
+  background-image: none;
+}
+[data-theme='note'] .markdown-body h1 { font-size: 1.9em; margin-top: 2em; }
+[data-theme='note'] .markdown-body h2 { font-size: 1.5em; margin-top: 2.6em; }
+[data-theme='note'] .markdown-body h3 { font-size: 1.25em; margin-top: 2.2em; }
+[data-theme='note'] .markdown-body h4 { font-size: 1.1em; margin-top: 2em; }
+[data-theme='note'] .markdown-body :is(h1, h2, h3, h4, h5) + :is(h2, h3, h4, h5, h6) { margin-top: 0.6em; }
+[data-theme='note'] .markdown-body p { margin: 1.4em 0; }
+/* note links — brand teal, underline on hover */
+[data-theme='note'] .markdown-body a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+[data-theme='note'] .markdown-body a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+/* note inline code — flat grey chip in the body text colour */
+[data-theme='note'] .markdown-body code {
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: none;
+}
+/* note code block — soft grey, flat, no border or shadow */
+[data-theme='note'] .markdown-body pre {
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+[data-theme='note'] .markdown-body pre.hljs code {
+  font-size: 0.9em;
+}
+/* Mermaid sits on the same soft grey as the code block */
+[data-theme='note'] .mermaid-container,
+[data-theme='note'] .mermaid-rendered {
+  background: #f7f7f7;
+}
+/* Blockquote — thin light-grey left rule, quiet grey text */
+[data-theme='note'] .markdown-body blockquote {
+  border-left: 2px solid var(--blockquote-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-style: normal;
+  padding: 0.2em 0 0.2em 1.2em;
+}
+[data-theme='note'] .markdown-body blockquote::before { content: none; }
+/* hr — plain hairline, no gradient */
+[data-theme='note'] .markdown-body hr {
+  height: 1px;
+  background: var(--border);
 }
 
 /* ===== Image Metadata Panel ===== */
