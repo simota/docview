@@ -11012,6 +11012,7 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
 [data-theme='note'] .markdown-body h4,
 [data-theme='note'] .markdown-body h5,
 [data-theme='note'] .markdown-body h6 {
+  position: relative;
   color: var(--text-primary);
   font-weight: 700;
   line-height: 1.5;
@@ -11019,20 +11020,33 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   padding-bottom: 0;
   background-image: none;
 }
+/* Rule-less headings expose any indent, so hang the anchor in the left margin to keep headings flush with body text */
+[data-theme='note'] .markdown-body .header-anchor {
+  position: absolute;
+  right: 100%;
+}
 [data-theme='note'] .markdown-body h1 { font-size: 1.9em; margin-top: 2em; }
 [data-theme='note'] .markdown-body h2 { font-size: 1.5em; margin-top: 2.6em; }
 [data-theme='note'] .markdown-body h3 { font-size: 1.25em; margin-top: 2.2em; }
 [data-theme='note'] .markdown-body h4 { font-size: 1.1em; margin-top: 2em; }
 [data-theme='note'] .markdown-body :is(h1, h2, h3, h4, h5) + :is(h2, h3, h4, h5, h6) { margin-top: 0.6em; }
 [data-theme='note'] .markdown-body p { margin: 1.4em 0; }
-/* note links — brand teal, underline on hover */
-[data-theme='note'] .markdown-body a {
-  color: var(--link-color);
-  text-decoration: none;
-}
-[data-theme='note'] .markdown-body a:hover {
-  color: var(--link-hover);
+/* note body stays monochrome like note.com articles — links are body-colour with an underline, teal only on hover */
+[data-theme='note'] .markdown-body a:not(.header-anchor) {
+  color: var(--text-primary);
   text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+[data-theme='note'] .markdown-body a:not(.header-anchor):hover {
+  color: var(--link-hover);
+}
+[data-theme='note'] .markdown-body li::marker { color: inherit; }
+/* The narrow column can't fit wide tables — scroll them inside the column instead of overflowing it */
+[data-theme='note'] .markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
 }
 /* note inline code — flat grey chip in the body text colour */
 [data-theme='note'] .markdown-body code {
