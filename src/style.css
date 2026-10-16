@@ -2676,6 +2676,21 @@ body.dragging::after {
   background: var(--bg-primary);
 }
 
+/* Rendered markdown may contain raw HTML with inline styles. Layout
+   containment makes the container the containing block for fixed/absolute
+   descendants and a stacking context, so such elements stay inside the
+   document area instead of covering the app shell; the vertical clip keeps
+   them off the Preview/Source toggle above it (horizontal overflow stays
+   visible so wide content is not cut off). */
+.json-view-tree.markdown-body,
+.slide-content {
+  contain: layout;
+}
+
+.json-view-tree.markdown-body {
+  overflow-y: clip;
+}
+
 #viewer::-webkit-scrollbar,
 #viewer-right::-webkit-scrollbar {
   width: 6px;

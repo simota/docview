@@ -1706,7 +1706,7 @@ function buildMermaidConfig(theme: Theme) {
 let mermaidTheme: Theme = 'light';
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   highlight(str_: string, lang: string, displayLabel = lang): string {
@@ -1982,12 +1982,60 @@ function isQiitaTheme(theme?: Theme): boolean {
     && document.documentElement.getAttribute('data-theme') === 'qiita';
 }
 
+// Raw HTML in markdown is allowed (like GitHub), so the whole rendered output
+// goes through DOMPurify: scripts, event handlers and javascript: URLs are
+// stripped, and <style>/<form> are dropped so a document cannot restyle the
+// app shell. Popovers are dropped because the top layer escapes the CSS
+// containment that keeps positioned raw HTML inside the document area.
+const MARKDOWN_SANITIZE_CONFIG = {
+  USE_PROFILES: { html: true, svg: true, svgFilters: true, mathMl: true },
+  // KaTeX wraps its MathML in <semantics>/<annotation> to keep the TeX source.
+  ADD_TAGS: ['semantics', 'annotation'],
+  ADD_ATTR: ['target', 'encoding'],
+  FORBID_TAGS: ['style', 'form'],
+  FORBID_ATTR: ['popover', 'popovertarget', 'popovertargetaction'],
+};
+
+// DOMPurify's DOM-clobbering guard drops ids such as "title" or "location"
+// (they exist on `document`), which would break heading anchors and the TOC.
+// Heading ids from markdown-it-anchor are carried through sanitization in an
+// attribute whose name raw HTML cannot guess, then restored on headings only
+// (headings are never exposed as named properties on `document`).
+const HEADING_ID_ATTR = `data-md-heading-id-${Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) => n.toString(36)).join('')}`;
+const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+
+md.renderer.rules.heading_open = (tokens, idx, options, _env, self) => {
+  const token = tokens[idx];
+  const id = token.attrGet('id');
+  if (id !== null) {
+    token.attrs = token.attrs!.filter(([name]) => name !== 'id');
+    token.attrSet(HEADING_ID_ATTR, id);
+  }
+  return self.renderToken(tokens, idx, options);
+};
+
+function restoreHeadingId(node: Element): void {
+  const id = node.getAttribute?.(HEADING_ID_ATTR);
+  if (id === null || id === undefined) return;
+  node.removeAttribute(HEADING_ID_ATTR);
+  if (HEADING_TAGS.has(node.nodeName)) node.setAttribute('id', id);
+}
+
+function sanitizeMarkdownHtml(html: string): string {
+  DOMPurify.addHook('afterSanitizeAttributes', restoreHeadingId);
+  try {
+    return DOMPurify.sanitize(html, MARKDOWN_SANITIZE_CONFIG);
+  } finally {
+    DOMPurify.removeHook('afterSanitizeAttributes', restoreHeadingId);
+  }
+}
+
 export function renderMarkdown(source: string, theme?: Theme): string {
   mermaidCounter = 0;
   diagramCounter = 0;
   const qiita = isQiitaTheme(theme);
   const env: MarkdownRenderEnv = { qiita };
-  const body = md.render(qiita ? transformQiitaNotes(source) : source, env);
+  const body = sanitizeMarkdownHtml(md.render(qiita ? transformQiitaNotes(source) : source, env));
   if (!env.qiitaArticle) return body;
   const title = env.qiitaArticle.title
     ? `<h1 class="qiita-article-title">${md.utils.escapeHtml(env.qiitaArticle.title)}</h1>`
