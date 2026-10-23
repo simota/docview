@@ -145,4 +145,25 @@ test.describe('Raw HTML in markdown', () => {
     expect(await page.evaluate(() => [...document.querySelectorAll('#viewer *')].some((el) =>
       [...el.attributes].some((a) => a.name.startsWith('data-md-heading-id'))))).toBe(false);
   });
+
+  test('raw HTML ids cannot stand in for app-owned elements', async ({ page }) => {
+    await openDocument(page, 'id-collision.md', [
+      '# Collision',
+      '',
+      '<div id="viewer-pane-right">document block</div>',
+      '',
+      '<div id="reconnect-banner">document banner</div>',
+    ].join('\n'));
+    const body = page.locator('#viewer');
+    await expect(body.locator('h1')).toContainText('Collision');
+
+    await page.keyboard.press('Meta+\\');
+    await expect(page.locator('#workspace')).toHaveClass(/split-view/);
+    await expect(page.locator('.viewer-pane-split')).toHaveClass(/compare-pane-active/);
+    await page.keyboard.press('Meta+\\');
+    await expect(page.locator('#workspace')).not.toHaveClass(/split-view/);
+    // Closing the split removes the real right pane, not the document's look-alike.
+    await expect(page.locator('.viewer-pane-split')).toHaveCount(0);
+    await expect(body.locator('.markdown-body #viewer-pane-right')).toHaveText('document block');
+  });
 });
