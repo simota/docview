@@ -28,6 +28,10 @@ if (args.includes('--help') || args.includes('-h')) {
     -p, --port <port>         Port number (default: 4000)
     --host <address>          Bind address (default: 127.0.0.1). Use 0.0.0.0
                               to expose the viewer on the LAN (opt-in).
+    --allowed-host <name>     Also accept this Host header name (repeatable),
+                              e.g. a LAN hostname. IPs and localhost are
+                              always accepted; other names are refused to
+                              block DNS rebinding.
     --no-open                 Don't auto-open browser
     --no-remote               Disable the remote URL fetcher (Cmd+L remote mode)
     --allow-private-remote    Also fetch private/loopback remote URLs (opt-in)

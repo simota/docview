@@ -212,6 +212,8 @@ let port = 4000;
 // Bind loopback-only by default so the viewer (and its unauthenticated APIs)
 // is not reachable from other machines on the LAN. Opt in with --host.
 let host = '127.0.0.1';
+// Extra Host header names to serve (e.g. a LAN hostname with --host 0.0.0.0).
+const allowedHosts = new Set();
 let remoteEnabled = true;
 let allowPrivateRemote = false;
 let remoteMaxSize = 5 * 1024 * 1024; // 5 MB default
@@ -246,6 +248,16 @@ for (let i = 0; i < args.length; i++) {
       ));
     }
     host = raw;
+  } else if (args[i] === '--allowed-host') {
+    const raw = args[++i];
+    const name = typeof raw === 'string' && raw.length > 0 ? hostnameOf(raw) : null;
+    if (!name) {
+      reportAndExit(Object.assign(
+        new Error(`--allowed-host の値が不正です: "${raw}" (例: my-mac.local)`),
+        { code: 'EINVALIDHOST' },
+      ));
+    }
+    allowedHosts.add(name);
   } else if (args[i] === '--no-remote') {
     remoteEnabled = false;
   } else if (args[i] === '--allow-private-remote') {
@@ -963,6 +975,44 @@ function isTrustedLocalHostname(hostname) {
   return lower === 'localhost' || lower === '127.0.0.1' || lower === '::1' || lower === '[::1]';
 }
 
+/** Hostname part of a Host / URL authority, lower-cased, without port or IPv6 brackets. */
+function hostnameOf(authority) {
+  try {
+    return new URL(`http://${authority}`).hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+// DNS rebinding guard: a page on attacker.example can re-resolve its own name
+// to 127.0.0.1 and then read every API response as "same-origin". The browser
+// still sends `Host: attacker.example`, so only names that cannot be rebound
+// (IP literals, localhost) plus the bind name and explicit --allowed-host
+// entries are served.
+function isAllowedHostHeader(hostHeader) {
+  if (hostHeader === undefined) return true; // HTTP/1.0 clients; browsers always send Host
+  const name = hostnameOf(hostHeader);
+  if (!name) return false;
+  if (isIP(name) || name === 'localhost' || name.endsWith('.localhost')) return true;
+  return name === host.toLowerCase() || allowedHosts.has(name);
+}
+
+// CSRF guard for state-changing requests: a cross-site page can POST a
+// text/plain "simple request" without a CORS preflight. Browsers attach Origin
+// to every cross-origin POST, so require it (when present) to match Host.
+function isCrossOriginWrite(req) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return false;
+  const fetchSite = String(req.headers['sec-fetch-site'] || '').toLowerCase();
+  if (fetchSite === 'cross-site' || fetchSite === 'same-site') return true;
+  const origin = req.headers.origin;
+  if (!origin) return false;
+  try {
+    return new URL(origin).host !== req.headers.host;
+  } catch {
+    return true;
+  }
+}
+
 function isTrustedOpenRequest(req) {
   const origin = req.headers.origin;
   if (!origin) return false;
@@ -1347,6 +1397,18 @@ const server = createServer(async (req, res) => {
   if (origin && (origin === `http://localhost:${port}` || origin === `http://127.0.0.1:${port}`)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+
+  if (!isAllowedHostHeader(req.headers.host)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden: unrecognized Host header (use --allowed-host to permit it)');
+    return;
+  }
+
+  if (isCrossOriginWrite(req)) {
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Cross-origin requests are not allowed' }));
+    return;
   }
 
   if (req.method === 'OPTIONS') {

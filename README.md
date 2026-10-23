@@ -123,6 +123,8 @@ docview ./docs --no-open
 |-----------------------|-------------------------------------|---------|
 | `-p`, `--port <port>` | Port number                         | `4000`  |
 | `--no-open`           | Don't auto-open the browser         | —       |
+| `--host <address>`    | Bind address (`0.0.0.0` exposes it on the LAN) | `127.0.0.1` |
+| `--allowed-host <name>` | Also accept this `Host` header name, e.g. a LAN hostname (repeatable). IP addresses and `localhost` are always accepted; other names are refused to block DNS rebinding | — |
 | `-h`, `--help`        | Show help                           | —       |
 | `-v`, `--version`     | Show version                        | —       |
 
