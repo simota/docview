@@ -59,6 +59,21 @@ const server = createServer((req, res) => {
     return;
   }
 
+  // Script-bearing documents with allowed MIME types (DocView must sandbox them).
+  if (url.pathname === '/probe.svg' || url.pathname === '/probe-xml.md') {
+    const script = "document.documentElement.setAttribute('data-ran','1');"
+      + "fetch('/api/file?path=README.md').then(r=>r.text()).then(t=>document.documentElement.setAttribute('data-leak',t),"
+      + "()=>document.documentElement.setAttribute('data-leak','blocked'))";
+    if (url.pathname === '/probe.svg') {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+      res.end(`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/><script>${script}</script></svg>`);
+    } else {
+      res.writeHead(200, { 'Content-Type': 'text/xml' });
+      res.end(`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>probe</p><script>${script}</script></body></html>`);
+    }
+    return;
+  }
+
   // Markdown served as HTML MIME — extension allow, MIME deny → 415 expected.
   if (url.pathname === '/html-disguised.md') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

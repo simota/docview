@@ -767,6 +767,21 @@ const OFFICE_MIME = {
   '.key': 'application/vnd.apple.keynote',
 };
 
+// Served files are untrusted. HTML and SVG opened directly in a tab (e.g.
+// "open image in new tab") would otherwise run their scripts on the DocView
+// origin and read every file through the API. A CSP sandbox gives them an
+// opaque origin instead; <img>, fetch() and the srcdoc preview are unaffected.
+const DOCUMENT_SANDBOX_CSP = {
+  '.html': 'sandbox allow-scripts',
+  '.htm': 'sandbox allow-scripts',
+  '.svg': 'sandbox',
+};
+
+function documentSandboxHeaders(ext) {
+  const csp = DOCUMENT_SANDBOX_CSP[ext];
+  return csp ? { 'Content-Security-Policy': csp } : {};
+}
+
 const TEXT_MIME = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -837,7 +852,7 @@ async function serveRawFile(req, res, filePath) {
     if (IMAGE_EXTENSIONS.has(ext)) {
       const content = await readFile(resolved);
       const mime = IMAGE_MIME[ext] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime });
+      res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime, ...documentSandboxHeaders(ext) });
       res.end(content);
       return;
     }
@@ -878,7 +893,7 @@ async function serveRawFile(req, res, filePath) {
     }
 
     const content = await readFileText(resolved);
-    res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
+    res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime, ...documentSandboxHeaders(ext) });
     res.end(content);
   } catch {
     res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -1633,7 +1648,7 @@ const server = createServer(async (req, res) => {
       if (IMAGE_EXTENSIONS.has(ext)) {
         const content = await readFile(resolved);
         const mime = IMAGE_MIME[ext] || 'application/octet-stream';
-        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime });
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'max-age=5', 'X-File-Mtime': mtime, ...documentSandboxHeaders(ext) });
         res.end(content);
       } else if (VIDEO_EXTENSIONS.has(ext)) {
         const mime = VIDEO_MIME[ext] || 'application/octet-stream';
@@ -1683,7 +1698,7 @@ const server = createServer(async (req, res) => {
         res.end(lines.join('\n'));
       } else {
         const content = await readFileText(resolved);
-        res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime });
+        res.writeHead(200, { 'Content-Type': TEXT_MIME[ext] || 'text/plain; charset=utf-8', 'X-File-Mtime': mtime, ...documentSandboxHeaders(ext) });
         res.end(content);
       }
     } catch {
@@ -1796,6 +1811,11 @@ const server = createServer(async (req, res) => {
       'X-Source-Url': result.sourceUrl,
       'Access-Control-Expose-Headers': 'X-Source-Url, X-File-Mtime',
     };
+    // The remote body and Content-Type are attacker-chosen (SVG, text/xml, ...)
+    // and any site can navigate the user here, so never let it run as a
+    // document on this origin. PDFs keep the default policy: the browser's
+    // PDF viewer refuses sandboxed documents and cannot script the origin.
+    if (!/^application\/pdf\b/i.test(result.contentType)) headers['Content-Security-Policy'] = 'sandbox';
     if (result.lastModified) headers['X-File-Mtime'] = result.lastModified;
     res.writeHead(200, headers);
     res.end(result.body);
