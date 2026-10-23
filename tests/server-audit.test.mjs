@@ -371,6 +371,10 @@ test('backlinks resolve Markdown links like the viewer does', async (t) => {
   await writeFile(join(directory, 'other-ext.md'), '[a](my%20doc.txt)\n');
   await writeFile(join(directory, 'wrong-dir.md'), '[a](notes.md)\n');
   await writeFile(join(directory, 'wiki-notes.md'), '[[notes]]\n');
+  // An encoded separator still qualifies the wiki link to one folder.
+  await mkdir(join(directory, 'other'));
+  await writeFile(join(directory, 'other', 'notes.md'), '# Other notes\n');
+  await writeFile(join(directory, 'wiki-encoded.md'), '[[sub%2Fnotes]]\n');
   const server = await startServer(t, { directory });
   const target = await (await server.request('/api/backlinks?path=' + encodeURIComponent('my doc.md'))).json();
   assert.deepEqual(target.map(({ path }) => path).sort(), ['angle.md', 'encoded.md', 'parent.md', 'wiki.md']);
@@ -378,7 +382,9 @@ test('backlinks resolve Markdown links like the viewer does', async (t) => {
   const notes = await (await server.request('/api/backlinks?path=sub/notes.md')).json();
   // A plain relative link opens notes.md beside its source; only wiki links
   // match by name across directories.
-  assert.deepEqual(notes.map(({ path }) => path), ['wiki-notes.md']);
+  assert.deepEqual(notes.map(({ path }) => path).sort(), ['wiki-encoded.md', 'wiki-notes.md']);
+  const otherNotes = await (await server.request('/api/backlinks?path=other/notes.md')).json();
+  assert.deepEqual(otherNotes.map(({ path }) => path), ['wiki-notes.md']);
 });
 
 test('CLI rejects an unsafe remote byte limit instead of silently disabling the cap', async () => {

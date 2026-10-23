@@ -2242,14 +2242,17 @@ const server = createServer(async (req, res) => {
       }
       if (!dest || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(dest)) return false;
       let resolvedLink;
+      let qualified;
       try {
         const base = sourcePath.split('/').map(encodeURIComponent).join('/');
         resolvedLink = decodeURIComponent(new URL(dest, `https://docview.invalid/${base}`).pathname.slice(1));
+        // `sub%2Fnotes` names a folder just like `sub/notes` once decoded.
+        qualified = decodeURIComponent(dest).includes('/');
       } catch {
         return false;
       }
       if (resolvedLink === targetPath) return true;
-      return isWiki && !dest.includes('/') && basename(resolvedLink) === targetName;
+      return isWiki && !qualified && basename(resolvedLink) === targetName;
     }
 
     async function scanBacklinks(dir) {
