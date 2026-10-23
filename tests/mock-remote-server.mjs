@@ -60,15 +60,20 @@ const server = createServer((req, res) => {
   }
 
   // Script-bearing documents with allowed MIME types (DocView must sandbox them).
-  if (url.pathname === '/probe.svg' || url.pathname === '/probe-xml.md') {
+  if (['/probe.svg', '/probe-xml.md', '/probe-pdf-xml.md', '/probe-pdf-list.md'].includes(url.pathname)) {
     const script = "document.documentElement.setAttribute('data-ran','1');"
       + "fetch('/api/file?path=README.md').then(r=>r.text()).then(t=>document.documentElement.setAttribute('data-leak',t),"
       + "()=>document.documentElement.setAttribute('data-leak','blocked'))";
     if (url.pathname === '/probe.svg') {
       res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
       res.end(`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/><script>${script}</script></svg>`);
+    } else if (url.pathname === '/probe-pdf-list.md') {
+      // Browsers use the last type of a comma list; it must not pass as a PDF.
+      res.writeHead(200, { 'Content-Type': 'application/pdf, image/svg+xml' });
+      res.end(`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/><script>${script}</script></svg>`);
     } else {
-      res.writeHead(200, { 'Content-Type': 'text/xml' });
+      // text/xml, or a "+xml" type that merely starts with application/pdf.
+      res.writeHead(200, { 'Content-Type': url.pathname === '/probe-pdf-xml.md' ? 'application/pdf+xml' : 'text/xml' });
       res.end(`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>probe</p><script>${script}</script></body></html>`);
     }
     return;
