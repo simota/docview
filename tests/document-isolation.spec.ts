@@ -7,7 +7,15 @@ import { test, expect, type Page } from '@playwright/test';
 const MOCK = 'http://127.0.0.1:4090';
 
 async function probe(page: Page, url: string) {
-  const response = await page.goto(url);
+  let response;
+  try {
+    response = await page.goto(url);
+  } catch (error) {
+    // Chromium may download a sandboxed "+xml" body instead of rendering it;
+    // a download never runs the document's script.
+    if (String(error).includes('Download is starting')) return { ran: null, leak: null };
+    throw error;
+  }
   expect(response?.ok()).toBeTruthy();
   // Give a script (if it runs at all) time to finish its fetch.
   await page.waitForTimeout(500);
