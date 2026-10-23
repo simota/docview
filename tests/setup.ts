@@ -142,6 +142,14 @@ flowchart TD
   }
   write('events.jsonl', bigJsonl.join('\n') + '\n');
 
+  // Document-isolation probes: if opened directly in a tab, their scripts must
+  // not run with the DocView origin (they try to read README.md via the API).
+  const probeScript = "document.documentElement.setAttribute('data-ran','1');"
+    + "fetch('/api/file?path=README.md').then(r=>r.text()).then(t=>document.documentElement.setAttribute('data-leak',t),"
+    + "()=>document.documentElement.setAttribute('data-leak','blocked'))";
+  write('probe.svg', `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/><script>${probeScript}</script></svg>`);
+  write('probe.html', `<!doctype html><html><body><p id="probe">probe</p><script>${probeScript}</script></body></html>`);
+
   // HTML fixture for the sandboxed-iframe HTML view. The inline <script>
   // appends #js-ran so tests can assert it does NOT run while sandboxed (default)
   // and DOES run after the scripts toggle is enabled.

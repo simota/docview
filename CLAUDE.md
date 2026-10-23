@@ -58,4 +58,4 @@ No linter/formatter configured; TypeScript strict mode is the quality gate.
 - Commit messages in Japanese, conventional commit style
 - ES Modules throughout (`"type": "module"`)
 - No frontend framework — DOM manipulation is direct
-- Security: path traversal prevention, CSP headers, CORS restricted to localhost, Host header allowlist (DNS rebinding), cross-origin POST rejection (CSRF)
+- Security: path traversal prevention, CSP headers, CORS restricted to localhost, Host header allowlist (DNS rebinding), cross-origin POST rejection (CSRF), CSP sandbox on served HTML/SVG and remote responses (direct-open XSS)
