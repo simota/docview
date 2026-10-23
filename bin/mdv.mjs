@@ -45,9 +45,15 @@ if (args.includes('--help') || args.includes('-h')) {
 
   Supported formats:
     Markdown   .md .markdown .mdx .txt
-    Data       .json .yaml .yml
+    HTML       .html .htm
+    Diagrams   .mmd .mermaid
+    Data       .json .jsonl .ndjson .yaml .yml .csv .tsv
     Config     .toml .ini .conf .env .cfg .properties
+    Logs       .log
+    Crontab    .cron .crontab crontab
     Images     .png .jpg .jpeg .gif .svg .webp .bmp .ico
+    Videos     .mp4 .m4v .webm .ogv .mov
+    Documents  .pdf .xls .xlsx .ppt .pptx .numbers .pages .key
 
   Examples:
     docview                  # View current directory

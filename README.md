@@ -63,10 +63,14 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 | Category  | Extensions                                   |
 |-----------|----------------------------------------------|
 | Markdown  | `.md` `.markdown` `.mdx` `.txt`              |
-| Data      | `.json` `.yaml` `.yml`                       |
+| HTML      | `.html` `.htm` (sandboxed iframe preview)    |
+| Diagrams  | `.mmd` `.mermaid`                            |
+| Data      | `.json` `.jsonl` `.ndjson` `.yaml` `.yml` `.csv` `.tsv` |
 | Config    | `.toml` `.ini` `.conf` `.env` `.cfg` `.properties` |
+| Logs      | `.log`                                       |
 | Crontab   | `.cron` `.crontab` (and files named `crontab`)     |
 | Images    | `.png` `.jpg` `.jpeg` `.gif` `.svg` `.webp` `.bmp` `.ico` |
+| Videos    | `.mp4` `.m4v` `.webm` `.ogv` `.mov`          |
 | Office / iWork | `.xls` `.xlsx` `.ppt` `.pptx` `.numbers` `.pages` `.key` (listed, open in default app / download fallback for normal files; no direct WebView preview) |
 | PDF       | `.pdf` (browser built-in viewer in an iframe; open in new tab / default app / download) |
 
