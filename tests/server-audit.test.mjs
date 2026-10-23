@@ -84,6 +84,65 @@ test('diagram requests validate JSON shape before invoking renderers', async (t)
   assert.equal((await server.request('/api/info')).status, 200);
 });
 
+function rawRequest(base, path, { method = 'GET', headers = {}, body } = {}) {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest(base + path, { method, headers }, (res) => {
+      let text = '';
+      res.on('data', (chunk) => { text += chunk; });
+      res.on('end', () => resolve({ status: res.statusCode, body: text }));
+    });
+    req.on('error', reject);
+    req.end(body);
+  });
+}
+
+test('DNS-rebound Host headers are refused while loopback names and IPs keep working', async (t) => {
+  const server = await startServer(t);
+  const { port } = new URL(server.base);
+  const rebound = await rawRequest(server.base, '/api/file?path=target.md', { headers: { Host: `attacker.example:${port}` } });
+  assert.equal(rebound.status, 403);
+  assert.ok(!rebound.body.includes('# Target'));
+  assert.equal((await rawRequest(server.base, '/api/tree', { headers: { Host: `evil.test:${port}` } })).status, 403);
+  for (const host of [`localhost:${port}`, `127.0.0.1:${port}`, `[::1]:${port}`, `app.localhost:${port}`, `192.168.0.10:${port}`]) {
+    const ok = await rawRequest(server.base, '/api/file?path=target.md', { headers: { Host: host } });
+    assert.equal(ok.status, 200, host);
+    assert.equal(ok.body, '# Target\n', host);
+  }
+});
+
+test('--allowed-host admits an explicit LAN hostname only', async (t) => {
+  const server = await startServer(t, { args: ['--allowed-host', 'My-Mac.local'] });
+  const { port } = new URL(server.base);
+  assert.equal((await rawRequest(server.base, '/api/info', { headers: { Host: `my-mac.local:${port}` } })).status, 200);
+  assert.equal((await rawRequest(server.base, '/api/info', { headers: { Host: `other.local:${port}` } })).status, 403);
+});
+
+test('cross-origin simple POST requests are refused before reaching renderers', async (t) => {
+  const server = await startServer(t);
+  const body = JSON.stringify({ type: 'graphviz', source: 'digraph { a }' });
+  const textPlain = { 'Content-Type': 'text/plain;charset=UTF-8' };
+  for (const headers of [
+    { ...textPlain, Origin: 'https://attacker.example' },
+    { ...textPlain, Origin: 'null' },
+    { ...textPlain, 'Sec-Fetch-Site': 'cross-site' },
+    { ...textPlain, Origin: 'http://localhost:1', 'Sec-Fetch-Site': 'same-site' },
+  ]) {
+    const response = await rawRequest(server.base, '/api/diagram', { method: 'POST', headers, body });
+    assert.equal(response.status, 403, JSON.stringify(headers));
+  }
+  const zip = await rawRequest(server.base, '/api/download-zip', {
+    method: 'POST', headers: { ...textPlain, Origin: 'https://attacker.example' }, body: JSON.stringify({ paths: ['target.md'] }),
+  });
+  assert.equal(zip.status, 403);
+  // Same-origin requests from the app itself are unaffected.
+  const sameOrigin = await rawRequest(server.base, '/api/diagram', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: server.base, 'Sec-Fetch-Site': 'same-origin' },
+    body: JSON.stringify({ type: 'unknown', source: 'x' }),
+  });
+  assert.equal(sameOrigin.status, 400, 'reaches validation, not the CSRF guard');
+});
+
 test('directory scanners and custom CSS respect the same symlink boundary as file reads', async (t) => {
   const server = await startServer(t);
   assert.equal((await server.request('/api/file?path=external.md')).status, 403);
