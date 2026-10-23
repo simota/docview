@@ -78,9 +78,7 @@ test.describe('Rendering audit regressions', () => {
   });
 
   test('HTML preview preserves URL encoding for local images and styles', async ({ page }) => {
-    const paths: string[] = [];
     await page.route('**/api/raw/**', async (route) => {
-      paths.push(new URL(route.request().url()).pathname);
       await route.fulfill({
         contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"/>',
@@ -97,7 +95,12 @@ test.describe('Rendering audit regressions', () => {
     await expect(frame.locator('#literal-percent')).toHaveAttribute('src', '/api/raw/html-assets/100%25.svg');
     await expect(frame.locator('#css')).toHaveCSS('background-image', /\/api\/raw\/html-assets\/image%20name\.svg/);
     await expect(frame.locator('#css-quote')).toHaveCSS('background-image', /\/api\/raw\/html-assets\/image%27name\.svg/);
-    await expect.poll(() => paths).toContain('/api/raw/html-assets/image%20name.svg');
+    // Read the requested URLs inside the frame: Chromium can isolate the
+    // sandboxed preview into its own process, and page-level request events
+    // and routes then miss requests issued before Playwright attaches to it.
+    await expect.poll(() => frame.locator('body').evaluate(() =>
+      performance.getEntriesByType('resource').map((entry) => new URL(entry.name).pathname),
+    )).toContain('/api/raw/html-assets/image%20name.svg');
   });
 
   test('Marp accepts a root boolean directive with a YAML comment', async ({ page }) => {
