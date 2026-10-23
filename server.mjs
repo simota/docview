@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { createReadStream, readFileSync } from 'node:fs';
+import { createReadStream, readFileSync, realpathSync } from 'node:fs';
 import { readFile, readdir, stat, realpath, open } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { join, resolve, relative, extname, basename, dirname, sep } from 'node:path';
@@ -2486,12 +2486,28 @@ function tryLocalDiagramCLI(type, source) {
   });
 }
 
+/** Same boundary as safePath(), synchronously, for Chokidar's ignore hook. */
+function resolvesOutsideRoot(path) {
+  let real;
+  try {
+    real = realpathSync.native(resolve(targetDir, path));
+  } catch {
+    return false; // Missing paths are reported as unlink events.
+  }
+  const prefix = targetDir.endsWith(sep) ? targetDir : targetDir + sep;
+  return real !== targetDir && !real.startsWith(prefix);
+}
+
 // File watcher — chokidar v5 has no glob support, so watch the directory
 // itself, prune ignored paths via the `ignored` function, and filter events
 // by extension before broadcasting.
 function isWatchIgnored(path, stats) {
   const rel = relative(targetDir, resolve(targetDir, path));
   if (!rel || rel.startsWith('..')) return false;
+  // Chokidar follows symlinks, so a link to /, $HOME, etc. would watch (and
+  // broadcast names from) a tree every other API refuses to expose. Stat-less
+  // calls cover event paths beneath a link; real files and dirs need no check.
+  if ((!stats || stats.isSymbolicLink()) && resolvesOutsideRoot(path)) return true;
   const segments = rel.split(sep);
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
