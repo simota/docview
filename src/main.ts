@@ -60,6 +60,8 @@ type LineJumpTarget = { line: number; lineEnd: number | null };
 
 // Split view state
 let splitActive = false;
+// Held by reference: rendered markdown may contain raw HTML reusing the same id.
+let splitPaneEl: HTMLDivElement | null = null;
 let splitViewer: HTMLDivElement | null = null;
 let splitFilePath: string | null = null;
 const splitScrollPositions = new Map<string, number>();
@@ -336,7 +338,7 @@ function setPaneProgress(pane: PaneId, pct: number) {
 function setActivePane(pane: PaneId) {
   activePane = splitActive ? pane : 'left';
   viewerPane.classList.toggle('compare-pane-active', splitActive && activePane === 'left');
-  document.getElementById('viewer-pane-right')?.classList.toggle('compare-pane-active', splitActive && activePane === 'right');
+  splitPaneEl?.classList.toggle('compare-pane-active', splitActive && activePane === 'right');
 }
 
 function toggleSyncSplitScroll() {
@@ -2504,9 +2506,12 @@ function connectSSE() {
   };
 }
 
+let reconnectBanner: HTMLDivElement | null = null;
+
 function showReconnectBanner() {
-  if (document.getElementById('reconnect-banner')) return;
+  if (reconnectBanner?.isConnected) return;
   const banner = document.createElement('div');
+  reconnectBanner = banner;
   banner.id = 'reconnect-banner';
   banner.className = 'reconnect-banner';
   banner.innerHTML = 'Connection lost — reconnecting...';
@@ -2691,6 +2696,7 @@ function toggleSplitView() {
     ensureLeftCompareHeader();
     const pane = document.createElement('div');
     pane.id = 'viewer-pane-right';
+    splitPaneEl = pane;
     pane.className = 'viewer-pane-split';
     pane.innerHTML = `
       <div class="pane-header compare-pane-header">
@@ -2746,7 +2752,8 @@ function toggleSplitView() {
     setActivePane('right');
   } else {
     workspace.classList.remove('split-view');
-    document.getElementById('viewer-pane-right')?.remove();
+    splitPaneEl?.remove();
+    splitPaneEl = null;
     splitViewer = null;
     splitTabBar = null;
     splitTabBarEl = null;
