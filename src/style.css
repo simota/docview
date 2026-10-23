@@ -10959,10 +10959,10 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --bg-editor: #fafafa;
   --text-primary: #08131a;
   --text-secondary: #5f6b70;
-  --text-muted: #8c979c;
+  --text-muted: #8b959a;
   --border: #e6e6e6;
   --border-subtle: #efefef;
-  --border-strong: #8c979c;
+  --border-strong: #8b959a;
   --accent: #41c9b4;
   --accent-light: #6ad6c6;
   --accent-lighter: #b6ebe2;
@@ -10983,8 +10983,8 @@ pre.mermaid svg g.statediagram-cluster rect.inner,
   --table-stripe: #fafafa;
   --table-border: #e6e6e6;
   --table-header-bg: linear-gradient(180deg, #f5f5f5, #efefef);
-  --link-color: #2bb59f;
-  --link-hover: #1f9c88;
+  --link-color: #1f8474;
+  --link-hover: #186a5d;
   --hr-gradient: linear-gradient(90deg, var(--border), var(--border));
   --mark-bg: #fff3b8;
   --scrollbar-thumb: #d0d5d8;
