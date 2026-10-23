@@ -121,7 +121,8 @@ test.describe('File tree right-click context menu', () => {
     await rightClick(page.locator('.filetree-item[data-path="subdir/README.md"]'));
     await page.locator('.filetree-context-item', { hasText: '親フォルダを開く' }).click();
 
-    expect(posted).toEqual({ path: 'subdir' });
+    // The click handler posts asynchronously; wait for the mocked route to see it.
+    await expect.poll(() => posted).toEqual({ path: 'subdir' });
     await expect(page.locator('#copy-toast')).toContainText('フォルダを開きました');
   });
 
@@ -141,7 +142,8 @@ test.describe('File tree right-click context menu', () => {
     await rightClick(page.locator('.filetree-item[data-path="subdir"]'));
     await page.locator('.filetree-context-item', { hasText: /^フォルダを開く$/ }).click();
 
-    expect(posted).toEqual({ path: 'subdir' });
+    // The click handler posts asynchronously; wait for the mocked route to see it.
+    await expect.poll(() => posted).toEqual({ path: 'subdir' });
     await expect(page.locator('#copy-toast')).toContainText('フォルダを開きました');
   });
 
