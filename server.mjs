@@ -1815,7 +1815,8 @@ const server = createServer(async (req, res) => {
     // and any site can navigate the user here, so never let it run as a
     // document on this origin. PDFs keep the default policy: the browser's
     // PDF viewer refuses sandboxed documents and cannot script the origin.
-    if (!/^application\/pdf\b/i.test(result.contentType)) headers['Content-Security-Policy'] = 'sandbox';
+    const mediaType = String(result.contentType).split(';')[0].trim().toLowerCase();
+    if (mediaType !== 'application/pdf') headers['Content-Security-Policy'] = 'sandbox';
     if (result.lastModified) headers['X-File-Mtime'] = result.lastModified;
     res.writeHead(200, headers);
     res.end(result.body);
