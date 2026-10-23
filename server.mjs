@@ -2223,20 +2223,33 @@ const server = createServer(async (req, res) => {
 
     refreshDocviewIgnore();
     const MARKDOWN_LIKE = new Set(['.md', '.markdown', '.mdx', '.txt']);
-    const targetName = basename(targetPath).replace(/\.[^.]+$/, '');
+    const targetName = basename(targetPath);
     const backlinks = [];
 
-    function isLinkToTarget(link, sourcePath) {
-      if (!link) return false;
-      const linkPath = link.split('#')[0].replace(/^\.\//, '');
-      if (!linkPath) return false;
-      if (linkPath === targetPath) return true;
-      const sourceDir = dirname(sourcePath);
-      const resolved = join(sourceDir, linkPath).replace(/\\/g, '/');
-      if (resolved === targetPath) return true;
-      const linkName = basename(linkPath).replace(/\.[^.]+$/, '');
-      if (linkName === targetName && !linkPath.includes('/')) return true;
-      return false;
+    // Mirror the viewer: Markdown destinations resolve like URLs against the
+    // source file and are percent-decoded (resolveDocumentResource), and wiki
+    // links default to `.md`. Only wiki links also match by name in any folder.
+    function isLinkToTarget(link, sourcePath, isWiki) {
+      let dest = link.trim();
+      if (isWiki) {
+        dest = dest.split(/[?#]/)[0].trim();
+        if (dest && !(dest.split('/').pop() || '').includes('.')) dest += '.md';
+      } else if (dest.startsWith('<')) {
+        const close = dest.indexOf('>');
+        dest = dest.slice(1, close === -1 ? undefined : close);
+      } else {
+        dest = dest.split(/\s/)[0]; // drop an optional "title"
+      }
+      if (!dest || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(dest)) return false;
+      let resolvedLink;
+      try {
+        const base = sourcePath.split('/').map(encodeURIComponent).join('/');
+        resolvedLink = decodeURIComponent(new URL(dest, `https://docview.invalid/${base}`).pathname.slice(1));
+      } catch {
+        return false;
+      }
+      if (resolvedLink === targetPath) return true;
+      return isWiki && !dest.includes('/') && basename(resolvedLink) === targetName;
     }
 
     async function scanBacklinks(dir) {
@@ -2267,8 +2280,8 @@ const server = createServer(async (req, res) => {
             const linkRegex = /\[(?:[^\]]*)\]\(([^)]+)\)|\[\[([^\]|]+)(?:\|[^\]]*?)?\]\]/g;
             let match;
             while ((match = linkRegex.exec(content)) !== null) {
-              const linkTarget = match[1] || match[2];
-              if (isLinkToTarget(linkTarget, relPath)) {
+              const isWiki = match[1] === undefined;
+              if (isLinkToTarget(isWiki ? match[2] : match[1], relPath, isWiki)) {
                 const line = content.substring(0, match.index).split('\n').length;
                 backlinks.push({ path: relPath, line });
                 break;
