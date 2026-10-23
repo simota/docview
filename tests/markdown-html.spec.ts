@@ -166,4 +166,12 @@ test.describe('Raw HTML in markdown', () => {
     await expect(page.locator('.viewer-pane-split')).toHaveCount(0);
     await expect(body.locator('.markdown-body #viewer-pane-right')).toHaveText('document block');
   });
+
+  test('a raw HTML look-alike does not suppress the reconnect banner', async ({ page }) => {
+    // Keep the live-reload stream failing so the app tries to show its banner.
+    await page.route('**/api/watch', (route) => route.abort());
+    await openDocument(page, 'banner-collision.md', '# Banner\n\n<div id="reconnect-banner">document banner</div>\n');
+    await expect(page.locator('#viewer h1')).toContainText('Banner');
+    await expect(page.locator('body > .reconnect-banner')).toBeVisible();
+  });
 });
