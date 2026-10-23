@@ -2013,7 +2013,9 @@ const server = createServer(async (req, res) => {
               const st = await stat(fullPath);
               if (st.size > MAX_SEARCH_FILE_BYTES) continue;
               const content = await readFileText(fullPath);
-              const lines = content.split('\n');
+              // CRLF files would otherwise keep a trailing \r on every line,
+              // which breaks `$` anchors and leaks into the result text.
+              const lines = content.split(/\r?\n/);
               const matchingLines = regexSearch
                 ? new Set(await regexSearch.findMatches(lines, 100 - results.length))
                 : null;

@@ -347,6 +347,18 @@ test('watcher does not follow symlinks out of the served root', async (t) => {
   assert.doesNotMatch(events, /escape\//);
 });
 
+test('regex search anchors work on CRLF files and results omit carriage returns', async (t) => {
+  const directory = join(fixture, 'crlf');
+  await mkdir(directory);
+  await writeFile(join(directory, 'windows.md'), 'alpha end\r\nbeta end\r\n');
+  const server = await startServer(t, { directory });
+  const regex = await (await server.request('/api/search?regex=1&context=1&q=' + encodeURIComponent('end$'))).json();
+  assert.deepEqual(regex.map(({ line }) => line), [1, 2]);
+  const plain = await (await server.request('/api/search?context=1&q=alpha')).json();
+  assert.equal(plain[0].text, 'alpha end');
+  assert.deepEqual(plain[0].contextLines, ['alpha end', 'beta end']);
+});
+
 test('CLI rejects an unsafe remote byte limit instead of silently disabling the cap', async () => {
   const child = spawn(NODE, [join(ROOT, 'server.mjs'), docs, '--remote-max-size', '9'.repeat(400)], {
     stdio: ['ignore', 'ignore', 'pipe'],
