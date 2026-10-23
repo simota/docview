@@ -310,6 +310,43 @@ test('watcher broadcasts changes to supported hidden files such as .env', async 
   assert.match(events, /"event":"change","path":"\.env"/);
 });
 
+test('watcher does not follow symlinks out of the served root', async (t) => {
+  const directory = join(fixture, 'watch-boundary');
+  const outside = join(fixture, 'watch-outside');
+  await mkdir(join(directory, 'real'), { recursive: true });
+  await mkdir(outside);
+  await writeFile(join(outside, 'leak.md'), 'outside\n');
+  await writeFile(join(directory, 'real', 'inside.md'), 'inside\n');
+  await symlink(outside, join(directory, 'escape'));
+  await symlink(join(directory, 'real'), join(directory, 'alias'));
+  const server = await startServer(t, { directory });
+  const controller = new AbortController();
+  t.after(() => controller.abort());
+  const response = await fetch(server.base + '/api/watch', { signal: controller.signal });
+  const reader = response.body.getReader();
+  await reader.read();
+  // Touch both sides until the in-root change arrives, so a missing outside
+  // event is not just the watcher still starting up.
+  const interval = setInterval(() => {
+    void writeFile(join(outside, 'leak.md'), `outside ${Date.now()}\n`);
+    void writeFile(join(directory, 'real', 'inside.md'), `inside ${Date.now()}\n`);
+  }, 200);
+  const timeout = setTimeout(() => controller.abort(), 4000);
+  t.after(() => { clearInterval(interval); clearTimeout(timeout); });
+  let events = '';
+  while (!/"path":"alias\/inside\.md"/.test(events) || !/"path":"real\/inside\.md"/.test(events)) {
+    const { value, done } = await reader.read().catch(() => ({ done: true }));
+    if (done) break;
+    events += Buffer.from(value).toString();
+  }
+  // Give a straggling outside event one more interval to show up.
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  clearInterval(interval);
+  assert.match(events, /"path":"real\/inside\.md"/);
+  assert.match(events, /"path":"alias\/inside\.md"/, 'in-root symlinked directories are still watched');
+  assert.doesNotMatch(events, /escape\//);
+});
+
 test('CLI rejects an unsafe remote byte limit instead of silently disabling the cap', async () => {
   const child = spawn(NODE, [join(ROOT, 'server.mjs'), docs, '--remote-max-size', '9'.repeat(400)], {
     stdio: ['ignore', 'ignore', 'pipe'],
