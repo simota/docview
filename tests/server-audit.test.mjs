@@ -125,7 +125,8 @@ test('cross-origin simple POST requests are refused before reaching renderers', 
     { ...textPlain, Origin: 'https://attacker.example' },
     { ...textPlain, Origin: 'null' },
     { ...textPlain, 'Sec-Fetch-Site': 'cross-site' },
-    { ...textPlain, Origin: 'http://localhost:1', 'Sec-Fetch-Site': 'same-site' },
+    { ...textPlain, Origin: 'http://localhost:1' },
+    { ...textPlain, 'Sec-Fetch-Site': 'same-site' },
   ]) {
     const response = await rawRequest(server.base, '/api/diagram', { method: 'POST', headers, body });
     assert.equal(response.status, 403, JSON.stringify(headers));
