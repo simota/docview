@@ -359,6 +359,28 @@ test('regex search anchors work on CRLF files and results omit carriage returns'
   assert.deepEqual(plain[0].contextLines, ['alpha end', 'beta end']);
 });
 
+test('backlinks resolve Markdown links like the viewer does', async (t) => {
+  const directory = join(fixture, 'backlinks');
+  await mkdir(join(directory, 'sub'), { recursive: true });
+  await writeFile(join(directory, 'my doc.md'), '# Target\n');
+  await writeFile(join(directory, 'sub', 'notes.md'), '# Notes\n');
+  await writeFile(join(directory, 'encoded.md'), '[a](my%20doc.md)\n');
+  await writeFile(join(directory, 'angle.md'), '[a](<my doc.md> "Title")\n');
+  await writeFile(join(directory, 'parent.md'), 'x\n\n[a](sub/../my%20doc.md#top)\n');
+  await writeFile(join(directory, 'wiki.md'), '[[my doc]]\n');
+  await writeFile(join(directory, 'other-ext.md'), '[a](my%20doc.txt)\n');
+  await writeFile(join(directory, 'wrong-dir.md'), '[a](notes.md)\n');
+  await writeFile(join(directory, 'wiki-notes.md'), '[[notes]]\n');
+  const server = await startServer(t, { directory });
+  const target = await (await server.request('/api/backlinks?path=' + encodeURIComponent('my doc.md'))).json();
+  assert.deepEqual(target.map(({ path }) => path).sort(), ['angle.md', 'encoded.md', 'parent.md', 'wiki.md']);
+  assert.equal(target.find(({ path }) => path === 'parent.md').line, 3);
+  const notes = await (await server.request('/api/backlinks?path=sub/notes.md')).json();
+  // A plain relative link opens notes.md beside its source; only wiki links
+  // match by name across directories.
+  assert.deepEqual(notes.map(({ path }) => path), ['wiki-notes.md']);
+});
+
 test('CLI rejects an unsafe remote byte limit instead of silently disabling the cap', async () => {
   const child = spawn(NODE, [join(ROOT, 'server.mjs'), docs, '--remote-max-size', '9'.repeat(400)], {
     stdio: ['ignore', 'ignore', 'pipe'],
