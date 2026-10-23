@@ -26,11 +26,14 @@ test.describe('Direct document isolation', () => {
 
   for (const path of ['/api/raw/probe.html', '/api/file?path=probe.html']) {
     test(`local HTML runs only in an opaque origin: ${path}`, async ({ page }) => {
-      expect(await probe(page, path)).toEqual({ ran: '1', leak: 'blocked' });
+      await probe(page, path);
+      // The script runs, but its API read must fail (opaque origin).
+      await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-leak'))).toBe('blocked');
+      expect(await page.evaluate(() => document.documentElement.getAttribute('data-ran'))).toBe('1');
     });
   }
 
-  for (const remote of ['/probe.svg', '/probe-xml.md']) {
+  for (const remote of ['/probe.svg', '/probe-xml.md', '/probe-pdf-xml.md', '/probe-pdf-list.md']) {
     test(`remote document is sandboxed: ${remote}`, async ({ page }) => {
       const result = await probe(page, `/api/remote?url=${encodeURIComponent(MOCK + remote)}`);
       expect(result).toEqual({ ran: null, leak: null });
