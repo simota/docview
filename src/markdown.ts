@@ -1856,6 +1856,30 @@ md.use(frontmatter, () => {
   // silently consume front matter
 });
 
+// The plugin auto-closes an unterminated block at end of file, so a document
+// that merely starts with a `---` horizontal rule would render as an empty
+// page. Only treat it as front matter when a closing fence exists.
+{
+  type BlockRule = Parameters<typeof md.block.ruler.at>[1];
+  // Look the rule up by its registered name: function names do not survive minification.
+  const rules = (md.block.ruler as unknown as { __rules__: { name: string; fn: BlockRule }[] }).__rules__;
+  const frontMatterRule = rules.find((rule) => rule.name === 'front_matter')?.fn;
+  if (frontMatterRule) {
+    md.block.ruler.at('front_matter', (state, startLine, endLine, silent) => {
+      if (startLine !== 0 || state.src.charCodeAt(0) !== 0x2D /* - */) return false;
+      const lineText = (line: number) => state.src.slice(state.bMarks[line] + state.tShift[line], state.eMarks[line]);
+      const openLength = /^-*/.exec(lineText(0))![0].length;
+      let closed = false;
+      for (let line = 1; line < endLine && !closed; line++) {
+        const text = lineText(line);
+        const fence = /^(-+)[ \t]*$/.exec(text);
+        closed = text === '...' || (!!fence && fence[1].length >= openLength && state.sCount[line] - state.blkIndent < 4);
+      }
+      return closed && frontMatterRule(state, startLine, endLine, silent);
+    }, { alt: ['paragraph', 'reference', 'blockquote', 'list'] });
+  }
+}
+
 type QiitaArticleMeta = { title: string; tags: string[] };
 type MarkdownRenderEnv = { qiita: boolean; qiitaArticle?: QiitaArticleMeta };
 
@@ -1888,10 +1912,18 @@ function wikiLinkPlugin(mdi: MarkdownIt) {
     const pos = state.pos;
     if (src.charCodeAt(pos) !== 0x5B || src.charCodeAt(pos + 1) !== 0x5B) return false; // [[
     const closeIdx = src.indexOf(']]', pos + 2);
-    if (closeIdx === -1) return false;
-    if (silent) return true;
-
+    // Stay inside the current inline range, and leave bracketed text such as
+    // `[[y](url) z]]` to the link rule — a wiki target never contains brackets.
+    if (closeIdx === -1 || closeIdx + 2 > state.posMax) return false;
     const content = src.slice(pos + 2, closeIdx);
+    if (/[[\]\n]/.test(content)) return false;
+    // Silent mode (link-label scanning) must still consume the token, or
+    // markdown-it aborts the whole render with "didn't increment state.pos".
+    if (silent) {
+      state.pos = closeIdx + 2;
+      return true;
+    }
+
     const pipeIdx = content.indexOf('|');
     const target = pipeIdx >= 0 ? content.slice(0, pipeIdx).trim() : content.trim();
     const display = pipeIdx >= 0 ? content.slice(pipeIdx + 1).trim() : target;
