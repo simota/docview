@@ -515,7 +515,10 @@ function handlePaneScroll(pane: PaneId) {
   if (!target) return;
 
   const path = getPanePath(pane);
-  if (path) getPaneScrollMap(pane).set(path, target.scrollTop);
+  // Swapping in the loading skeleton clamps scrollTop to 0 and fires a scroll
+  // event; recording it would erase the position the reload is about to restore.
+  const isLoading = target.firstElementChild?.classList.contains('loading-skeleton');
+  if (path && !isLoading) getPaneScrollMap(pane).set(path, target.scrollTop);
 
   const scrollHeight = target.scrollHeight - target.clientHeight;
   const pct = scrollHeight > 0 ? (target.scrollTop / scrollHeight) * 100 : 0;
@@ -846,8 +849,10 @@ function interceptRelativeLinks(currentPath: string, target: HTMLElement = viewe
     if (!href) return;
     if (href.startsWith('#')) {
       // Shared DocView links are application routes, handled by hashchange.
+      // Require a `key=` pair: heading ids such as `#file` or `#album` are
+      // in-page anchors, and generated ids never contain `=`.
       const params = new URLSearchParams(href.slice(1));
-      if (params.has('file') || params.has('album') || params.has('compare')) return;
+      if (href.includes('=') && (params.has('file') || params.has('album') || params.has('compare'))) return;
       a.addEventListener('click', (e) => {
         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
@@ -955,9 +960,12 @@ function renderContent(content: string, path: string, target: HTMLElement = view
           renderHighlighted(content, path, target);
         }
       } else if (path.endsWith('.yaml') || path.endsWith('.yml')) {
-        const treeHtml = renderYamlTree(content, secretSafe ? maskSecretValue : undefined);
+        // Build the tree from the masked document too: an alias (`other: *pw`)
+        // would otherwise resolve to the secret behind a masked anchor.
+        const yamlSource = secretSafe ? maskYamlSecrets(content) : content;
+        const treeHtml = renderYamlTree(yamlSource, secretSafe ? maskSecretValue : undefined);
         if (treeHtml) {
-          const highlighted = hljs.highlight(secretSafe ? maskYamlSecrets(content) : content, { language: 'yaml' }).value;
+          const highlighted = hljs.highlight(yamlSource, { language: 'yaml' }).value;
           target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
@@ -1259,7 +1267,11 @@ async function renderImage(path: string) {
   if (path.toLowerCase().endsWith('.svg')) {
     try {
       const res = await fetch(url);
-      if (!res.ok) return;
+      if (seq !== leftLoadSeq) return;
+      if (!res.ok) {
+        showError(`Failed to load: ${path} (${res.status})`);
+        return;
+      }
       const svgText = await res.text();
       if (seq !== leftLoadSeq) return;
       const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
@@ -1272,7 +1284,9 @@ async function renderImage(path: string) {
       }
       initImageZoom(viewer);
       imageMetaPanel.mount(path);
-    } catch { /* ignore */ }
+    } catch {
+      if (seq === leftLoadSeq) showError(`Connection error loading: ${path}`);
+    }
     return;
   }
   viewer.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /><p class="image-caption">${escapeHtml(path)}</p></div>`;
@@ -2222,8 +2236,8 @@ async function loadFullFile(path: string, seq: number) {
 }
 
 // Error UX (#11)
-function showError(message: string) {
-  viewer.innerHTML = `<div class="error-banner"><p>${escapeHtml(message)}</p><button class="error-btn" onclick="location.reload()">Reload</button></div>`;
+function showError(message: string, target: HTMLElement = viewer) {
+  target.innerHTML = `<div class="error-banner"><p>${escapeHtml(message)}</p><button class="error-btn" onclick="location.reload()">Reload</button></div>`;
 }
 
 async function reloadCurrentFile() {
@@ -2375,6 +2389,7 @@ img{max-width:100%}h1,h2,h3{color:#1a1c2e}</style></head>
 }
 
 function handleKeyboard(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229) return; // keys driving an IME conversion
   if (helpModal.isOpen) return;
   const openPaneFindBar = [findBar, splitFindBar].find((bar) => bar?.active);
   if (openPaneFindBar) {
@@ -2790,12 +2805,18 @@ async function loadIntoSplit(path: string) {
     if (path.toLowerCase().endsWith('.svg')) {
       try {
         const res = await fetch(url);
-        if (!res.ok || !isCurrent()) return;
+        if (!isCurrent()) return;
+        if (!res.ok) {
+          showError(`Failed to load: ${path} (${res.status})`, target);
+          return;
+        }
         const svgText = await res.text();
         if (!isCurrent()) return;
         const cleanSvg = DOMPurify.sanitize(svgText, { USE_PROFILES: { html: true, svg: true, svgFilters: true }, ADD_TAGS: ['use', 'foreignObject'] });
         target.innerHTML = `<div class="image-view"><div class="svg-container">${cleanSvg}</div></div>`;
-      } catch { /* ignore */ }
+      } catch {
+        if (isCurrent()) showError(`Connection error loading: ${path}`, target);
+      }
     } else {
       target.innerHTML = `<div class="image-view"><img src="${url}" alt="${escapeHtml(path)}" /></div>`;
     }
@@ -2823,13 +2844,19 @@ async function loadIntoSplit(path: string) {
 
   try {
     const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
-    if (!res.ok) return;
+    if (!isCurrent()) return;
+    if (!res.ok) {
+      showError(`Failed to load: ${path} (${res.status})`, target);
+      return;
+    }
     const content = await res.text();
     if (!isCurrent()) return;
     renderContent(content, path, target);
     initImageZoom(target);
     if (syncSplitScroll) requestAnimationFrame(() => { if (isCurrent()) syncScrollFrom('left'); });
-  } catch { /* ignore */ }
+  } catch {
+    if (isCurrent()) showError(`Connection error loading: ${path}`, target);
+  }
 }
 
 // --- Init ---

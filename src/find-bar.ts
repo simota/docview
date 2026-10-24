@@ -28,6 +28,9 @@ export class FindBar {
     // Events
     this.input.addEventListener('input', () => this.search());
     this.input.addEventListener('keydown', (e) => {
+      // Enter/Escape that commit or cancel an IME conversion are not ours (Safari
+      // reports the committing Enter with isComposing=false but keyCode 229).
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); this.prev(); }
       else if (e.key === 'Enter') { e.preventDefault(); this.next(); }
       else if (e.key === 'Escape') { this.close(); }
@@ -92,24 +95,27 @@ export class FindBar {
 
   private findAllMatches(query: string): Range[] {
     const ranges: Range[] = [];
-    const lowerQuery = query.toLowerCase();
-    const walker = document.createTreeWalker(this.viewer, NodeFilter.SHOW_TEXT);
+    // Case-insensitive matching on the original text: indices from a
+    // lower-cased copy drift when lower-casing changes length (e.g. "İ").
+    const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'giu');
+    // Skip the inactive half of a Tree/Source toggle: every view renders both,
+    // so counting the hidden copy doubles the total and next/prev land on
+    // invisible text.
+    const walker = document.createTreeWalker(this.viewer, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const view = node.parentElement?.closest<HTMLElement>('.json-view-tree, .json-view-source');
+        return view?.style.display === 'none' ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      },
+    });
 
     let node: Text | null;
     while ((node = walker.nextNode() as Text | null)) {
       const text = node.textContent || '';
-      const lowerText = text.toLowerCase();
-      let startPos = 0;
-
-      while (startPos < text.length) {
-        const idx = lowerText.indexOf(lowerQuery, startPos);
-        if (idx === -1) break;
-
+      for (const match of text.matchAll(pattern)) {
         const range = document.createRange();
-        range.setStart(node, idx);
-        range.setEnd(node, idx + query.length);
+        range.setStart(node, match.index);
+        range.setEnd(node, match.index + match[0].length);
         ranges.push(range);
-        startPos = idx + query.length;
       }
     }
     return ranges;

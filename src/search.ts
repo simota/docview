@@ -115,12 +115,19 @@ export class SearchModal {
       this.debounceTimer = setTimeout(() => this.search(), this.mode === 'fulltext' ? 300 : 50);
     });
 
+    // A lone Shift tap toggles mode (backward compat). Toggle on release, and
+    // only when no other key was pressed meanwhile, so typing capitals does not.
+    let shiftAlone = false;
+    this.input.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift' && shiftAlone) this.switchMode(this.mode === 'files' ? 'fulltext' : 'files');
+      shiftAlone = false;
+    });
     this.input.addEventListener('keydown', (e) => {
+      shiftAlone = e.key === 'Shift' && !e.repeat && !e.isComposing;
+      // Enter/Escape that commit or cancel an IME conversion are not ours (Safari
+      // reports the committing Enter with isComposing=false but keyCode 229).
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Escape') this.close();
-      // Shift key toggles mode (backward compat)
-      if (e.key === 'Shift') {
-        this.switchMode(this.mode === 'files' ? 'fulltext' : 'files');
-      }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         this.navigate(e.key === 'ArrowDown' ? 1 : -1);
