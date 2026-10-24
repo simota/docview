@@ -33,6 +33,11 @@ interface SearchResult {
 const PAGE_SIZE = 1000;
 const SEARCH_DEBOUNCE_MS = 300;
 
+/** Enter/Escape that commit or cancel an IME conversion (Safari: keyCode 229). */
+function isImeKey(e: KeyboardEvent): boolean {
+  return e.isComposing || e.keyCode === 229;
+}
+
 // --- Shared HTML helpers ---
 
 function esc(s: string): string {
@@ -650,6 +655,7 @@ export class ChunkedTable {
         }
       };
       input.addEventListener('keydown', (e) => {
+        if (isImeKey(e)) return;
         if (e.key === 'Enter') { e.preventDefault(); onSubmit(); }
       });
       input.addEventListener('change', onSubmit);
@@ -658,6 +664,7 @@ export class ChunkedTable {
     // Row-jump input ("行へ移動")
     this.container.querySelectorAll<HTMLInputElement>('.chunk-row-jump-input').forEach((input) => {
       input.addEventListener('keydown', (e) => {
+        if (isImeKey(e)) return;
         if (e.key === 'Enter') { e.preventDefault(); void this.jumpToRow(input); }
       });
     });
@@ -683,6 +690,7 @@ export class ChunkedTable {
         }, SEARCH_DEBOUNCE_MS);
       });
       searchInput.addEventListener('keydown', (e) => {
+        if (isImeKey(e)) return;
         if (e.key === 'Escape') {
           searchInput.value = '';
           this.executeSearch('');

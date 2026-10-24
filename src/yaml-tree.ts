@@ -1,8 +1,12 @@
 import { parse, parseDocument, visit, isScalar } from 'yaml';
 import { isLikelySecretKey, maskSecrets, REDACTED, type SecretMasker } from './secret-mask';
 
-/** Mask block values too; a line-based assignment matcher cannot see them. */
-export function maskYamlSecrets(content: string): string {
+/**
+ * Mask block values too; a line-based assignment matcher cannot see them.
+ * `maskKeys: false` leaves mapping keys intact so the result still parses
+ * (two hash-like keys would otherwise both become `[REDACTED]` and collide).
+ */
+export function maskYamlSecrets(content: string, { maskKeys = true } = {}): string {
   try {
     const doc = parseDocument(content);
     if (doc.errors.length) return maskSecrets(content);
@@ -17,7 +21,8 @@ export function maskYamlSecrets(content: string): string {
           pair.value = replacement;
         }
       },
-      Scalar(_key, node) {
+      Scalar(key, node) {
+        if (!maskKeys && key === 'key') return;
         if (typeof node.value === 'string') node.value = maskSecrets(node.value);
       },
     });

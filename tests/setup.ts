@@ -441,6 +441,7 @@ flowchart TD
   write('audit-find.yaml', 'greeting: zqfindtoken\n');
   write('audit-find-length.md', '# Find\n\nİstanbul İstanbul end\n');
   write('audit-secret-alias.yaml', 'password: &pw hunter2-alias\nother: *pw\n');
+  write('audit-secret-hashkeys.yaml', 'checksums:\n  d41d8cd98f00b204e9800998ecf8427e: a.txt\n  9e107d9d372bb6826bd81d3542a419d6: b.txt\n');
   write('audit-bom.jsonl', '﻿{"a":1}\n{"a":2}\n');
   write('audit-bom.csv', '﻿id,name\n1,alpha\n');
 

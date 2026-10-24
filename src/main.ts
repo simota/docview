@@ -476,10 +476,16 @@ function toggleAllCodeBlocks() {
 }
 
 // --- Scroll position memory (#7) ---
+// While the loading skeleton is shown, scrollTop has been clamped to 0 and is
+// not the reader's position; recording it would erase the one to restore.
+function isShowingLoadingSkeleton(target: HTMLElement): boolean {
+  return Boolean(target.firstElementChild?.classList.contains('loading-skeleton'));
+}
+
 function saveScrollPosition(pane: PaneId = 'left') {
   const path = getPanePath(pane);
   const target = getPaneViewer(pane);
-  if (path && target) {
+  if (path && target && !isShowingLoadingSkeleton(target)) {
     getPaneScrollMap(pane).set(path, target.scrollTop);
   }
 }
@@ -515,10 +521,7 @@ function handlePaneScroll(pane: PaneId) {
   if (!target) return;
 
   const path = getPanePath(pane);
-  // Swapping in the loading skeleton clamps scrollTop to 0 and fires a scroll
-  // event; recording it would erase the position the reload is about to restore.
-  const isLoading = target.firstElementChild?.classList.contains('loading-skeleton');
-  if (path && !isLoading) getPaneScrollMap(pane).set(path, target.scrollTop);
+  if (path && !isShowingLoadingSkeleton(target)) getPaneScrollMap(pane).set(path, target.scrollTop);
 
   const scrollHeight = target.scrollHeight - target.clientHeight;
   const pct = scrollHeight > 0 ? (target.scrollTop / scrollHeight) * 100 : 0;
@@ -962,10 +965,10 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       } else if (path.endsWith('.yaml') || path.endsWith('.yml')) {
         // Build the tree from the masked document too: an alias (`other: *pw`)
         // would otherwise resolve to the secret behind a masked anchor.
-        const yamlSource = secretSafe ? maskYamlSecrets(content) : content;
-        const treeHtml = renderYamlTree(yamlSource, secretSafe ? maskSecretValue : undefined);
+        const treeSource = secretSafe ? maskYamlSecrets(content, { maskKeys: false }) : content;
+        const treeHtml = renderYamlTree(treeSource, secretSafe ? maskSecretValue : undefined);
         if (treeHtml) {
-          const highlighted = hljs.highlight(yamlSource, { language: 'yaml' }).value;
+          const highlighted = hljs.highlight(secretSafe ? maskYamlSecrets(content) : content, { language: 'yaml' }).value;
           target.innerHTML = `
             <div class="json-view-toggle">
               <button class="json-toggle-btn active" data-view="tree">Tree</button>
