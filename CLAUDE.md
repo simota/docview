@@ -12,11 +12,13 @@ DocView (`docview` / `mdv`) — Node.js CLI tool that serves a local directory a
 npm run dev          # Vite dev server with HMR
 npm run build        # tsc + vite build → dist/
 npm run serve        # Build then launch server.mjs
+npm run test:unit    # node:test suites (tests/*.test.mjs) for server/CLI behavior
+npm run check:contrast  # Theme color contrast check
 npm run test:e2e     # Playwright E2E tests (requires Chromium)
 npx playwright test tests/core.spec.ts --headed  # Run single test file with browser visible
 ```
 
-Tests expect the server on port 4000 — Playwright config auto-starts `node server.mjs /tmp/md-test-docs --port 4000`.
+E2E tests run against the built `dist/` (run `npm run build` first). Playwright config auto-starts DocView on port 4001 (`--allow-private-remote`) and 4002 (default security), both serving `/tmp/md-test-docs` (fixtures written by `tests/setup.ts`), plus a mock remote server on 4090. Outside CI it reuses servers already listening on those ports — stop stale ones after changing `server.mjs`.
 
 No linter/formatter configured; TypeScript strict mode is the quality gate.
 
