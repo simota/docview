@@ -132,6 +132,9 @@ export class UrlBar {
     });
 
     this.input.addEventListener('keydown', (e) => {
+      // Enter/Escape that commit or cancel an IME conversion are not ours (Safari
+      // reports the committing Enter with isComposing=false but keyCode 229).
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Escape') { e.preventDefault(); this.close(); return; }
       if (e.key === 'Enter') { e.preventDefault(); void this.submit(); return; }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
