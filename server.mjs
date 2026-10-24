@@ -153,12 +153,16 @@ const ENCODING_MAP = {
   'koi8-r': 'koi8-r',
 };
 
+function hasUtf8Bom(buf) {
+  return buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
+}
+
 /**
  * Detect encoding from a buffer and return a TextDecoder-compatible label.
  */
 function detectEncoding(buf) {
   // BOM detection
-  if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) return 'utf-8';
+  if (hasUtf8Bom(buf)) return 'utf-8';
   if (buf[0] === 0xFF && buf[1] === 0xFE) return 'utf-16le';
   if (buf[0] === 0xFE && buf[1] === 0xFF) return 'utf-16be';
 
@@ -174,7 +178,9 @@ function detectEncoding(buf) {
 async function readFileText(filePath) {
   const buf = await readFile(filePath);
   const encoding = detectEncoding(buf);
-  if (encoding === 'utf-8') return buf.toString('utf-8');
+  // Drop a UTF-8 BOM like TextDecoder does for the other encodings: kept, it
+  // defeats `^` anchors on line 1 in search and leaks into the first CSV header.
+  if (encoding === 'utf-8') return buf.toString('utf-8', hasUtf8Bom(buf) ? 3 : 0);
   const decoder = new TextDecoder(encoding);
   return decoder.decode(buf);
 }
@@ -193,7 +199,7 @@ async function createTextReadStream(filePath) {
     const { bytesRead } = await fh.read(sample, 0, 4096, 0);
     const encoding = detectEncoding(sample.subarray(0, bytesRead));
     if (encoding === 'utf-8') {
-      return createReadStream(filePath, { encoding: 'utf-8' });
+      return createReadStream(filePath, { encoding: 'utf-8', start: hasUtf8Bom(sample) ? 3 : 0 });
     }
     // Non-UTF-8: read full file, decode, return as stream
     const buf = await readFile(filePath);
