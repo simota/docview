@@ -66,6 +66,10 @@ test.describe('Frontend audit regressions', () => {
       await route.continue();
     });
     try {
+      // Editors often save twice in a row: the second reload starts while the
+      // first one's skeleton is still on screen.
+      writeFileSync(file, original + '\nFirst save.\n');
+      await page.waitForTimeout(150);
       writeFileSync(file, original + '\nEdited marker paragraph.\n');
       await expect(page.locator('#viewer')).toContainText('Edited marker paragraph.', { timeout: 15000 });
       await expect.poll(() => viewer.evaluate((el) => el.scrollTop)).toBe(3000);
@@ -153,6 +157,13 @@ test.describe('Frontend audit regressions', () => {
     await expect(page.locator('#viewer .json-view-tree')).toContainText('other');
     await expect(page.locator('#viewer')).not.toContainText('hunter2-alias');
     await expect(page.locator('#viewer .json-view-tree')).toContainText('[REDACTED]');
+  });
+
+  test('secret-safe YAML tree keeps mapping keys (no collision on hash-like keys)', async ({ page }) => {
+    await openHash(page, 'audit-secret-hashkeys.yaml', '?secretSafe=1');
+    const tree = page.locator('#viewer .json-view-tree');
+    await expect(tree).toContainText('d41d8cd98f00b204e9800998ecf8427e');
+    await expect(tree).toContainText('9e107d9d372bb6826bd81d3542a419d6');
   });
 
   test('UTF-8 BOM is stripped from text and record responses', async ({ request }) => {
