@@ -423,6 +423,27 @@ flowchart TD
     'Evil: [[javascript:alert(1)]] and [[data:text/html;base64,PHNjcmlwdD4=]]',
   ].join('\n') + '\n');
 
+  // Frontend audit fixtures (frontend-audit.spec.ts).
+  write('audit-wiki-label.md', 'Bounded: [x [[y](http://example.com) z]] tail\n\n# After Wiki\n');
+  write('audit-unclosed-fm.md', '---\n# Unclosed Title\n\nBody paragraph should render.\n');
+  write('audit-closed-fm.md', '---\ntitle: meta\n---\n# Closed Title\n');
+  write('audit-heading-route.md', [
+    '# Heading Route',
+    '',
+    '[go to file section](#file)',
+    '',
+    ...Array.from({ length: 120 }, (_, i) => `Filler paragraph ${i + 1}.\n`),
+    '## File',
+    '',
+    'File section body.',
+  ].join('\n') + '\n');
+  write('audit-scroll.md', '# Scroll Memory\n\n' + Array.from({ length: 300 }, (_, i) => `Paragraph ${i + 1}.\n`).join('\n'));
+  write('audit-find.yaml', 'greeting: zqfindtoken\n');
+  write('audit-find-length.md', '# Find\n\nİstanbul İstanbul end\n');
+  write('audit-secret-alias.yaml', 'password: &pw hunter2-alias\nother: *pw\n');
+  write('audit-bom.jsonl', '﻿{"a":1}\n{"a":2}\n');
+  write('audit-bom.csv', '﻿id,name\n1,alpha\n');
+
   // mtime filter fixtures (filetree-mtime-filter.spec.ts).
   // archived-old.md: backdated ~400 days → excluded by every preset except "すべて".
   // edited-yesterday.md: dated to yesterday noon → excluded by "今日" but included
