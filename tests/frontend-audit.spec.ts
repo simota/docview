@@ -81,6 +81,14 @@ test.describe('Frontend audit regressions', () => {
     await page.keyboard.press('/');
     await page.locator('.find-input').fill('zqfindtoken');
     await expect(page.locator('.find-info')).toHaveText('1/1');
+
+    // Switching views with the bar open re-runs the query on the shown half.
+    await page.locator('#viewer .json-toggle-btn[data-view="source"]').click();
+    await expect.poll(() => page.evaluate(() => {
+      const [range] = [...(CSS.highlights.get('find-current') ?? [])] as Range[];
+      return range?.startContainer.parentElement?.closest('.json-view-source, .json-view-tree')?.className ?? null;
+    })).toBe('json-view-source');
+    await expect(page.locator('.find-info')).toHaveText('1/1');
   });
 
   test('find bar ranges stay aligned after characters whose lower case is longer', async ({ page }) => {

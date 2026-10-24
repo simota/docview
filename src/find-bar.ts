@@ -38,6 +38,11 @@ export class FindBar {
     this.bar.querySelector('.find-next')!.addEventListener('click', () => this.next());
     this.bar.querySelector('.find-prev')!.addEventListener('click', () => this.prev());
     this.bar.querySelector('.find-close')!.addEventListener('click', () => this.close());
+    // Hidden Tree/Source halves are excluded from matches, so re-run the query
+    // once a toggle (whose own listener has already swapped views) reveals the other.
+    viewer.addEventListener('click', (e) => {
+      if (this.isOpen && this.input.value && (e.target as Element | null)?.closest('.json-toggle-btn')) this.search();
+    });
 
     // Insert into viewer's parent
     viewer.parentElement!.insertBefore(this.bar, viewer);
