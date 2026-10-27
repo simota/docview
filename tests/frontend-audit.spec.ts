@@ -117,6 +117,8 @@ test.describe('Frontend audit regressions', () => {
     const tabFiles = page.locator('.search-tab', { hasText: 'Files' });
     const tabFulltext = page.locator('.search-tab', { hasText: 'Full text' });
     await expect(tabFiles).toHaveAttribute('aria-selected', 'true');
+    // The modal focuses its input on the next frame; keys sent before that are lost.
+    await expect(page.locator('.search-overlay input')).toBeFocused();
 
     // Typing a capital: Shift is held while another key is pressed.
     await page.keyboard.down('Shift');
