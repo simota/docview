@@ -244,7 +244,7 @@ test.describe('Navigation audit regressions', () => {
 
 test('locator ignores zero and overflowing line targets', () => {
   for (const line of ['0', '0-2', '9007199254740993', '1-999999999999999999999']) {
-    expect(resolveLocator(`#file=README.md&line=${line}`, 'https://docview.test')).toEqual({ kind: 'local', path: 'README.md', line: null, lineEnd: null });
+    expect(resolveLocator(`#file=README.md&line=${line}`, { currentOrigin: 'https://docview.test' })).toEqual({ kind: 'local', path: 'README.md', line: null, lineEnd: null });
   }
 });
 
@@ -376,4 +376,15 @@ test('choosing a URL-bar suggestion invalidates an earlier pending submission', 
   } finally {
     release.resolve();
   }
+});
+
+test('locator maps file: URLs under the served root to relative paths', () => {
+  const rootPath = '/srv/docs';
+  expect(resolveLocator('file:///srv/docs/sub/a%20b.md', { rootPath })).toEqual({ kind: 'local', path: 'sub/a b.md', line: null, lineEnd: null });
+  expect(resolveLocator('file://localhost/srv/docs/README.md', { rootPath })).toEqual({ kind: 'local', path: 'README.md', line: null, lineEnd: null });
+  expect(resolveLocator('file:///C:/Docs/README.md', { rootPath: 'C:\\docs\\' })).toEqual({ kind: 'local', path: 'README.md', line: null, lineEnd: null });
+  for (const input of ['file:///srv/docs', 'file:///srv/docs-other/a.md', 'file:///srv/docs/../etc/passwd', 'file://host/srv/docs/a.md']) {
+    expect(resolveLocator(input, { rootPath }).kind).toBe('invalid');
+  }
+  expect(resolveLocator('file:///srv/docs/a.md').kind).toBe('invalid');
 });
