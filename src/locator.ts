@@ -5,13 +5,20 @@
 //   - Hash only:         "#file=docs/guide.md&line=42"
 //   - Same-origin URL:   "http://localhost:4000/#file=docs/guide.md&line=42"
 //   - Remote URL:        "https://example.com/README.md"   (Phase 3)
+//   - File URL:          "file:///abs/root/docs/guide.md"  (must be under rootPath)
 
 export type LocatorResult =
   | { kind: 'local'; path: string; line: number | null; lineEnd: number | null }
   | { kind: 'remote'; url: string }
   | { kind: 'invalid'; reason: string };
 
-export function resolveLocator(input: string, currentOrigin?: string): LocatorResult {
+export interface LocatorOptions {
+  currentOrigin?: string;
+  // Absolute path of the served directory (from /api/info); required for file: URLs.
+  rootPath?: string | null;
+}
+
+export function resolveLocator(input: string, options: LocatorOptions = {}): LocatorResult {
   const raw = input.trim();
   if (!raw) return { kind: 'invalid', reason: 'Empty input' };
 
@@ -19,15 +26,42 @@ export function resolveLocator(input: string, currentOrigin?: string): LocatorRe
 
   const url = tryParseUrl(raw);
   if (url) {
+    if (url.protocol === 'file:') return resolveFileUrl(url, options.rootPath ?? null);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       return { kind: 'invalid', reason: `Unsupported protocol: ${url.protocol}` };
     }
-    const origin = currentOrigin ?? (typeof location !== 'undefined' ? location.origin : '');
+    const origin = options.currentOrigin ?? (typeof location !== 'undefined' ? location.origin : '');
     if (origin && url.origin === origin) return parseHashFragment(url.hash || '');
     return { kind: 'remote', url: url.href };
   }
 
   return { kind: 'local', path: normalizePath(raw), line: null, lineEnd: null };
+}
+
+// Maps a file: URL onto a path relative to the served directory. The server
+// still enforces containment; this only translates the absolute form.
+function resolveFileUrl(url: URL, rootPath: string | null): LocatorResult {
+  if (url.host && url.host !== 'localhost') {
+    return { kind: 'invalid', reason: `Unsupported file URL host: ${url.host}` };
+  }
+  if (!rootPath) return { kind: 'invalid', reason: 'Server root path is unavailable' };
+
+  let abs: string;
+  try { abs = decodeURIComponent(url.pathname); } catch {
+    return { kind: 'invalid', reason: 'Malformed file URL' };
+  }
+  // Windows: file:///C:/dir → "/C:/dir"; the root arrives as "C:\dir".
+  const windows = /^\/[A-Za-z]:\//.test(abs);
+  if (windows) abs = abs.slice(1);
+  const root = rootPath.replace(/\\/g, '/').replace(/\/+$/, '');
+  const fold = (s: string) => (windows ? s.toLowerCase() : s);
+
+  if (!fold(abs).startsWith(`${fold(root)}/`)) {
+    return { kind: 'invalid', reason: `Outside the served directory: ${abs}` };
+  }
+  const rel = abs.slice(root.length + 1);
+  if (!rel) return { kind: 'invalid', reason: 'File URL points to the served directory itself' };
+  return { kind: 'local', path: normalizePath(rel), line: null, lineEnd: null };
 }
 
 function tryParseUrl(raw: string): URL | null {

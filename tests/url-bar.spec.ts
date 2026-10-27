@@ -47,6 +47,33 @@ test.describe('URL bar (Cmd+L)', () => {
     await expect(page).toHaveURL(/#file=subdir%2FREADME\.md/);
   });
 
+  test('opens a file by file:// URL under the served root', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item');
+    const { rootPath } = await (await page.request.get('/api/info')).json();
+
+    await page.keyboard.press('Meta+l');
+    await page.locator('.url-bar-input').fill(`file://${rootPath}/subdir/README.md`);
+    await expect(page.locator('.url-bar-status')).toContainText('subdir/README.md ✓');
+    await page.keyboard.press('Enter');
+
+    await page.waitForSelector('#viewer h1');
+    await expect(page.locator('#viewer h1')).toContainText('Subdir Readme');
+    await expect(page).toHaveURL(/#file=subdir%2FREADME\.md/);
+  });
+
+  test('rejects file:// URLs outside the served root', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.filetree-item');
+
+    await page.keyboard.press('Meta+l');
+    await page.locator('.url-bar-input').fill('file:///etc/hosts');
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('.url-bar-status')).toContainText('Outside the served directory');
+    await expect(page.locator('.url-bar-overlay')).toBeVisible();
+  });
+
   test('opens a file with hash fragment including line jump', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.filetree-item');

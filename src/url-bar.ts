@@ -50,6 +50,8 @@ export class UrlBar {
   // Lazy-loaded remote capability info.
   private remoteInfo: RemoteInfo | null = null;
   private remoteInfoLoading: Promise<void> | null = null;
+  // Absolute served directory, loaded with remoteInfo; maps file: URLs to paths.
+  private rootPath: string | null = null;
 
   // Live validation state.
   private validateTimer: ReturnType<typeof setTimeout> | null = null;
@@ -80,7 +82,7 @@ export class UrlBar {
     this.input = document.createElement('input');
     this.input.className = 'url-bar-input';
     this.input.type = 'text';
-    this.input.placeholder = 'e.g. docs/guide.md or #file=docs/api.md&line=42';
+    this.input.placeholder = 'e.g. docs/guide.md, file:///…/guide.md or #file=docs/api.md&line=42';
     this.input.setAttribute('aria-label', 'URL or path');
     this.input.autocomplete = 'off';
     this.input.spellcheck = false;
@@ -211,7 +213,18 @@ export class UrlBar {
       } catch { /* fall through */ }
     }
 
-    const result = resolveLocator(raw);
+    if (this.needsRootPath(raw)) {
+      this.setInfo('Checking...');
+      void this.ensureRemoteInfoLoaded().then(() => {
+        if (!this.isOpen || this.input.value.trim() !== raw) return;
+        // Info failed to load: report it rather than re-fetching in a loop.
+        if (this.remoteInfo === null) { this.setError('Server root path is unavailable'); return; }
+        this.scheduleValidate();
+      });
+      return;
+    }
+
+    const result = resolveLocator(raw, { rootPath: this.rootPath });
     if (result.kind === 'invalid') { this.setError(result.reason); return; }
     if (result.kind === 'remote') {
       if (this.remoteInfo?.enabled === false) {
@@ -289,7 +302,12 @@ export class UrlBar {
       } catch { /* fall through */ }
     }
 
-    const result = resolveLocator(raw);
+    if (this.needsRootPath(raw)) {
+      await this.ensureRemoteInfoLoaded();
+      if (seq !== this.submitSeq || !this.isOpen) return;
+    }
+
+    const result = resolveLocator(raw, { rootPath: this.rootPath });
     if (result.kind === 'invalid') { this.setError(result.reason); return; }
 
     if (result.kind === 'remote') {
@@ -312,6 +330,10 @@ export class UrlBar {
     this.pushHistory(raw);
     this.close();
     this.onOpen({ kind: 'local', path: result.path, line: result.line, lineEnd: result.lineEnd });
+  }
+
+  private needsRootPath(raw: string): boolean {
+    return this.remoteInfo === null && /^file:/i.test(raw);
   }
 
   private async verifyPath(path: string): Promise<boolean> {
@@ -355,6 +377,7 @@ export class UrlBar {
         if (!res.ok) return;
         const data = await res.json();
         this.remoteInfo = data.remote ?? { enabled: false, allowPrivate: false, maxSizeBytes: 0 };
+        this.rootPath = typeof data.rootPath === 'string' ? data.rootPath : null;
       } catch {
         this.remoteInfo = { enabled: false, allowPrivate: false, maxSizeBytes: 0 };
       }
