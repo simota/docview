@@ -1,4 +1,4 @@
-import MarkdownIt from 'markdown-it';
+import MarkdownIt, { type MarkdownIt as MarkdownItInstance } from 'markdown-it';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
 
@@ -1906,7 +1906,7 @@ md.core.ruler.after('block', 'qiita_article_frontmatter', (state) => {
 });
 
 // Wiki links [[target]] or [[target|display]]
-function wikiLinkPlugin(mdi: MarkdownIt) {
+function wikiLinkPlugin(mdi: MarkdownItInstance) {
   mdi.inline.ruler.after('link', 'wiki_link', (state, silent) => {
     const src = state.src;
     const pos = state.pos;
@@ -1964,7 +1964,7 @@ const defaultRender =
 
 md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
   const href = tokens[idx].attrGet('href');
-  if (href && /^https?:\/\//.test(href)) {
+  if (typeof href === 'string' && /^https?:\/\//.test(href)) {
     tokens[idx].attrSet('target', '_blank');
     tokens[idx].attrSet('rel', 'noopener noreferrer');
   }
