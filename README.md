@@ -17,7 +17,7 @@ Your browser opens at `http://localhost:4000` and the folder becomes a browsable
 > - **Windows** — Press the `Windows` key, type `PowerShell`, press `Enter`.
 > - **Linux** — Press `Ctrl + Alt + T` (most distros), or search for `Terminal` in your apps.
 >
-> Then install [Node.js 20.19+](https://nodejs.org/) (the **LTS** button is the safe choice), close and reopen the terminal, and run the command above.
+> Then install [Node.js 22.22+](https://nodejs.org/) (the **LTS** button is the safe choice), close and reopen the terminal, and run the command above.
 
 ### Try it on a specific folder or file
 
