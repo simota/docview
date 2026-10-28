@@ -32,6 +32,41 @@ test.describe('Regression: bug-fix suite', () => {
     await expect(page.locator('#viewer h1')).toContainText('Live Reload v2', { timeout: 15000 });
   });
 
+  test('live reload: a change made while the stream was down is applied on reconnect', async ({ page }) => {
+    const file = join(DIR, 'live-reload-resync.md');
+    writeFileSync(file, '# Resync v1\n');
+
+    // First connection: a stream that ends right after the handshake, as when
+    // the server restarts or the laptop sleeps. Then refuse reconnects until
+    // the file has changed, and finally let the real stream through.
+    let phase: 'first' | 'down' | 'up' = 'first';
+    await page.route('**/api/watch', async (route) => {
+      if (phase === 'first') {
+        phase = 'down';
+        await route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'data: connected\n\n' });
+      } else if (phase === 'down') {
+        await route.abort();
+      } else {
+        await route.continue();
+      }
+    });
+    await page.goto('/#file=live-reload-resync.md');
+    await expect(page.locator('#viewer h1')).toContainText('Resync v1');
+    const banner = page.locator('body > .reconnect-banner');
+    await expect(banner).toBeVisible();
+
+    // The change event is broadcast while this page has no stream, so it is lost.
+    writeFileSync(file, '# Resync v2\n');
+    // The banner stays up for the whole outage instead of timing out.
+    await page.waitForTimeout(5000);
+    await expect(banner).toBeVisible();
+    await expect(page.locator('#viewer h1')).toContainText('Resync v1');
+
+    phase = 'up';
+    await expect(page.locator('#viewer h1')).toContainText('Resync v2', { timeout: 15000 });
+    await expect(banner).toHaveCount(0, { timeout: 10000 });
+  });
+
   // NOTE: an `add → file tree refresh` variant was intentionally omitted: the
   // add/unlink broadcast refreshes the tree in EVERY connected page, which
   // destabilizes parallel tests interacting with the tree (context menu spec).
