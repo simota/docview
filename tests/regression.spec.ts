@@ -67,6 +67,34 @@ test.describe('Regression: bug-fix suite', () => {
     await expect(banner).toHaveCount(0, { timeout: 10000 });
   });
 
+  test('live reload: reconnecting keeps an open image comparison', async ({ page }) => {
+    // The comparison leaves the previously opened file as the current one, so
+    // a reconnect resync must not navigate back to it.
+    let phase: 'first' | 'down' | 'up' = 'first';
+    await page.route('**/api/watch', async (route) => {
+      if (phase === 'first') {
+        phase = 'down';
+        await route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'data: connected\n\n' });
+      } else if (phase === 'down') {
+        await route.abort();
+      } else {
+        await route.continue();
+      }
+    });
+    await page.goto('/#file=README.md');
+    await expect(page.locator('#viewer h1')).toContainText('Hello DocView');
+    await page.evaluate(() => { location.hash = '#compare=images%2Fa.png&compare=images%2Fb.jpg'; });
+    await expect(page.locator('#compare-view-pane')).toBeVisible();
+    const banner = page.locator('body > .reconnect-banner');
+    await expect(banner).toBeVisible();
+
+    phase = 'up';
+    await expect(banner).toHaveText('Reconnected', { timeout: 10000 });
+    await expect(banner).toHaveCount(0, { timeout: 10000 });
+    await expect(page.locator('#compare-view-pane')).toBeVisible();
+    await expect(page.locator('.compare-pane-item')).toHaveCount(2);
+  });
+
   // NOTE: an `add → file tree refresh` variant was intentionally omitted: the
   // add/unlink broadcast refreshes the tree in EVERY connected page, which
   // destabilizes parallel tests interacting with the tree (context menu spec).

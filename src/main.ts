@@ -2538,7 +2538,9 @@ function connectSSE() {
 /** Re-fetch every live view, as if each had received a change event. */
 function resyncAfterReconnect() {
   fileTree?.refresh();
-  if (currentFilePath) void reloadCurrentFile();
+  // A comparison keeps the file it replaced as current; reloading that would
+  // navigate away from the comparison.
+  if (currentFilePath && !compareActive) void reloadCurrentFile();
   if (splitActive && splitFilePath) void loadIntoSplit(splitFilePath);
   void reloadCurrentAlbum();
   if (reconnectBanner) {
