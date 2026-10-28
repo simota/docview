@@ -408,6 +408,7 @@ flowchart TD
   // (file-local reload) instead of `add` (global tree refresh in every page),
   // keeping cross-test interference minimal.
   write('live-reload.md', '# Live Reload v1\n');
+  write('live-reload-resync.md', '# Resync v1\n');
 
   // Filename containing an HTML injection payload — the breadcrumb must
   // escape path segments instead of injecting an <img> element.

@@ -2496,10 +2496,20 @@ let _albumSseDebounce: ReturnType<typeof setTimeout> | null = null;
 let _currentAlbumPath: string | null = null;
 let _currentAlbumRecursive = false;
 
+// Set when the stream drops. The server does not replay events, so anything
+// that changed during the outage is only picked up by resyncing on reconnect.
+let sseNeedsResync = false;
+
 function connectSSE() {
   const evtSource = new EventSource('/api/watch');
   evtSource.onmessage = (event) => {
-    if (event.data === 'connected') return;
+    if (event.data === 'connected') {
+      if (sseNeedsResync) {
+        sseNeedsResync = false;
+        resyncAfterReconnect();
+      }
+      return;
+    }
     try {
       const data = JSON.parse(event.data) as { event: string; path: string };
       if (data.event === 'change' && data.path === currentFilePath) reloadCurrentFile();
@@ -2519,22 +2529,44 @@ function connectSSE() {
   };
   evtSource.onerror = () => {
     evtSource.close();
-    showReconnectBanner();
+    sseNeedsResync = true;
+    setReconnectBanner('Connection lost — reconnecting...');
     setTimeout(connectSSE, 3000);
   };
 }
 
-let reconnectBanner: HTMLDivElement | null = null;
+/** Re-fetch every live view, as if each had received a change event. */
+function resyncAfterReconnect() {
+  fileTree?.refresh();
+  if (currentFilePath) void reloadCurrentFile();
+  if (splitActive && splitFilePath) void loadIntoSplit(splitFilePath);
+  void reloadCurrentAlbum();
+  if (reconnectBanner) {
+    setReconnectBanner('Reconnected');
+    reconnectBannerTimer = setTimeout(() => setReconnectBanner(null), 2000);
+  }
+}
 
-function showReconnectBanner() {
-  if (reconnectBanner?.isConnected) return;
-  const banner = document.createElement('div');
-  reconnectBanner = banner;
-  banner.id = 'reconnect-banner';
-  banner.className = 'reconnect-banner';
-  banner.innerHTML = 'Connection lost — reconnecting...';
-  document.body.appendChild(banner);
-  setTimeout(() => banner.remove(), 4000);
+let reconnectBanner: HTMLDivElement | null = null;
+let reconnectBannerTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Show the banner with `text` (kept up until replaced), or remove it with null. */
+function setReconnectBanner(text: string | null) {
+  if (reconnectBannerTimer) clearTimeout(reconnectBannerTimer);
+  reconnectBannerTimer = null;
+  if (text === null) {
+    reconnectBanner?.remove();
+    reconnectBanner = null;
+    return;
+  }
+  if (!reconnectBanner?.isConnected) {
+    reconnectBanner = document.createElement('div');
+    reconnectBanner.id = 'reconnect-banner';
+    reconnectBanner.className = 'reconnect-banner';
+    reconnectBanner.setAttribute('role', 'status');
+    document.body.appendChild(reconnectBanner);
+  }
+  reconnectBanner.textContent = text;
 }
 
 let serverRootPath: string | null = null;
