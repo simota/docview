@@ -45,6 +45,25 @@ function formatAbsolute(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+type GitFileState = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed';
+
+interface GitStatusResponse {
+  git: boolean;
+  files: Record<string, GitFileState>;
+  truncated: boolean;
+}
+
+const GIT_BADGE: Record<GitFileState, { letter: string; label: string }> = {
+  modified: { letter: 'M', label: '変更あり (未コミット)' },
+  added: { letter: 'A', label: '追加 (未コミット)' },
+  untracked: { letter: 'U', label: 'Git 未追跡' },
+  deleted: { letter: 'D', label: '削除' },
+  renamed: { letter: 'R', label: '名前変更' },
+};
+
+/** Value of the filter select that shows only files with uncommitted Git changes. */
+const GIT_FILTER_VALUE = 'git';
+
 interface TreeResponse {
   root: string;
   path: string;
@@ -66,6 +85,16 @@ export interface FileTreeActions {
   revealInOS?: (folderPath: string) => void;
   /** Resolve a tree-relative path to an absolute filesystem path, or null. */
   absPath?: (relPath: string) => string | null;
+  /** Whether a file can be compared as text. */
+  canDiff?: (path: string) => boolean;
+  /** Path of the file currently shown in the main viewer. */
+  currentPath?: () => string | null;
+  /** Open the diff view comparing two files (old → new). */
+  compareFiles?: (oldPath: string, newPath: string) => void;
+  /** Open the diff view for a file's own history (session baseline / Git). */
+  showHistory?: (path: string) => void;
+  /** Open the broken-link report for a folder ('' = served root) or document. */
+  checkLinks?: (path: string) => void;
 }
 
 // --- File type icons (#1, SVG) ---
@@ -183,6 +212,8 @@ export class FileTree {
   private onSelect: FileSelectCallback;
   private onAlbum: AlbumCallback | null;
   private actions: FileTreeActions;
+  /** File picked with "比較元として選択", awaiting a second file to compare with. */
+  private compareBase: string | null = null;
   private activePath: string | null = null;
   private openDirs = new Set<string>();
   private treeData: FileNode[] = [];
@@ -190,6 +221,12 @@ export class FileTree {
   private loadSeq = 0;
   /** Max age in days for the mtime filter; 0 (or NaN) means no time filter. */
   private mtimeMaxDays = 0;
+  private gitOnly = false;
+  private gitFiles = new Map<string, GitFileState>();
+  /** Directories containing at least one changed file. */
+  private gitDirs = new Set<string>();
+  private gitSeq = 0;
+  private gitOption: HTMLOptionElement | null = null;
   private contextMenuEl: HTMLElement | null = null;
 
   constructor(
@@ -223,7 +260,7 @@ export class FileTree {
     // Modification-time filter — preset age ranges, combined with the text query (AND).
     this.mtimeSelect = document.createElement('select');
     this.mtimeSelect.className = 'filetree-mtime-filter';
-    this.mtimeSelect.setAttribute('aria-label', '更新時間で絞り込み');
+    this.mtimeSelect.setAttribute('aria-label', '更新時間・Git の変更で絞り込み');
     // days: 0 = no filter; negative = calendar-day cutoff (-1 today, -2 yesterday …);
     // positive = rolling N-day window. All presets are cumulative (lower bound only).
     const MTIME_OPTIONS: { label: string; days: number }[] = [
@@ -242,7 +279,8 @@ export class FileTree {
       this.mtimeSelect.appendChild(el);
     }
     this.mtimeSelect.addEventListener('change', () => {
-      this.mtimeMaxDays = Number(this.mtimeSelect.value);
+      this.gitOnly = this.mtimeSelect.value === GIT_FILTER_VALUE;
+      this.mtimeMaxDays = this.gitOnly ? 0 : Number(this.mtimeSelect.value);
       this.applyFilters();
     });
 
@@ -264,6 +302,12 @@ export class FileTree {
       e.preventDefault();
       this.showContextMenu(e.clientX, e.clientY, item.dataset.path, item.dataset.type === 'dir' ? 'dir' : 'file');
     });
+    // The root heading offers whole-site actions (link check of every document).
+    this.rootLabel.addEventListener('contextmenu', (e) => {
+      if (!this.actions.checkLinks) return;
+      e.preventDefault();
+      this.showRootMenu(e.clientX, e.clientY);
+    });
     document.addEventListener('click', () => this.hideContextMenu());
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.hideContextMenu(); });
     window.addEventListener('scroll', () => this.hideContextMenu(), true);
@@ -281,6 +325,15 @@ export class FileTree {
     } catch {
       this.actions.notify?.(`コピー: ${text}`);
     }
+  }
+
+  private showRootMenu(x: number, y: number): void {
+    this.hideContextMenu();
+    const entries: { label: string; run: () => void }[] = [
+      { label: 'すべての文書のリンク切れをチェック', run: () => this.actions.checkLinks!('') },
+    ];
+    if (this.actions.revealInOS) entries.push({ label: 'フォルダを開く', run: () => this.actions.revealInOS!('') });
+    this.renderMenu(x, y, entries);
   }
 
   private showContextMenu(x: number, y: number, path: string, type: 'file' | 'dir'): void {
@@ -304,6 +357,36 @@ export class FileTree {
     if (type === 'file' && this.actions.openInApp) {
       entries.push({ label: 'アプリで開く', run: () => this.actions.openInApp!(path) });
     }
+    if (type === 'file' && this.actions.compareFiles && this.actions.canDiff?.(path)) {
+      const compareFiles = this.actions.compareFiles;
+      const current = this.actions.currentPath?.() ?? null;
+      if (current && current !== path && this.actions.canDiff(current)) {
+        const currentName = current.split('/').pop() || current;
+        entries.push({ label: `表示中の「${currentName}」と比較`, run: () => compareFiles(current, path) });
+      }
+      const base = this.compareBase;
+      if (base && base !== path) {
+        const baseName = base.split('/').pop() || base;
+        entries.push({
+          label: `選択した「${baseName}」と比較`,
+          run: () => { this.compareBase = null; compareFiles(base, path); },
+        });
+      }
+      entries.push({
+        label: '比較元として選択',
+        run: () => {
+          this.compareBase = path;
+          this.actions.notify?.(`比較元: ${name} — 比較したいファイルを右クリックしてください`);
+        },
+      });
+    }
+    if (type === 'file' && this.actions.showHistory && this.actions.canDiff?.(path)) {
+      entries.push({ label: '変更履歴・差分を表示', run: () => this.actions.showHistory!(path) });
+    }
+    if (this.actions.checkLinks && (type === 'dir' || /\.(?:md|markdown|mdx)$/i.test(path))) {
+      const checkLinks = this.actions.checkLinks;
+      entries.push({ label: type === 'dir' ? 'このフォルダのリンク切れをチェック' : 'リンク切れをチェック', run: () => checkLinks(path) });
+    }
     if (this.actions.revealInOS) {
       if (type === 'file') {
         // Parent folder of the file ('' when the file sits at the served root).
@@ -313,7 +396,10 @@ export class FileTree {
         entries.push({ label: 'フォルダを開く', run: () => this.actions.revealInOS!(path) });
       }
     }
+    this.renderMenu(x, y, entries);
+  }
 
+  private renderMenu(x: number, y: number, entries: { label: string; run: () => void }[]): void {
     const menu = document.createElement('div');
     menu.className = 'filetree-context-menu';
     menu.setAttribute('role', 'menu');
@@ -360,6 +446,7 @@ export class FileTree {
     if (query && !node.name.toLowerCase().includes(query) && !node.path.toLowerCase().includes(query)) {
       return false;
     }
+    if (this.gitOnly && !this.gitFiles.has(node.path)) return false;
     if (cutoff !== null) {
       if (!node.mtime) return false;
       const t = new Date(node.mtime).getTime();
@@ -388,7 +475,7 @@ export class FileTree {
   /** Re-render the tree applying the active text + mtime filters. */
   private applyFilters(): void {
     const cutoff = this.mtimeCutoff();
-    const active = this.filterQuery !== '' || cutoff !== null;
+    const active = this.filterQuery !== '' || cutoff !== null || this.gitOnly;
     const display = active ? this.filterTree(this.treeData, this.filterQuery, cutoff) : this.treeData;
     this.renderTree(display, this.treeList, 0);
   }
@@ -406,9 +493,63 @@ export class FileTree {
       this.rootLabel.textContent = data.root;
       this.treeData = data.tree;
       this.applyFilters();
+      void this.refreshGitStatus();
     } catch {
       if (seq === this.loadSeq) this.container.style.display = 'none';
     }
+  }
+
+  /** Re-read uncommitted Git changes and update the tree badges / filter. */
+  async refreshGitStatus(): Promise<void> {
+    const seq = ++this.gitSeq;
+    let data: GitStatusResponse;
+    try {
+      const res = await fetch('/api/git/status', { cache: 'no-store' });
+      if (!res.ok) return;
+      data = await res.json();
+    } catch {
+      return;
+    }
+    if (seq !== this.gitSeq) return;
+    const files = new Map<string, GitFileState>(data.git ? Object.entries(data.files) : []);
+    const dirs = new Set<string>();
+    for (const path of files.keys()) {
+      const parts = path.split('/');
+      for (let i = 1; i < parts.length; i++) dirs.add(parts.slice(0, i).join('/'));
+    }
+    const changed = files.size !== this.gitFiles.size
+      || [...files].some(([path, state]) => this.gitFiles.get(path) !== state);
+    this.gitFiles = files;
+    this.gitDirs = dirs;
+    this.updateGitOption(data.git);
+    if (changed) this.applyFilters();
+  }
+
+  private updateGitOption(available: boolean): void {
+    if (available && !this.gitOption) {
+      this.gitOption = document.createElement('option');
+      this.gitOption.value = GIT_FILTER_VALUE;
+      this.mtimeSelect.appendChild(this.gitOption);
+    }
+    if (this.gitOption) this.gitOption.textContent = `Git: 変更のみ (${this.gitFiles.size})`;
+    if (!available && this.gitOption) {
+      if (this.gitOnly) {
+        this.gitOnly = false;
+        this.mtimeSelect.value = '0';
+      }
+      this.gitOption.remove();
+      this.gitOption = null;
+    }
+  }
+
+  private gitBadge(path: string, type: 'file' | 'dir'): string {
+    if (type === 'dir') {
+      return this.gitDirs.has(path) ? '<span class="filetree-git-dot" title="未コミットの変更を含む" aria-hidden="true"></span>' : '';
+    }
+    const state = this.gitFiles.get(path);
+    if (!state) return '';
+    const badge = GIT_BADGE[state];
+    return `<span class="filetree-git filetree-git--${state}" title="Git: ${badge.label}" aria-label="${badge.label}">${badge.letter}</span>`;
   }
 
   private renderTree(nodes: FileNode[], parent: HTMLElement, depth: number) {
@@ -449,7 +590,7 @@ export class FileTree {
           : '';
 
         const renderDirInner = (open: boolean) =>
-          `<span class="filetree-chevron ${open ? 'open' : ''}">${ICON_CHEVRON}</span>${open ? ICON_DIR_OPEN : ICON_DIR_CLOSED}<span class="filetree-name">${esc(node.name)}</span>${albumBtnHtml}`;
+          `<span class="filetree-chevron ${open ? 'open' : ''}">${ICON_CHEVRON}</span>${open ? ICON_DIR_OPEN : ICON_DIR_CLOSED}<span class="filetree-name">${esc(node.name)}</span>${this.gitBadge(node.path, 'dir')}${albumBtnHtml}`;
 
         item.innerHTML = renderDirInner(isOpen);
 
@@ -500,7 +641,7 @@ export class FileTree {
           const tooltip = tooltipParts.join(' · ');
           metaHtml = `<span class="filetree-meta" title="${esc(tooltip)}">${esc(rel)}</span>`;
         }
-        item.innerHTML = `<span class="filetree-chevron-spacer"></span>${fileIcon(node.name)}<span class="filetree-name">${esc(node.name)}</span>${metaHtml}`;
+        item.innerHTML = `<span class="filetree-chevron-spacer"></span>${fileIcon(node.name)}<span class="filetree-name">${esc(node.name)}</span>${this.gitBadge(node.path, 'file')}${metaHtml}`;
         if (this.activePath === node.path) {
           item.classList.add('active');
           item.setAttribute('aria-selected', 'true');

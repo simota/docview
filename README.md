@@ -56,6 +56,10 @@ If the browser doesn't open, copy `http://localhost:4000` into any browser — i
 - **Text size** — adjust document text from 50% to 200% in 10% steps; preference is persisted
 - **Table of contents** — auto-generated TOC sidebar from heading structure
 - **Search** — full-text search across all files in the directory
+- **Diff view** — compare any two text files side by side or unified, with word-level highlights, change navigation (`n` / `p`), whitespace-insensitive mode, expandable context, click-through to the line, and patch copy / `.patch` download. Right-click a file → *表示中の「…」と比較* or *比較元として選択*
+- **Live change review** — when an open file is edited by another tool, a *変更あり +N −M* chip appears next to the breadcrumb; click it (or press `D`) to see exactly what changed since you opened it, and *確認済みにする* to reset the baseline
+- **Git history** — for files in a Git repository, compare the working copy against `HEAD` or any of the last 30 commits that touched the file. The file tree marks uncommitted changes (`M` / `A` / `U`) and the filter menu adds *Git: 変更のみ*. Read-only: DocView only runs `git status`, `git log` and `git show`
+- **Link check** — finds relative links, images, reference definitions and `[[wiki links]]` in Markdown whose target does not exist (resolved exactly as the viewer resolves them), with same-name files suggested as fixes. Per-document results appear in the TOC panel; right-click a folder (or the root name) for a report you can copy as a Markdown checklist. The report re-checks live as files change
 - **Tabs** — open multiple files as tabs within a single session
 
 ## Supported Formats
@@ -142,6 +146,9 @@ docview ./docs --no-open
 | `Cmd/Ctrl + E`    | Toggle table of contents            |
 | `Cmd/Ctrl + Shift + E` | Toggle theme (dark / light)   |
 | `Cmd/Ctrl + Shift + S` | Present as slides (Marp deck for `marp: true` files) |
+| `D`               | Diff the current file (changes since opened, else Git `HEAD`) |
+| `n` / `p` (`j` / `k`) | Next / previous change in the diff view |
+| `u`               | Toggle side-by-side / unified diff  |
 | `Cmd/Ctrl + =` / `-` / `0` | Increase / decrease / reset document text size |
 | `?`               | Show keyboard shortcut help         |
 | `↑` / `↓`         | Navigate file list / search results |

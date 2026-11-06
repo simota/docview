@@ -30,6 +30,8 @@ No linter/formatter configured; TypeScript strict mode is the quality gate.
 - `GET /api/search?q=` — full-text grep across served directory
 - `GET /api/watch` — SSE stream; Chokidar broadcasts file changes to all connected clients
 - `GET /api/custom-css` — loads `.docview.css` from the served directory
+- `GET /api/git/status` / `GET /api/git/log?path=` / `GET /api/git/show?path=&rev=` — read-only Git history (execFile, validated rev, timeout); `git:false` outside a repo
+- `GET /api/links/check?path=` — broken relative links in Markdown (resolved like the viewer), scoped to a folder/file
 
 **Frontend (`src/`)** — Vanilla TypeScript SPA, no framework. Each UI concern is a separate module:
 - `main.ts` — app shell, routing (`#file=path`), file fetching, scroll memory, code-block copy buttons
@@ -37,6 +39,7 @@ No linter/formatter configured; TypeScript strict mode is the quality gate.
 - `filetree.ts` / `tabs.ts` / `toc.ts` / `search.ts` / `find-bar.ts` — sidebar, tabs, TOC, search modal, vim-style find
 - `json-tree.ts` / `yaml-tree.ts` / `csv-viewer.ts` — structured data viewers (tree views, tables)
 - `theme.ts` — light/dark toggle with localStorage persistence
+- `text-diff.ts` (pure Myers line diff + intraline + unified patch, unit-tested from `tests/text-diff.test.mjs`) / `diff-view.ts` (diff modal: files, Git revisions, in-session snapshots) / `link-report.ts` (link check modal)
 
 **CLI (`bin/mdv.mjs`)** — Parses args, imports server, auto-opens browser.
 
