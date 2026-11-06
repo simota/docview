@@ -18,6 +18,9 @@ import { ImageMetaPanel } from './image-meta-panel';
 import { HelpModal } from './help-modal';
 import { UrlBar } from './url-bar';
 import { isSecretSafeModeEnabled, maskSecretValue, maskSecrets } from './secret-mask';
+import { DiffView, isDiffablePath, type DiffSource, type Snapshot } from './diff-view';
+import { diffLines } from './text-diff';
+import { LinkReport } from './link-report';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import './style.css';
@@ -256,6 +259,99 @@ const searchModal = new SearchModal(({ path, line }) => openFileLocation(path, l
 
 // --- Help modal (?) ---
 const helpModal = new HelpModal();
+
+// --- Diff view & live-change tracking ---
+// The first text loaded for a path in this session is kept as its baseline, so
+// edits made by another tool while the file is open can be reviewed as a diff.
+const SNAPSHOT_LIMIT = 50;
+const SNAPSHOT_MAX_CHARS = 4 * 1024 * 1024;
+const liveSnapshots = new Map<string, Snapshot>();
+const btnLiveChanges = document.getElementById('btn-live-changes') as HTMLButtonElement | null;
+const btnDiff = document.getElementById('btn-diff') as HTMLButtonElement | null;
+
+function recordSnapshot(path: string, text: string, replace = false): void {
+  if (text.length > SNAPSHOT_MAX_CHARS) return;
+  if (liveSnapshots.has(path) && !replace) {
+    // Refresh LRU order without replacing the baseline.
+    const snap = liveSnapshots.get(path)!;
+    liveSnapshots.delete(path);
+    liveSnapshots.set(path, snap);
+    return;
+  }
+  liveSnapshots.delete(path);
+  liveSnapshots.set(path, { text, takenAt: Date.now() });
+  while (liveSnapshots.size > SNAPSHOT_LIMIT) {
+    const oldest = liveSnapshots.keys().next().value;
+    if (oldest === undefined) break;
+    liveSnapshots.delete(oldest);
+  }
+}
+
+/** Show "changed since opened" with +/− counts, or hide it when unchanged. */
+function updateLiveChangeChip(path: string | null, text: string | null): void {
+  if (!btnLiveChanges) return;
+  const snap = path ? liveSnapshots.get(path) : undefined;
+  if (!path || text === null || !snap || snap.text === text) {
+    btnLiveChanges.hidden = true;
+    btnLiveChanges.dataset.path = '';
+    return;
+  }
+  const { stats } = diffLines(snap.text, text);
+  btnLiveChanges.hidden = false;
+  btnLiveChanges.dataset.path = path;
+  btnLiveChanges.innerHTML = `<span class="live-change-dot" aria-hidden="true"></span>変更あり <span class="diff-stat-add">+${stats.added}</span> <span class="diff-stat-del">−${stats.removed}</span>`;
+  btnLiveChanges.setAttribute('aria-label', `開いてから変更されました: ${stats.added} 行追加、${stats.removed} 行削除。差分を表示`);
+}
+
+const diffView = new DiffView({
+  getSnapshot: (path) => liveSnapshots.get(path) ?? null,
+  resetSnapshot: (path, text) => {
+    recordSnapshot(path, text, true);
+    if (path === currentFilePath) updateLiveChangeChip(path, text);
+  },
+  openLocation: (path, line) => openFileLocation(path, line, null, 'left'),
+  notify: (message) => showCopyToast(message),
+});
+
+/** Open the most useful diff for a file: unseen live edits first, then Git HEAD. */
+async function openDiffForFile(path: string | null): Promise<void> {
+  if (!path || !isDiffablePath(path)) {
+    showCopyToast('テキストファイルを開いているときに使えます');
+    return;
+  }
+  const working: DiffSource = { kind: 'file', path };
+  if (btnLiveChanges && !btnLiveChanges.hidden && btnLiveChanges.dataset.path === path) {
+    await diffView.open({ kind: 'snapshot', path }, working);
+    return;
+  }
+  let base: DiffSource = liveSnapshots.has(path) ? { kind: 'snapshot', path } : working;
+  try {
+    const res = await fetch(`/api/git/log?path=${encodeURIComponent(path)}&limit=1`, { cache: 'no-store' });
+    const log = res.ok ? await res.json() as { git: boolean; commits: unknown[] } : null;
+    if (log?.git && log.commits.length > 0) base = { kind: 'git', path, rev: 'HEAD' };
+  } catch { /* no git history — fall back to the session baseline */ }
+  await diffView.open(base, working);
+}
+
+/** Compare two served files (old → new). */
+function compareFiles(oldPath: string, newPath: string): void {
+  if (!isDiffablePath(oldPath) || !isDiffablePath(newPath)) {
+    showCopyToast('テキストとして比較できない形式です');
+    return;
+  }
+  void diffView.open({ kind: 'file', path: oldPath }, { kind: 'file', path: newPath });
+}
+
+const linkReport = new LinkReport({
+  openLocation: (path, line) => openFileLocation(path, line, null, 'left'),
+  notify: (message) => showCopyToast(message),
+});
+
+btnLiveChanges?.addEventListener('click', () => {
+  const path = btnLiveChanges.dataset.path;
+  if (path) void diffView.open({ kind: 'snapshot', path }, { kind: 'file', path });
+});
+btnDiff?.addEventListener('click', () => void openDiffForFile(currentFilePath));
 
 // --- URL bar (Cmd+L) ---
 const urlBar = new UrlBar((target) => {
@@ -919,6 +1015,7 @@ function renderContent(content: string, path: string, target: HTMLElement = view
       if (target === viewer) {
         toc.update();
         toc.loadBacklinks(path);
+        if (!sourceUrl && /\.(?:md|markdown|mdx)$/i.test(path)) void toc.loadBrokenLinks(path);
       }
       interceptRelativeLinks(sourceUrl ?? path, target, pane);
       addHeadingCopyButtons(target, path);
@@ -2009,6 +2106,7 @@ async function loadServerFile(path: string) {
   const type = detectFileType(path);
   const fileChanged = currentFilePath !== path;
   currentFilePath = path;
+  if (fileChanged) updateLiveChangeChip(null, null);
   document.title = `${path} — DocView`;
   updateBreadcrumb(path);
   updatePaneLabels();
@@ -2223,6 +2321,8 @@ async function loadFullFile(path: string, seq: number) {
   updateBreadcrumb(path, mtime);
   const content = await res.text();
   if (seq !== leftLoadSeq) return;
+  recordSnapshot(path, content);
+  updateLiveChangeChip(path, content);
 
   // Large file warning
   if (content.length > MAX_FILE_SIZE) {
@@ -2394,6 +2494,7 @@ img{max-width:100%}h1,h2,h3{color:#1a1c2e}</style></head>
 function handleKeyboard(e: KeyboardEvent) {
   if (e.isComposing || e.keyCode === 229) return; // keys driving an IME conversion
   if (helpModal.isOpen) return;
+  if (diffView.isOpen || linkReport.isOpen) return;
   const openPaneFindBar = [findBar, splitFindBar].find((bar) => bar?.active);
   if (openPaneFindBar) {
     if (e.key === 'Escape') { openPaneFindBar.close(); e.preventDefault(); }
@@ -2415,6 +2516,14 @@ function handleKeyboard(e: KeyboardEvent) {
   }
   if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
     // n/N for next/prev match when find was used
+  }
+
+  // Diff for the current file (live edits since opened, else Git HEAD)
+  if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable
+    && !document.querySelector('.album-view, .slide-overlay, .marp-slide-overlay')) {
+    e.preventDefault();
+    void openDiffForFile(activePane === 'right' && splitActive ? splitFilePath : currentFilePath);
+    return;
   }
 
   if (e.key === '?' && !e.metaKey && !e.ctrlKey && !isEditable) {
@@ -2500,6 +2609,16 @@ let _currentAlbumRecursive = false;
 // that changed during the outage is only picked up by resyncing on reconnect.
 let sseNeedsResync = false;
 
+// Edits change Git status without a tree reload; coalesce bursts of events.
+let gitStatusTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleGitStatusRefresh() {
+  if (gitStatusTimer) clearTimeout(gitStatusTimer);
+  gitStatusTimer = setTimeout(() => { gitStatusTimer = null; void fileTree?.refreshGitStatus(); }, 600);
+}
+
+// A commit made in a terminal changes status without touching watched files.
+window.addEventListener('focus', () => scheduleGitStatusRefresh());
+
 function connectSSE() {
   const evtSource = new EventSource('/api/watch');
   evtSource.onmessage = (event) => {
@@ -2512,6 +2631,10 @@ function connectSSE() {
     }
     try {
       const data = JSON.parse(event.data) as { event: string; path: string };
+      if (data.event === 'change' || data.event === 'unlink') diffView.notifyFileChanged(data.path);
+      if (data.event === 'add' || data.event === 'unlink') diffView.invalidateFileList();
+      scheduleGitStatusRefresh();
+      linkReport.notifyChange();
       if (data.event === 'change' && data.path === currentFilePath) reloadCurrentFile();
       if (data.event === 'change' && splitActive && data.path === splitFilePath) void loadIntoSplit(data.path);
       if (data.event === 'add' || data.event === 'unlink') fileTree?.refresh();
@@ -2928,12 +3051,21 @@ async function init() {
         openInApp,
         revealInOS,
         absPath: (rel) => (serverRootPath ? `${serverRootPath.replace(/\/$/, '')}/${rel}` : null),
+        canDiff: isDiffablePath,
+        currentPath: () => currentFilePath,
+        compareFiles,
+        showHistory: (path) => void openDiffForFile(path),
+        checkLinks: (path) => void linkReport.open(path),
       },
     );
     await fileTree.load();
 
     // Wire up TOC backlinks to navigate files
     toc.setFileSelectCallback((path) => { void loadServerFile(path); collapseSidebarOnMobile(); });
+    toc.setLinkCallbacks(
+      (path, line) => openFileLocation(path, line, null, 'left'),
+      (scope) => void linkReport.open(scope),
+    );
 
     sidebarVisible = true;
     sidebar.classList.remove('sidebar-hidden');

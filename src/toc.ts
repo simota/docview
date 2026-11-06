@@ -1,4 +1,7 @@
+import { fetchLinkCheck } from './link-report';
+
 type FileSelectCallback = (path: string) => void;
+type LocationCallback = (path: string, line: number) => void;
 
 interface Backlink {
   path: string;
@@ -9,6 +12,9 @@ export class TableOfContents {
   private container: HTMLElement;
   private viewer: HTMLElement;
   private onFileSelect: FileSelectCallback | null = null;
+  private onLocation: LocationCallback | null = null;
+  private onLinkReport: ((scope: string) => void) | null = null;
+  private brokenSeq = 0;
 
   constructor(container: HTMLElement, viewer: HTMLElement) {
     this.container = container;
@@ -17,6 +23,12 @@ export class TableOfContents {
 
   setFileSelectCallback(cb: FileSelectCallback) {
     this.onFileSelect = cb;
+  }
+
+  /** Hooks for the broken-links section: jump to a line / open the full report. */
+  setLinkCallbacks(onLocation: LocationCallback, onLinkReport: (scope: string) => void) {
+    this.onLocation = onLocation;
+    this.onLinkReport = onLinkReport;
   }
 
   update() {
@@ -43,6 +55,7 @@ export class TableOfContents {
     html += '</nav>';
     // Backlinks container (populated async)
     html += '<div class="backlinks-section" id="backlinks-section"></div>';
+    html += '<div class="backlinks-section brokenlinks-section" id="brokenlinks-section"></div>';
     this.container.innerHTML = html;
 
     // Click handler — smooth scroll
@@ -84,6 +97,37 @@ export class TableOfContents {
           const path = a.dataset.path;
           if (path && this.onFileSelect) this.onFileSelect(path);
         });
+      });
+    } catch { /* ignore */ }
+  }
+
+  /** List this document's relative links whose targets are missing. */
+  async loadBrokenLinks(filePath: string) {
+    const seq = ++this.brokenSeq;
+    const section = this.container.querySelector('#brokenlinks-section');
+    if (!section) return;
+    try {
+      const result = await fetchLinkCheck(filePath);
+      if (seq !== this.brokenSeq || !section.isConnected) return;
+      if (result.broken.length === 0) {
+        section.innerHTML = '';
+        return;
+      }
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      section.innerHTML = `<div class="backlinks-title brokenlinks-title">Broken links (${result.broken.length})</div><nav class="backlinks-nav">${
+        result.broken.map((b) =>
+          `<a class="backlink-item brokenlink-item" href="#" data-line="${b.line}" title="${esc(b.target ?? b.link)} が見つかりません">L${b.line} ${esc(b.link)}</a>`
+        ).join('')
+      }<a class="backlink-item brokenlink-report" href="#">すべての文書をチェック…</a></nav>`;
+      section.querySelectorAll<HTMLAnchorElement>('.brokenlink-item').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.onLocation?.(filePath, Number(a.dataset.line));
+        });
+      });
+      section.querySelector('.brokenlink-report')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.onLinkReport?.('');
       });
     } catch { /* ignore */ }
   }

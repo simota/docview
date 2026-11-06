@@ -4,7 +4,7 @@ import { readFile, readdir, stat, realpath, open } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { join, resolve, relative, extname, basename, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { isIP } from 'node:net';
 import chokidar from 'chokidar';
@@ -175,6 +175,12 @@ function detectEncoding(buf) {
 /**
  * Read a file and decode to UTF-8 string, auto-detecting encoding.
  */
+function decodeTextBuffer(buf) {
+  const encoding = detectEncoding(buf);
+  if (encoding === 'utf-8') return buf.toString('utf-8', hasUtf8Bom(buf) ? 3 : 0);
+  return new TextDecoder(encoding).decode(buf);
+}
+
 async function readFileText(filePath) {
   const buf = await readFile(filePath);
   const encoding = detectEncoding(buf);
@@ -1213,6 +1219,295 @@ async function safePath(reqPath) {
   }
 }
 
+// --- Link check ---
+// Finds relative links in Markdown documents whose target does not exist,
+// resolving them exactly like the viewer does (URL resolution against the
+// source file; wiki links default to `.md` and are relative to the source).
+
+const LINK_CHECK_EXT = new Set(['.md', '.markdown', '.mdx']);
+const LINK_CHECK_MAX_FILES = 5000;
+const LINK_CHECK_MAX_BROKEN = 1000;
+
+/** Blank out code spans/blocks (keeping newlines) so links inside code are ignored. */
+function stripMarkdownCode(text) {
+  const blank = (m) => m.replace(/[^\n]/g, ' ');
+  return text
+    .replace(/^( {0,3})(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^\1?\2[`~]*[ \t]*$|(?![\s\S]))/gm, blank)
+    .replace(/(`+)(?!`)[\s\S]*?[^`]\1(?!`)/g, blank)
+    .replace(/<!--[\s\S]*?-->/g, blank);
+}
+
+/** Extract { raw, dest, kind, index } for every inline, image, reference and wiki link. */
+function extractMarkdownLinks(text) {
+  const links = [];
+  const inline = /(!?)\[(?:[^\]\\]|\\.)*\]\(\s*(<[^>\n]*>|[^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
+  let m;
+  while ((m = inline.exec(text)) !== null) {
+    let dest = m[2];
+    if (dest.startsWith('<')) dest = dest.slice(1, -1);
+    links.push({ raw: m[0], dest, kind: m[1] ? 'image' : 'link', index: m.index });
+  }
+  const reference = /^ {0,3}\[[^\]\n]+\]:\s*(<[^>\n]*>|\S+)/gm;
+  while ((m = reference.exec(text)) !== null) {
+    let dest = m[1];
+    if (dest.startsWith('<')) dest = dest.slice(1, -1);
+    links.push({ raw: m[0].trim(), dest, kind: 'reference', index: m.index });
+  }
+  const wiki = /\[\[([^[\]\n|]+)(?:\|[^[\]\n]*)?\]\]/g;
+  while ((m = wiki.exec(text)) !== null) {
+    const target = m[1].trim();
+    const suffixStart = target.search(/[?#]/);
+    const path = suffixStart < 0 ? target : target.slice(0, suffixStart);
+    const filename = path.split('/').pop() || '';
+    const dest = path && !filename.includes('.') ? `${path}.md${suffixStart < 0 ? '' : target.slice(suffixStart)}` : target;
+    links.push({ raw: m[0], dest, kind: 'wiki', index: m.index });
+  }
+  return links.sort((a, b) => a.index - b.index);
+}
+
+/** Resolve a link destination against its source file; null for external/in-page links. */
+function resolveLinkTarget(dest, sourcePath) {
+  const d = dest.trim();
+  if (!d || d.startsWith('#') || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(d)) return null;
+  try {
+    const base = sourcePath.split('/').map(encodeURIComponent).join('/');
+    const resolvedUrl = new URL(d, `https://docview.invalid/${base}`);
+    return decodeURIComponent(resolvedUrl.pathname.slice(1));
+  } catch {
+    return undefined; // malformed — reported as broken
+  }
+}
+
+async function checkLinks(scope) {
+  refreshDocviewIgnore();
+  const docs = [];
+  const nameIndex = new Map(); // basename -> [relPath]
+  let truncated = false;
+
+  async function walk(dir) {
+    let entries;
+    try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      const rel = relative(targetDir, fullPath).replace(/\\/g, '/');
+      if (entry.isSymbolicLink() && !await safePath(rel)) continue;
+      let isDir = entry.isDirectory();
+      if (entry.isSymbolicLink()) {
+        try { isDir = (await stat(fullPath)).isDirectory(); } catch { continue; }
+      }
+      if (isDir) {
+        if (shouldSkipDir(entry.name, rel)) continue;
+        await walk(fullPath);
+      } else {
+        if (shouldSkipFile(entry.name, rel)) continue;
+        const list = nameIndex.get(entry.name) || [];
+        list.push(rel);
+        nameIndex.set(entry.name, list);
+        if (!LINK_CHECK_EXT.has(extname(entry.name).toLowerCase())) continue;
+        if (scope && rel !== scope && !rel.startsWith(`${scope}/`)) continue;
+        if (docs.length >= LINK_CHECK_MAX_FILES) { truncated = true; continue; }
+        docs.push({ rel, fullPath });
+      }
+    }
+  }
+  await walk(targetDir);
+
+  const existsCache = new Map();
+  async function exists(relPath) {
+    if (existsCache.has(relPath)) return existsCache.get(relPath);
+    let ok = false;
+    const resolved = await safePath(relPath);
+    if (resolved) {
+      try { await stat(resolved); ok = true; } catch { ok = false; }
+    }
+    existsCache.set(relPath, ok);
+    return ok;
+  }
+
+  const broken = [];
+  let totalLinks = 0;
+  docs.sort((a, b) => a.rel.localeCompare(b.rel));
+  for (const doc of docs) {
+    let content;
+    try {
+      const st = await stat(doc.fullPath);
+      if (st.size > MAX_SEARCH_FILE_BYTES) continue;
+      content = await readFileText(doc.fullPath);
+    } catch { continue; }
+    const text = stripMarkdownCode(content.replace(/\r\n?/g, '\n'));
+    const lineStarts = [0];
+    for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) lineStarts.push(i + 1);
+    const lineOf = (index) => {
+      let lo = 0;
+      let hi = lineStarts.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (lineStarts[mid] <= index) lo = mid; else hi = mid - 1;
+      }
+      return lo + 1;
+    };
+    for (const link of extractMarkdownLinks(text)) {
+      const target = resolveLinkTarget(link.dest, doc.rel);
+      if (target === null) continue;
+      totalLinks++;
+      let reason = null;
+      if (target === undefined) reason = 'invalid';
+      else if (target !== '' && !await exists(target)) reason = 'missing'; // '' is the served root
+      if (!reason) continue;
+      const item = {
+        source: doc.rel,
+        line: lineOf(link.index),
+        kind: link.kind,
+        link: link.kind === 'wiki' ? link.raw : link.dest,
+        target: target ?? null,
+        reason,
+        suggestions: [],
+      };
+      if (target) {
+        const candidates = nameIndex.get(basename(target)) || [];
+        item.suggestions = candidates.filter((c) => c !== target).slice(0, 3);
+      }
+      broken.push(item);
+      if (broken.length >= LINK_CHECK_MAX_BROKEN) { truncated = true; break; }
+    }
+    if (broken.length >= LINK_CHECK_MAX_BROKEN) break;
+  }
+  return { scope: scope || '', scannedFiles: docs.length, totalLinks, broken, truncated };
+}
+
+// --- Git history (read-only) ---
+// Only `git log` / `git show <rev>:<file>` are run, via execFile (no shell),
+// with a validated revision, a timeout and an output cap. Paths go through
+// safePath first, so history is limited to files inside the served root.
+
+const GIT_REV_RE = /^(?:HEAD(?:~\d{1,4})?|[0-9a-f]{7,40})$/;
+const GIT_MAX_SHOW_BYTES = 8 * 1024 * 1024;
+
+function runGit(cwd, gitArgs, { maxBuffer = 1024 * 1024, encoding = 'utf8' } = {}) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    execFile('git', [
+      // Never run repo-configured helpers for these read-only queries.
+      '-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null',
+      '--no-pager', ...gitArgs,
+    ], {
+      cwd,
+      encoding,
+      maxBuffer,
+      timeout: 5000,
+      windowsHide: true,
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' },
+    }, (err, stdout, stderr) => {
+      if (err) {
+        const e = new Error(String(stderr || err.message || 'git failed').trim().split('\n')[0]);
+        e.code = err.code;
+        rejectPromise(e);
+        return;
+      }
+      resolvePromise(stdout);
+    });
+  });
+}
+
+/** Resolve a request path to an existing regular file inside the root, or send an error. */
+async function resolveGitTarget(res, reqPath) {
+  if (!reqPath) {
+    sendJson(res, 400, { error: 'Missing path parameter' });
+    return null;
+  }
+  const resolved = await safePath(reqPath);
+  if (!resolved) {
+    sendJson(res, 403, { error: 'Access denied' });
+    return null;
+  }
+  try {
+    const s = await stat(resolved);
+    if (!s.isFile()) {
+      sendJson(res, 400, { error: `Not a file: ${reqPath}` });
+      return null;
+    }
+  } catch {
+    sendJson(res, 404, { error: 'File not found' });
+    return null;
+  }
+  return resolved;
+}
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
+
+const GIT_STATUS_MAX_ENTRIES = 5000;
+
+/**
+ * Working-tree status of files under the served root, keyed by root-relative
+ * path: modified | added | untracked | deleted | renamed. Null outside a repo.
+ */
+async function gitWorkingTreeStatus() {
+  refreshDocviewIgnore();
+  const realRoot = await realpath(targetDir);
+  let toplevel;
+  try {
+    toplevel = (await runGit(realRoot, ['rev-parse', '--show-toplevel'])).trim();
+  } catch {
+    return null;
+  }
+  const out = await runGit(realRoot, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', '.'], { maxBuffer: 8 * 1024 * 1024 });
+  const files = {};
+  let count = 0;
+  let truncated = false;
+  const parts = out.split('\0');
+  for (let i = 0; i < parts.length; i++) {
+    const entry = parts[i];
+    if (entry.length < 4) continue;
+    const code = entry.slice(0, 2);
+    const repoPath = entry.slice(3);
+    // Renames/copies are followed by the original path as a separate field.
+    if (code[0] === 'R' || code[0] === 'C') i++;
+    if (code === '!!') continue;
+    const rel = relative(realRoot, join(toplevel, repoPath)).replace(/\\/g, '/');
+    if (!rel || rel.startsWith('../') || rel === '..') continue;
+    // Match the tree: skipped / .docviewignore'd paths are not reported.
+    const segments = rel.split('/');
+    let hidden = shouldSkipFile(segments[segments.length - 1], rel);
+    for (let j = 1; j < segments.length && !hidden; j++) {
+      hidden = shouldSkipDir(segments[j - 1], segments.slice(0, j).join('/'));
+    }
+    if (hidden) continue;
+    let state = 'modified';
+    if (code === '??') state = 'untracked';
+    else if (code[0] === 'A' || code[1] === 'A') state = 'added';
+    else if (code[0] === 'D' || code[1] === 'D') state = 'deleted';
+    else if (code[0] === 'R' || code[0] === 'C') state = 'renamed';
+    files[rel] = state;
+    if (++count >= GIT_STATUS_MAX_ENTRIES) { truncated = true; break; }
+  }
+  return { files, truncated };
+}
+
+async function gitFileLog(resolved, limit) {
+  const cwd = dirname(resolved);
+  const out = await runGit(cwd, [
+    'log', '--follow', `--max-count=${limit}`, '--date=iso-strict',
+    '--format=%H%x1f%h%x1f%aI%x1f%an%x1f%s%x1e', '--', `./${basename(resolved)}`,
+  ]);
+  return out.split('\x1e').map((rec) => rec.trim()).filter(Boolean).map((rec) => {
+    const [hash, short, date, author, subject] = rec.split('\x1f');
+    return { hash, short, date, author, subject };
+  });
+}
+
+async function gitFileStatus(resolved) {
+  const cwd = dirname(resolved);
+  const out = await runGit(cwd, ['status', '--porcelain=v1', '--untracked-files=all', '--', `./${basename(resolved)}`]);
+  const line = out.split('\n').find(Boolean);
+  if (!line) return 'clean';
+  const code = line.slice(0, 2);
+  if (code === '??') return 'untracked';
+  if (code === '!!') return 'ignored';
+  return 'modified';
+}
+
 // MIME types for static files
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -1784,6 +2079,83 @@ const server = createServer(async (req, res) => {
         insecureTls: remoteInsecureTls,
       },
     }));
+    return;
+  }
+
+  // Broken relative links across Markdown documents (optionally scoped to a folder or file).
+  if (url.pathname === '/api/links/check') {
+    const rawScope = (url.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
+    if (rawScope) {
+      const resolved = await safePath(rawScope);
+      if (!resolved) {
+        sendJson(res, 403, { error: 'Access denied' });
+        return;
+      }
+      try { await stat(resolved); } catch {
+        sendJson(res, 404, { error: 'Not found' });
+        return;
+      }
+    }
+    try {
+      sendJson(res, 200, await checkLinks(rawScope));
+    } catch {
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
+
+  // Changed files (vs HEAD and untracked) under the served root.
+  if (url.pathname === '/api/git/status') {
+    try {
+      const status = await gitWorkingTreeStatus();
+      sendJson(res, 200, status ? { git: true, ...status } : { git: false, files: {}, truncated: false });
+    } catch {
+      sendJson(res, 200, { git: false, files: {}, truncated: false });
+    }
+    return;
+  }
+
+  // Git history of a single served file: recent commits + working-tree status.
+  if (url.pathname === '/api/git/log') {
+    const resolved = await resolveGitTarget(res, url.searchParams.get('path'));
+    if (!resolved) return;
+    const limitParam = Number.parseInt(url.searchParams.get('limit') || '30', 10);
+    const limit = Number.isSafeInteger(limitParam) ? Math.min(Math.max(limitParam, 1), 200) : 30;
+    try {
+      const status = await gitFileStatus(resolved);
+      const commits = status === 'untracked' || status === 'ignored' ? [] : await gitFileLog(resolved, limit);
+      sendJson(res, 200, { git: true, status, commits });
+    } catch {
+      // Not a repository, git missing, or a timeout — history is simply unavailable.
+      sendJson(res, 200, { git: false, status: null, commits: [] });
+    }
+    return;
+  }
+
+  // File content at a past revision (HEAD, HEAD~N or a commit hash).
+  if (url.pathname === '/api/git/show') {
+    const rev = url.searchParams.get('rev') || 'HEAD';
+    if (!GIT_REV_RE.test(rev)) {
+      sendJson(res, 400, { error: 'Invalid revision' });
+      return;
+    }
+    const resolved = await resolveGitTarget(res, url.searchParams.get('path'));
+    if (!resolved) return;
+    try {
+      const buf = await runGit(dirname(resolved), ['show', `${rev}:./${basename(resolved)}`], {
+        encoding: 'buffer',
+        maxBuffer: GIT_MAX_SHOW_BYTES,
+      });
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': 'sandbox',
+      });
+      res.end(decodeTextBuffer(buf));
+    } catch (err) {
+      sendJson(res, 404, { error: `Not available at ${rev}: ${err.message}` });
+    }
     return;
   }
 

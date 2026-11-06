@@ -459,4 +459,14 @@ flowchart TD
   todayStart.setHours(0, 0, 0, 0);
   const yesterdayNoon = new Date(todayStart.getTime() - 12 * 3_600_000); // always yesterday 12:00
   utimesSync(join(DIR, 'edited-yesterday.md'), yesterdayNoon, yesterdayNoon);
+
+  // Diff view & link check fixtures (diff-linkcheck.spec.ts) — kept in their own
+  // folder so the broken links below never touch other suites.
+  mkdirSync(join(DIR, 'diffcheck'), { recursive: true });
+  write('diffcheck/config.prod.yaml', 'name: app\nport: 8080\ndebug: false\nreplicas: 3\n');
+  write('diffcheck/config.dev.yaml', 'name: app\nport: 3000\ndebug: true\nreplicas: 3\nextra: on\n');
+  write('diffcheck/secret-a.env', 'API_KEY=dv_live_ABC1234567890SECRETKEY\nNAME=one\n');
+  write('diffcheck/secret-b.env', 'API_KEY=dv_live_XYZ0987654321OTHERKEY\nNAME=two\n');
+  write('diffcheck/live.md', '# Live\n\nfirst line\n');
+  write('diffcheck/links.md', '# Links\n\n[ok](live.md)\n[broken](missing-page.md)\n![img](pics/none.png)\n');
 }

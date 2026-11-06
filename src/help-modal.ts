@@ -27,6 +27,15 @@ function buildSections(): ShortcutSection[] {
       ],
     },
     {
+      title: 'Diff',
+      items: [
+        ['D', 'Diff current file (changes since opened / Git HEAD)'],
+        ['n / p  or  j / k', 'Next / previous change'],
+        ['u', 'Toggle side-by-side / unified'],
+        ['Right-click file', 'Compare two files'],
+      ],
+    },
+    {
       title: 'View',
       items: [
         [`${MOD}+=  /  ${MOD}+−  /  ${MOD}+0`, 'Text size increase / decrease / reset'],
