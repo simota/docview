@@ -359,6 +359,48 @@ test('regex search anchors work on CRLF files and results omit carriage returns'
   assert.deepEqual(plain[0].contextLines, ['alpha end', 'beta end']);
 });
 
+test('plain search matches case-insensitively per line across encodings and files', async (t) => {
+  const directory = join(fixture, 'plain-search');
+  await mkdir(join(directory, 'sub'), { recursive: true });
+  await writeFile(join(directory, 'greek.md'), 'ΟΔΟΣ\r\nΟΔΟΣ ΜΑΣ\r\nnothing\n');
+  await writeFile(join(directory, 'mixed.md'), 'First LINE\nsecond line\nthird\n');
+  await writeFile(join(directory, 'sub', 'none.md'), 'no hits here\n');
+  // Shift_JIS "あい line" — decoded before matching.
+  await writeFile(join(directory, 'sub', 'sjis.txt'), Buffer.from([0x82, 0xA0, 0x82, 0xA2, 0x20, 0x4C, 0x49, 0x4E, 0x45, 0x0A]));
+  const server = await startServer(t, { directory });
+  const search = async (q) => (await (await server.request('/api/search?context=0&q=' + encodeURIComponent(q))).json())
+    .map(({ path, line, text }) => `${path}:${line}:${text}`).sort();
+  assert.deepEqual(await search('line'), ['mixed.md:1:First LINE', 'mixed.md:2:second line', 'sub/sjis.txt:1:あい LINE']);
+  assert.deepEqual(await search('οδος'), ['greek.md:1:ΟΔΟΣ', 'greek.md:2:ΟΔΟΣ ΜΑΣ']);
+  assert.deepEqual(await search('ς μ'), ['greek.md:2:ΟΔΟΣ ΜΑΣ']);
+  // A query spanning a line break never matches a single line.
+  assert.deepEqual(await search('line\nsecond'), []);
+  assert.deepEqual(await search('absent-term'), []);
+});
+
+test('file tree lists nested entries in order with metadata', async (t) => {
+  const directory = join(fixture, 'tree-order');
+  await mkdir(join(directory, 'b-dir', 'deep'), { recursive: true });
+  await mkdir(join(directory, 'a-dir'), { recursive: true });
+  await mkdir(join(directory, 'empty-dir'), { recursive: true });
+  await mkdir(join(directory, 'deck.key'), { recursive: true });
+  for (const name of ['z.md', 'B.md', 'a.md', 'b-dir/deep/x.json', 'b-dir/y.yaml', 'a-dir/w.txt', 'skip.bin']) {
+    await writeFile(join(directory, name), name);
+  }
+  await symlink(join(fixture, 'outside.md'), join(directory, 'escape.md'));
+  await symlink(join(directory, 'a.md'), join(directory, 'alias.md'));
+  const server = await startServer(t, { directory });
+  const { tree } = await (await server.request('/api/tree')).json();
+  const flatten = (items) => items.flatMap((item) => (item.children
+    ? [`${item.path}/`, ...flatten(item.children)]
+    : [`${item.path}:${item.size}:${typeof item.mtime}`]));
+  assert.deepEqual(flatten(tree), [
+    'a-dir/', 'a-dir/w.txt:11:string',
+    'b-dir/', 'b-dir/deep/', 'b-dir/deep/x.json:17:string', 'b-dir/y.yaml:12:string',
+    'a.md:4:string', 'alias.md:4:string', 'B.md:4:string', 'deck.key:' + tree.find((i) => i.name === 'deck.key').size + ':string', 'z.md:4:string',
+  ]);
+});
+
 test('backlinks resolve Markdown links like the viewer does', async (t) => {
   const directory = join(fixture, 'backlinks');
   await mkdir(join(directory, 'sub'), { recursive: true });

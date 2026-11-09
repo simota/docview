@@ -219,6 +219,9 @@ export class FileTree {
   private treeData: FileNode[] = [];
   private filterQuery = '';
   private loadSeq = 0;
+  /** refresh() coalescing: a load is running / another is owed after it. */
+  private refreshRunning = false;
+  private refreshQueued = false;
   /** Max age in days for the mtime filter; 0 (or NaN) means no time filter. */
   private mtimeMaxDays = 0;
   private gitOnly = false;
@@ -669,8 +672,25 @@ export class FileTree {
     }
   }
 
+  /**
+   * Reload the tree (e.g. after an SSE add/unlink). Starts at once when idle;
+   * events arriving while a load is in flight collapse into one follow-up
+   * load, so a burst of N file events costs at most two /api/tree walks
+   * instead of N — and the last load still starts after the last event.
+   */
   refresh() {
-    this.load();
+    if (this.refreshRunning) {
+      this.refreshQueued = true;
+      return;
+    }
+    this.refreshRunning = true;
+    void this.load().finally(() => {
+      this.refreshRunning = false;
+      if (this.refreshQueued) {
+        this.refreshQueued = false;
+        this.refresh();
+      }
+    });
   }
 }
 
