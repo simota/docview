@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git history: compare a file with `HEAD` or recent commits (`/api/git/log`, `/api/git/show`), Git change badges in the file tree and a "Git: 変更のみ" filter (`/api/git/status`).
 - Link check: broken relative links, images, reference definitions and wiki links across Markdown documents (`/api/links/check`), shown per document in the TOC panel and as a folder report.
 
+### Performance
+
+- Text decoding skips the encoding detector for plain-ASCII files (which decode identically under every supported encoding): full-text search, backlinks and file loading spend far less CPU.
+- Plain full-text search skips the per-line scan for files that do not contain the query.
+- `/api/tree` stats directory entries concurrently (bounded per directory).
+- The file tree coalesces SSE add/unlink bursts into at most one follow-up `/api/tree` reload instead of one per event.
+- Content-hashed `/assets/*` bundles are served with `Cache-Control: immutable`, so reloads no longer re-download them.
+
 ## 1.9.0 - 2026-07-30
 
 ### Changed

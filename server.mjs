@@ -8,9 +8,10 @@ import { spawn, execFile } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { isIP } from 'node:net';
 import chokidar from 'chokidar';
-import jschardet from 'jschardet';
 import Papa from 'papaparse';
 import { createRegexSearch } from './lib/server-regex.mjs';
+import { hasUtf8Bom, detectEncoding, decodeTextBuffer } from './lib/text-decode.mjs';
+import { mapWithConcurrency } from './lib/concurrency.mjs';
 import {
   parseDimensions, buildDimensions, parsePngTextChunksFromFile,
   extractExif, extractPngColorInfo, detectAiProvenance,
@@ -127,68 +128,10 @@ function reportAndExit(err, { exitCode = 1 } = {}) {
 process.on('uncaughtException', (err) => reportAndExit(err));
 process.on('unhandledRejection', (err) => reportAndExit(err instanceof Error ? err : new Error(String(err))));
 
-// --- Encoding detection helpers ---
-
-const ENCODING_MAP = {
-  'utf-8': 'utf-8',
-  'ascii': 'utf-8',
-  'utf8': 'utf-8',
-  'shift_jis': 'shift_jis',
-  'shiftjis': 'shift_jis',
-  'shift-jis': 'shift_jis',
-  'windows-31j': 'shift_jis',
-  'cp932': 'shift_jis',
-  'euc-jp': 'euc-jp',
-  'eucjp': 'euc-jp',
-  'iso-2022-jp': 'iso-2022-jp',
-  'euc-kr': 'euc-kr',
-  'big5': 'big5',
-  'gb2312': 'gbk',
-  'gb18030': 'gb18030',
-  'gbk': 'gbk',
-  'windows-1252': 'windows-1252',
-  'iso-8859-1': 'windows-1252',
-  'iso-8859-2': 'iso-8859-2',
-  'ibm866': 'ibm866',
-  'koi8-r': 'koi8-r',
-};
-
-function hasUtf8Bom(buf) {
-  return buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
-}
-
-/**
- * Detect encoding from a buffer and return a TextDecoder-compatible label.
- */
-function detectEncoding(buf) {
-  // BOM detection
-  if (hasUtf8Bom(buf)) return 'utf-8';
-  if (buf[0] === 0xFF && buf[1] === 0xFE) return 'utf-16le';
-  if (buf[0] === 0xFE && buf[1] === 0xFF) return 'utf-16be';
-
-  const detected = jschardet.detect(buf);
-  if (!detected || !detected.encoding) return 'utf-8';
-  const key = detected.encoding.toLowerCase().replace(/[_\s]/g, match => match === '_' ? '_' : '-');
-  return ENCODING_MAP[key] || 'utf-8';
-}
-
-/**
- * Read a file and decode to UTF-8 string, auto-detecting encoding.
- */
-function decodeTextBuffer(buf) {
-  const encoding = detectEncoding(buf);
-  if (encoding === 'utf-8') return buf.toString('utf-8', hasUtf8Bom(buf) ? 3 : 0);
-  return new TextDecoder(encoding).decode(buf);
-}
+// --- Encoding detection helpers (lib/text-decode.mjs) ---
 
 async function readFileText(filePath) {
-  const buf = await readFile(filePath);
-  const encoding = detectEncoding(buf);
-  // Drop a UTF-8 BOM like TextDecoder does for the other encodings: kept, it
-  // defeats `^` anchors on line 1 in search and leaks into the first CSV header.
-  if (encoding === 'utf-8') return buf.toString('utf-8', hasUtf8Bom(buf) ? 3 : 0);
-  const decoder = new TextDecoder(encoding);
-  return decoder.decode(buf);
+  return decodeTextBuffer(await readFile(filePath));
 }
 
 /**
@@ -1144,38 +1087,47 @@ function buildZip(entries) {
 const sseClients = new Set();
 
 // File tree builder
+// Per-entry checks and stats within a directory are independent, so a few
+// run concurrently instead of one syscall round trip at a time.
+// Subdirectories are still walked one at a time, which keeps the in-flight
+// work (and memory) per request bounded. Results keep readdir order before
+// sorting, so the output is unchanged.
+const TREE_STAT_CONCURRENCY = 8;
+
 async function buildTree(dir, base = dir) {
   const entries = await readdir(dir, { withFileTypes: true });
-  const items = [];
+  const items = await mapWithConcurrency(entries, TREE_STAT_CONCURRENCY, (entry) => buildTreeEntry(entry, dir, base));
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item && item.type === 'dir') {
+      const children = await buildTree(join(dir, entries[i].name), base);
+      if (children.length > 0) item.children = children;
+      else items[i] = null;
+    }
+  }
+  const kept = items.filter(Boolean);
 
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-    const relPath = relative(base, fullPath).replace(/\\/g, '/');
-    if (entry.isSymbolicLink() && !await safePath(relPath)) continue;
+  // Sort: dirs first, then files, alphabetically
+  kept.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
-    if (entry.isDirectory()) {
-      if (isSupportedFilename(entry.name) && OFFICE_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
-        if (shouldSkipFile(entry.name, relPath)) continue;
-        let size;
-        let mtime;
-        try {
-          const st = await stat(fullPath);
-          size = st.size;
-          mtime = st.mtime.toISOString();
-        } catch {
-          // Directory package disappeared between readdir and stat — skip metadata
-        }
-        items.push({ name: entry.name, path: relPath, type: 'file', size, mtime });
-        continue;
-      }
-      // Skip built-in/ignored/hidden dirs but allow hidden files (e.g. .env).
-      if (shouldSkipDir(entry.name, relPath)) continue;
-      const children = await buildTree(fullPath, base);
-      if (children.length > 0) {
-        items.push({ name: entry.name, path: relPath, type: 'dir', children });
-      }
-    } else if (isSupportedFilename(entry.name)) {
-      if (shouldSkipFile(entry.name, relPath)) continue;
+  return kept;
+}
+
+/**
+ * Tree item for one directory entry, or null when it is not listed.
+ * Directories come back without `children`; buildTree walks them afterwards.
+ */
+async function buildTreeEntry(entry, dir, base) {
+  const fullPath = join(dir, entry.name);
+  const relPath = relative(base, fullPath).replace(/\\/g, '/');
+  if (entry.isSymbolicLink() && !await safePath(relPath)) return null;
+
+  if (entry.isDirectory()) {
+    if (isSupportedFilename(entry.name) && OFFICE_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+      if (shouldSkipFile(entry.name, relPath)) return null;
       let size;
       let mtime;
       try {
@@ -1183,19 +1135,28 @@ async function buildTree(dir, base = dir) {
         size = st.size;
         mtime = st.mtime.toISOString();
       } catch {
-        // File disappeared between readdir and stat — skip metadata
+        // Directory package disappeared between readdir and stat — skip metadata
       }
-      items.push({ name: entry.name, path: relPath, type: 'file', size, mtime });
+      return { name: entry.name, path: relPath, type: 'file', size, mtime };
     }
+    // Skip built-in/ignored/hidden dirs but allow hidden files (e.g. .env).
+    if (shouldSkipDir(entry.name, relPath)) return null;
+    return { name: entry.name, path: relPath, type: 'dir', children: null };
   }
-
-  // Sort: dirs first, then files, alphabetically
-  items.sort((a, b) => {
-    if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
-
-  return items;
+  if (isSupportedFilename(entry.name)) {
+    if (shouldSkipFile(entry.name, relPath)) return null;
+    let size;
+    let mtime;
+    try {
+      const st = await stat(fullPath);
+      size = st.size;
+      mtime = st.mtime.toISOString();
+    } catch {
+      // File disappeared between readdir and stat — skip metadata
+    }
+    return { name: entry.name, path: relPath, type: 'file', size, mtime };
+  }
+  return null;
 }
 
 // Safe path resolution (prevent traversal + symlink bypass)
@@ -1520,21 +1481,31 @@ const MIME = {
 };
 
 // Serve static file from dist
+// Vite emits everything under dist/assets/ with a content hash in the file
+// name, so a given URL never changes content: let the browser keep it instead
+// of re-downloading several MB of JS/CSS on every page load. index.html and
+// the unhashed public files (e.g. /highlight-api.css) are left uncached.
+const HASHED_ASSET_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
 async function serveStatic(res, urlPath) {
   let filePath = join(distDir, urlPath === '/' ? 'index.html' : urlPath);
+  let hashedAsset = false;
 
   try {
     const s = await stat(filePath);
     if (s.isDirectory()) filePath = join(filePath, 'index.html');
+    else hashedAsset = urlPath.startsWith('/assets/');
   } catch {
-    // SPA fallback
+    // SPA fallback — never cacheable: the URL may later name a real asset.
     filePath = join(distDir, 'index.html');
   }
 
   try {
     const content = await readFile(filePath);
     const ext = extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+    if (hashedAsset) headers['Cache-Control'] = HASHED_ASSET_CACHE_CONTROL;
+    res.writeHead(200, headers);
     res.end(content);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -2366,6 +2337,10 @@ const server = createServer(async (req, res) => {
       const lowerQuery = query.toLowerCase();
       matcher = { test: (s) => s.toLowerCase().includes(lowerQuery) };
     }
+    // Plain search: a line can only match if the whole lowercased file
+    // contains the query (lowercasing is per character, and line breaks are
+    // not cased), so files without it skip the per-line split and scan.
+    const plainQuery = useRegex ? null : query.toLowerCase();
     const regexSearch = useRegex ? createRegexSearch(query) : null;
 
     async function searchDir(dir) {
@@ -2391,6 +2366,7 @@ const server = createServer(async (req, res) => {
               const st = await stat(fullPath);
               if (st.size > MAX_SEARCH_FILE_BYTES) continue;
               const content = await readFileText(fullPath);
+              if (plainQuery !== null && !content.toLowerCase().includes(plainQuery)) continue;
               // CRLF files would otherwise keep a trailing \r on every line,
               // which breaks `$` anchors and leaks into the result text.
               const lines = content.split(/\r?\n/);
